@@ -123,3 +123,7 @@ def api_toxicity_data():
     return jsonify({"error": "No data available"}), 404
 
 # --- ADD THIS TO server.py ---
+
+
+
+# faccio dei cambiamenti a caso nel file
