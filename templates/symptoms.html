@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Symptom Index | Aria Bene Comune</title>
+    <style>
+        @font-face { font-family: 'Biscottini'; src: url('../static/fonts/Biscottini-Regular.woff') format('woff'); font-weight: 400; }
+        @font-face { font-family: 'SourceSerif4'; src: url('../static/fonts/SourceSerif4-Bold.otf.woff2') format('woff2'); font-weight: 700; }
+        @font-face { font-family: 'SourceSerif4'; src: url('../static/fonts/SourceSerif4-Regular.otf.woff2') format('woff2'); font-weight: 400; }
+
+        :root { 
+            --black: #000000; 
+            --white: #ffffff; 
+            --orange: #3493e5; 
+            --good: #50f096; --fair: #f0e63c; --poor: #ff5050;
+            --font-header: 'Biscottini', sans-serif;
+            --font-serif: 'SourceSerif4', serif;
+        }
+
+        * { border-radius: 0 !important; box-sizing: border-box; }
+
+        body { 
+            font-family: var(--font-serif); 
+            background-color: var(--orange); 
+            margin: 0; padding: 0; color: var(--black); 
+            line-height: 1.3; text-transform: uppercase;
+        }
+
+        /* NAVIGATION */
+        .top-nav {
+            background: var(--white); display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 40px; position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid var(--black);
+        }
+        .nav-logo { font-family: var(--font-header); color: var(--black); font-size: 22px; text-decoration: none; }
+        .nav-link { color: var(--black); text-decoration: none; font-family: var(--font-header); font-size: 15px; padding: 0 25px; border-left: 1px solid rgba(0,0,0,0.3); }
+
+        .main-container { display: flex; width: 100%; min-height: calc(100vh - 55px); }
+
+        /* LEFT SIDE: ANATOMY */
+        .anatomy-side {
+            flex: 1; border-right: 1px solid var(--black); padding: 40px;
+            position: sticky; top: 55px; height: calc(100vh - 55px);
+            display: flex; flex-direction: column; align-items: center; background: #fcfcfc;
+        }
+
+        .anatomy-header { width: 100%; margin-bottom: 20px; }
+        .hero-title { font-family: var(--font-header); font-size: 50px; line-height: 1; margin: 0; text-transform: none; }
+        .data-status { font-family: var(--font-header); font-size: 11px; color: #999; margin-top: 10px; }
+
+        .silhouette-wrapper {
+            position: relative;
+            height: 90%;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .body-image {
+            height: 100%;
+            width: auto;
+            filter: grayscale(100%) contrast(1.1);
+            opacity: 0.9;
+        }
+
+        /* --- CALLOUT SYSTEM --- */
+        .callout {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            z-index: 10;
+        }
+
+        /* The dot that sits on the body part */
+        .anchor-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--black);
+            border-radius: 50% !important;
+            position: absolute;
+        }
+
+        .callout-line {
+            height: 1px;
+            background: var(--black);
+            width: 60px;
+        }
+
+        /* Specific Positions */
+        /* NEURO: Pointing to Head center-top */
+        #neuro-point { top: 5%; left: 50%; transform: translateX(-50%); }
+        #callout-neuro { top: 3%; left: 55%; flex-direction: row; }
+        #callout-neuro .callout-line { transform: rotate(-20deg); width: 40px; transform-origin: left; }
+
+        /* EYE: Pointing to Eyes */
+        #eye-point { top: 12%; left: 50%; transform: translateX(-50%); }
+        #callout-eye { top: 12%; right: 55%; flex-direction: row-reverse; }
+        #callout-eye .callout-line { width: 80px; }
+
+        /* LUNGS: Pointing to Chest */
+        #lungs-point { top: 28%; left: 50%; transform: translateX(-50%); }
+        #callout-lungs { top: 28%; left: 55%; flex-direction: row; }
+        #callout-lungs .callout-line { width: 60px; }
+
+        .sym-btn { 
+            padding: 12px 18px; border: 1px solid var(--black); background: var(--white); 
+            font-family: var(--font-header); cursor: pointer; text-align: left;
+            transition: 0.2s; min-width: 180px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05);
+        }
+        .sym-btn h2 { margin: 0; font-size: 14px; font-weight: normal; }
+        .sym-btn p { margin: 2px 0 0 0; font-size: 10px; color: #888; text-transform: none; font-family: var(--font-serif); }
+        .sym-btn.active { background: var(--black); color: var(--white); box-shadow: none; }
+
+        /* RIGHT SIDE: DATA */
+        .data-side { flex: 1.2; padding: 40px; background: var(--orange); }
+        .pollutant-group { border: 1px solid var(--black); background: var(--white); margin-bottom: 20px; }
+        .pollutant-label { background: var(--black); color: var(--white); padding: 10px 25px; font-family: var(--font-header); font-size: 18px; }
+
+        .level-row { display: grid; grid-template-columns: 140px 160px 1fr; border-bottom: 1px solid #eee; transition: 0.3s; }
+        .level-row:last-child { border-bottom: none; }
+        .range-label { padding: 15px 20px; font-family: var(--font-header); font-size: 11px; color: #888; border-right: 1px solid #eee; display: flex; align-items: center; }
+        .block-frame { padding: 15px; font-family: var(--font-header); font-size: 12px; display: flex; align-items: center; justify-content: center; border-right: 1px solid #eee; color: #ccc; }
+        .symptom-info { padding: 15px 25px; opacity: 0.2; transition: 0.3s; }
+        .symptom-info h4 { margin: 0 0 5px 0; font-family: var(--font-header); font-size: 14px; font-weight: normal; }
+        .symptom-info p { margin: 0; font-size: 13px; text-transform: none; color: #666; }
+
+        .level-row.active { background: #fffcf5; }
+        .level-row.active .block-frame { color: var(--black); font-weight: bold; }
+        .level-row.active .symptom-info { opacity: 1; }
+        .active.lvl-good .block-frame { background: var(--good); border-right-color: var(--black); }
+        .active.lvl-fair .block-frame { background: var(--fair); border-right-color: var(--black); }
+        .active.lvl-poor .block-frame { background: var(--poor); border-right-color: var(--black); }
+
+        .floating-report-btn { position: fixed; bottom: 30px; left: 30px; display: flex; align-items: center; gap: 12px; text-decoration: none; z-index: 9999; }
+        .icon-circle { width: 60px; height: 60px; background-color: var(--black); color: white; border-radius: 50% !important; display: flex; justify-content: center; align-items: center; font-size: 2.5rem; font-weight: bold; border: 2px solid #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+
+        @media (max-width: 1100px) {
+            .main-container { flex-direction: column; }
+            .anatomy-side { position: relative; top: 0; height: auto; border-right: none; border-bottom: 2px solid #000; padding-bottom: 100px; }
+            .silhouette-wrapper { height: 600px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="top-nav">
+        <a href="/" class="nav-logo">ARIA BENE COMUNE</a>
+        <div class="nav-links">
+            <a href="/symptoms" class="nav-link">SYMPTOMS</a>
+            <a href="/map" class="nav-link">MAP</a>
+            <a href="/archive" class="nav-link">ARCHIVE</a>
+            <a href="/about" class="nav-link">ABOUT</a>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div class="anatomy-side">
+            <div class="anatomy-header">
+                <h1 class="hero-title">Symptoms</h1>
+                
+            </div>
+
+            <div class="silhouette-wrapper">
+                <img src="../static/corpo.png" class="body-image" alt="Anatomical Profile">
+
+                <!-- NEURO (Head) -->
+                <div class="anchor-dot" id="neuro-point"></div>
+                <div class="callout" id="callout-neuro">
+                    <
+                    <button class="sym-btn" onclick="switchSymptom('neuro', this)">
+                        <h2>NEURO_IMPACT</h2>
+                        <p>Cephalalgia or vertigo.</p>
+                    </button>
+                </div>
+
+                <!-- EYE (Face) -->
+                <div class="anchor-dot" id="eye-point"></div>
+                <div class="callout" id="callout-eye">
+                    <button class="sym-btn active" onclick="switchSymptom('eye', this)">
+                        <h2>EYE_IRRITATION</h2>
+                        <p>Stinging or lacrimation.</p>
+                    </button>
+                    
+                </div>
+
+                <!-- LUNGS (Chest) -->
+                <div class="anchor-dot" id="lungs-point"></div>
+                <div class="callout" id="callout-lungs">
+                    
+                    <button class="sym-btn" onclick="switchSymptom('lungs', this)">
+                        <h2>RESPIRATORY</h2>
+                        <p>Coughing or dyspnea.</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-side" >
+            <div id="display-area" style="background-color: var(--orange);"></div>
+        </div>
+    </div>
+
+    <a href="/report" class="floating-report-btn"><div class="icon-circle">!</div></a>
+
+    <script>
+        const pollutantData = {
+            no2: { name: "NITROGEN_DIOXIDE (NO2)", unit: "µg/m³", factor: 1.88, levels: [
+                { class: "lvl-good", range: "0-40", label: "GOOD", title: "WHO_THRESHOLD_OK", text: "Safe limits.", max: 40 },
+                { class: "lvl-fair", range: "41-90", label: "FAIR", title: "SENSITIVE_ALERT", text: "Pulmonary irritation potential.", max: 90 },
+                { class: "lvl-poor", range: "91+", label: "POOR", title: "HEALTH_VIOLATION", text: "Respiratory distress likely.", max: 9999 }
+            ]},
+            nh3: { name: "AMMONIA (NH3)", unit: "µg/m³", factor: 700, levels: [
+                { class: "lvl-good", range: "0-270", label: "SAFE", title: "DETECTION_NULL", text: "Below irritation threshold.", max: 270 },
+                { class: "lvl-fair", range: "271-350", label: "FAIR", title: "ODOR_THRESHOLD", text: "Detectable chemical markers.", max: 350 },
+                { class: "lvl-poor", range: "351+", label: "IRRITANT", title: "ACUTE_EXPOSURE", text: "Burning in mucous membranes.", max: 9999 }
+            ]},
+            co: { name: "CARBON_MONOXIDE (CO)", unit: "mg/m³", factor: 1.15, levels: [
+                { class: "lvl-good", range: "0-5", label: "SAFE", title: "WHO_SAFE", text: "Normal oxygenation.", max: 5 },
+                { class: "lvl-fair", range: "6-10", label: "FAIR", title: "EU_LEGAL_LIMIT", text: "Max legal exposure limit.", max: 10 },
+                { class: "lvl-poor", range: "11+", label: "DANGER", title: "TOXIC_LOAD", text: "Confusion and headaches.", max: 9999 }
+            ]}
+        };
+
+        const symptomMap = { eye: ['nh3', 'no2'], lungs: ['no2', 'nh3'], neuro: ['co'] };
+        let sensorData = { no2: 0, nh3: 0, co: 0 };
+        let currentSymptom = 'eye';
+
+        function switchSymptom(sym, btn) {
+            currentSymptom = sym;
+            document.querySelectorAll('.sym-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderSymptomBlocks();
+        }
+
+        function renderSymptomBlocks() {
+            const area = document.getElementById('display-area');
+            area.innerHTML = ''; 
+            const pollutants = symptomMap[currentSymptom];
+            pollutants.forEach(pKey => {
+                const data = pollutantData[pKey];
+                const currentValMetric = sensorData[pKey] * data.factor;
+                let pollutantSection = document.createElement('div');
+                pollutantSection.className = 'pollutant-group';
+                pollutantSection.innerHTML = `<div class="pollutant-label">${data.name}</div>`;
+                const reversedLevels = [...data.levels].reverse();
+                reversedLevels.forEach(lvl => {
+                    let activeClass = "";
+                    let idx = data.levels.indexOf(lvl);
+                    if (currentValMetric <= lvl.max && currentValMetric > (idx === 0 ? -1 : data.levels[idx-1].max)) activeClass = "active";
+                    pollutantSection.innerHTML += `
+                        <div class="level-row ${lvl.class} ${activeClass}">
+                            <div class="range-label">${lvl.range} ${data.unit}</div>
+                            <div class="block-frame">${lvl.label}</div>
+                            <div class="symptom-info">
+                                <h4>${lvl.title}</h4>
+                                <p>${lvl.text}</p>
+                            </div>
+                        </div>`;
+                });
+                area.appendChild(pollutantSection);
+            });
+        }
+
+        async function sync() {
+            try {
+                const r = await fetch('/api/toxicity-data');
+                const data = await r.json();
+                if (data.time) {
+                    sensorData = { no2: data.no2, nh3: data.nh3, co: data.co };
+                    document.getElementById('time-display').innerText = "ATMOSPHERIC_TIMESTAMP: " + data.time;
+                    renderSymptomBlocks();
+                }
+            } catch (e) { console.warn("SYNC_WAITING..."); }
+        }
+        sync();
+        setInterval(sync, 30000);
+    </script>
+</body>
+</html>
