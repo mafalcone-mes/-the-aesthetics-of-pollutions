@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home | Aria Bene Comune</title>
+    <style>
+        @font-face { font-family: 'Biscottini'; src: url('../static/fonts/Biscottini-Regular.woff') format('woff'); font-weight: 400; }
+        @font-face { font-family: 'SourceSerif4'; src: url('../static/fonts/SourceSerif4-Bold.otf.woff2') format('woff2'); font-weight: 700; }
+        @font-face { font-family: 'SourceSerif4'; src: url('../static/fonts/SourceSerif4-Regular.otf.woff2') format('woff2'); font-weight: 400; }
+
+        :root { 
+            --black: #000000; 
+            --white: #ffffff; 
+            --orange: #3493e5; 
+            --good: #50f096; --fair: #f0e63c; --poor: #ff5050;
+            --font-header: 'Biscottini', sans-serif;
+            --font-serif: 'SourceSerif4', serif;
+        }
+
+        * { border-radius: 0 !important; box-sizing: border-box; }
+
+        body { 
+            font-family: var(--font-serif); 
+            background-color: var(--orange); /* Changed to white for standard archival look, change back to var(--orange) if preferred */
+            margin: 0; padding: 0; color: var(--black); 
+            line-height: 1.3; text-transform: uppercase;
+        }
+
+        /* 1. NAVIGATION */
+        .top-nav {
+            background: var(--white); display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 40px; position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid var(--black);
+        }
+        .nav-logo { font-family: var(--font-header); color: var(--black); font-size: 22px; text-decoration: none; }
+        .nav-links { display: flex; }
+        .nav-link { color: var(--black); text-decoration: none; font-family: var(--font-header); font-size: 15px; padding: 0 25px; border-left: 1px solid rgba(0,0,0,0.3); }
+        .nav-link:hover { background: var(--black); color: var(--white); }
+
+        /* 2. VIDEO HERO SECTION */
+        .video-hero {
+            position: relative;
+            width: 100%;
+            height: 60vh;
+            overflow: hidden;
+            background: var(--black);
+            border-bottom: 1px solid var(--black);
+        }
+
+        #hero-video {
+            position: absolute;
+            top: 50%; left: 50%;
+            min-width: 100%; min-height: 100%;
+            width: auto; height: auto;
+            transform: translate(-50%, -50%);
+            filter: grayscale(100%) contrast(1.2) brightness(0.4);
+            object-fit: cover;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            text-align: center;
+            padding: 40px;
+            z-index: 2;
+            color: var(--white);
+        }
+
+        .hero-title { 
+            font-family: var(--font-header); font-size: 100px; line-height: 0.9; 
+            margin: 0 0 20px 0; font-weight: normal; text-transform: none;
+        }
+        .hero-manifesto { 
+            font-size: 24px; text-transform: none; 
+            max-width: 800px; line-height: 1.4; font-family: var(--font-serif);
+        }
+
+        /* 3. CONTENT AREA */
+        .dashboard-wrapper { width: 100%; padding: 40px; }
+
+        .section-label {
+            font-family: var(--font-header); font-size: 14px; color: var(--black);
+            margin-bottom: 15px; display: block; font-weight: bold;
+        }
+
+        /* UPDATED TO 4 COLUMNS */
+        .card-grid { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 20px; 
+            margin-bottom: 60px; 
+        }
+
+        .portal-card {
+            background: white; border: 1px solid var(--black); 
+            padding: 25px; display: flex; flex-direction: column;
+            transition: 0.1s; text-decoration: none; color: inherit;
+        }
+        .portal-card:hover { background: #f9f9f9; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+
+        .portal-card.good { border-top: 8px solid var(--black); }
+        .portal-card.fair { border-top: 8px solid var(--black); }
+        .portal-card.poor { border-top: 8px solid var(--black); }
+        .portal-card.neutral { border-top: 8px solid var(--black); }
+
+        .card-id { font-family: var(--font-header); font-size: 11px; color: #999; margin-bottom: 10px; }
+        .card-title { font-family: var(--font-header); font-size: 22px; margin: 0 0 15px 0; }
+        .card-desc { font-size: 14px; text-transform: none; color: #444; margin-bottom: 25px; flex-grow: 1; line-height: 1.4; }
+        
+        .card-action { 
+            background: var(--black); color: white; padding: 10px; 
+            text-align: center; font-family: var(--font-header); font-size: 13px;
+        }
+        .portal-card:hover .card-action { background: var(--orange); color: var(--white); }
+
+        /* 4. FLOATING REPORT BUTTON */
+        .floating-report-btn { 
+            position: fixed; bottom: 30px; left: 30px; 
+            display: flex; align-items: center; gap: 12px; 
+            text-decoration: none; z-index: 9999; 
+        }
+        .icon-circle { 
+            width: 60px; height: 60px; background-color: var(--black); 
+            color: white; border-radius: 50% !important; 
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 2.5rem; font-weight: bold; border: 2px solid #fff; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
+        }
+
+        @media (max-width: 1200px) { .card-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 700px) { 
+            .card-grid { grid-template-columns: 1fr; } 
+            .hero-title { font-size: 60px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="top-nav">
+        <a href="/" class="nav-logo">ARIA BENE COMUNE</a>
+        <div class="nav-links">
+            
+            <a href="/symptoms" class="nav-link">SYMPTOMS</a>
+            <a href="/map" class="nav-link">MAP</a>
+            <a href="/archive" class="nav-link">ARCHIVE</a>
+            <a href="/about" class="nav-link">ABOUT</a>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION WITH VIDEO -->
+    <div class="video-hero">
+        <video autoplay muted loop playsinline id="hero-video" poster="../static/TARASVIVE.png">
+            <source src="../static/video/VideoFinals_PreAudio.mp4" type="video/mp4">
+        </video>
+        <div class="hero-overlay">
+            <h1 class="hero-title">Aria Bene Comune</h1>
+            <p class="hero-manifesto">
+                Technical sovereignty through decentralized monitoring. A network of air quality sensors owned and operated by the citizens of Taranto.
+            </p>
+        </div>
+    </div>
+
+    <div class="dashboard-wrapper">
+        
+        
+        <div class="card-grid">
+            <!-- 01 Symptoms -->
+            <a href="/symptoms" class="portal-card good">
+                
+                <h3 class="card-title">Symptoms</h3>
+                <p class="card-desc">Determine correlations between clinical biological responses and localized toxicity levels.</p>
+                <div class="card-action">EXECUTE_INDEX</div>
+            </a>
+
+            <!-- 02 Map -->
+            <a href="/map" class="portal-card fair">
+                
+                <h3 class="card-title">Live Map</h3>
+                <p class="card-desc">Geospatial telemetry and real-time distribution of the atmospheric pollutant plume.</p>
+                <div class="card-action">VIEW_SPATIAL</div>
+            </a>
+
+            <!-- 03 Archive -->
+            <a href="/archive" class="portal-card poor">
+                
+                <h3 class="card-title">Archive</h3>
+                <p class="card-desc">Historical data registry and longitudinal analysis of atmospheric violations.</p>
+                <div class="card-action">ACCESS_DB</div>
+            </a>
+
+            <!-- 04 About (NEW CARD) -->
+            <a href="/about" class="portal-card neutral">
+                
+                <h3 class="card-title">About</h3>
+                <p class="card-desc">The project narrative: Technical genesis, community ownership, and the biological manifesto.</p>
+                <div class="card-action">READ_DOSSIER</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Floating Report Button -->
+    <a href="/report" class="floating-report-btn">
+        <div class="icon-circle">!</div>
+    </a>
+
+</body>
+</html>
