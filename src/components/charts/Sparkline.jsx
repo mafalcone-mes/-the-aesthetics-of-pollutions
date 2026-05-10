@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function Sparkline({ data, color, height = 80 }) {
+export default function Sparkline({ data, color, labels, height = 80 }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
   const W = 400;
   const max = Math.max(...data, 1);
@@ -14,10 +14,14 @@ export default function Sparkline({ data, color, height = 80 }) {
   const path = 'M' + pts.join(' L');
   const area = path + ` L${W},${height} L0,${height} Z`;
   const gradId = `sg${color.replace('#', '')}`;
+
   const hoveredPoint = hoveredIdx == null ? null : points[hoveredIdx];
-  const label = hoveredPoint
+  const timeLabel  = hoveredIdx != null && labels ? labels[hoveredIdx] : null;
+  const valueLabel = hoveredPoint
     ? (Number.isInteger(hoveredPoint.v) ? `${hoveredPoint.v}` : hoveredPoint.v.toFixed(1))
     : null;
+  const tooltipText = timeLabel ? `${timeLabel} · ${valueLabel}` : valueLabel;
+  const tooltipW = tooltipText && tooltipText.length > 6 ? tooltipText.length * 4.2 + 8 : 28;
 
   return (
     <svg
@@ -52,8 +56,11 @@ export default function Sparkline({ data, color, height = 80 }) {
       })}
 
       {hoveredPoint && (
-        <g transform={`translate(${hoveredPoint.x}, ${Math.max(12, hoveredPoint.y - 12)})`} pointerEvents="none">
-          <rect x={-14} y={-12} width={28} height={12} rx={3} fill="var(--black)" />
+        <g
+          transform={`translate(${Math.min(Math.max(hoveredPoint.x, tooltipW / 2), W - tooltipW / 2)}, ${Math.max(14, hoveredPoint.y - 12)})`}
+          pointerEvents="none"
+        >
+          <rect x={-tooltipW / 2} y={-13} width={tooltipW} height={13} rx={3} fill="var(--black)" />
           <text
             x="0"
             y="-3.5"
@@ -62,7 +69,7 @@ export default function Sparkline({ data, color, height = 80 }) {
             fontSize="6"
             fill="var(--white)"
           >
-            {label}
+            {tooltipText}
           </text>
         </g>
       )}

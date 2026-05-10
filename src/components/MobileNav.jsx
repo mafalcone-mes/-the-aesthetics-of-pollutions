@@ -3,6 +3,7 @@ const ITEMS = [
   { id: 'map',      icon: '◎', it: 'Mappa',    en: 'Map' },
   { id: 'archive',  icon: '▤', it: 'Archivio', en: 'Archive' },
   { id: 'symptoms', icon: '♡', it: 'Sintomi',  en: 'Symptoms' },
+  { id: 'report',   icon: '⚠', it: 'Segnala',  en: 'Report' },
 ];
 
 export default function MobileNav({ page, setPage, lang }) {

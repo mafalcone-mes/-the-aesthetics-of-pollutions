@@ -2,6 +2,7 @@ const NAV = [
   { id: 'map',      it: 'Mappa',    en: 'Map' },
   { id: 'archive',  it: 'Archivio', en: 'Archive' },
   { id: 'symptoms', it: 'Sintomi',  en: 'Symptoms' },
+  { id: 'report',   it: 'Segnala',  en: 'Report' },
 ];
 
 export default function TopBar({ page, setPage, lang, setLang }) {
