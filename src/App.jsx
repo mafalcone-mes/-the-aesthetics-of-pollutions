@@ -25,13 +25,13 @@ export default function App() {
 
   useEffect(() => {
     if (tweaks.darkMode) {
-      document.documentElement.style.setProperty('--black', '#F5F3EE');
-      document.documentElement.style.setProperty('--white', '#111010');
+      document.documentElement.style.setProperty('--black', '#F0F0F0');
+      document.documentElement.style.setProperty('--white', '#1A1A1A');
       document.documentElement.style.setProperty('--gray',  '#222');
       document.documentElement.style.setProperty('--gray2', '#666');
     } else {
-      document.documentElement.style.setProperty('--black', '#111010');
-      document.documentElement.style.setProperty('--white', '#F5F3EE');
+      document.documentElement.style.setProperty('--black', '#1A1A1A');
+      document.documentElement.style.setProperty('--white', '#F0F0F0');
       document.documentElement.style.setProperty('--gray',  '#DDDAD3');
       document.documentElement.style.setProperty('--gray2', '#9B9790');
     }

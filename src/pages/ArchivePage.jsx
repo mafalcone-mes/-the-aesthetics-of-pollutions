@@ -194,7 +194,7 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
                 <tr key={`${r.sensorId}-${r.dateObj}`} onClick={() => { setSelectedSensor(SENSORS.find((s) => s.id === r.sensorId)); setPage('record'); }}>
                   <td style={{ color: '#9B9790', fontSize: 11 }}>{(currentPage - 1) * PAGE_SIZE + i + 1}</td>
                   <td><span style={{ fontFamily: 'Epilogue', fontWeight: 700 }}>{r.sensorName}</span></td>
-                  <td><span style={{ fontStyle: 'italic' }}>{r.district}</span></td>
+                  <td><span style={{  }}>{r.district}</span></td>
                   <td>{r.dateStr}</td>
                   <td style={{ fontFamily: 'Epilogue', fontWeight: 600 }}>{r.hourStr}</td>
                   <td><span className={`aqi-pill${isDark ? ' dark' : ''}`} style={{ background: lv.color }}>{L ? lv.it : lv.en}</span></td>
@@ -213,7 +213,7 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
 
       {/* PAGINATION */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px', borderTop: 'var(--border)' }}>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontStyle: 'italic', color: '#9B9790' }}>
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: '#9B9790' }}>
           {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} {L ? 'di' : 'of'} {filtered.length.toLocaleString()} {L ? 'letture' : 'readings'}
         </div>
         <div style={{ display: 'flex', gap: 0 }}>
@@ -232,3 +232,4 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
     </div>
   );
 }
+

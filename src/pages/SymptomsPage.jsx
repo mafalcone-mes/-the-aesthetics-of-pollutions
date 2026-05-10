@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import HeroDots from '../components/HeroDots';
 import { LEVELS } from '../data/levels';
+import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
 import { SYMPTOMS, SUGGESTIONS } from '../data/symptoms';
-import { getSensorAQI } from '../utils/aqi';
+import { HOURLY_DATA } from '../data/timeseries';
+import { getPollLevel } from '../utils/aqi';
 
 const ZONE_CATS = {
   mind:    { primary: 'systemic',     label_it: 'Testa / Mente',    label_en: 'Head / Mind', desc_it: 'Mal di testa, confusione, vertigini',       desc_en: 'Headache, confusion, dizziness' },
@@ -18,217 +21,265 @@ const CATS = [
   { key: 'systemic',     it: 'Sistemici (CO/NH₃/C₆H₆)',    en: 'Systemic (CO/NH₃/C₆H₆)' },
 ];
 
-function BodyFigure({ activeZone, setActiveZone, levelColor }) {
+const ORGAN_LAYOUT = [
+  { key: 'mind', svg: 'mind', top: '19%', left: '53%', width: '33%', ratio: '50.29 / 60.19', zIndex: 2 },
+  { key: 'eyes', svg: 'eyes', top: '22%', left: '31%', width: '10%', ratio: '12.09 / 7.35', zIndex: 4 },
+  { key: 'throat', svg: 'throat', top: '35%', left: '39%', width: '16%', ratio: '33.57 / 43.16', zIndex: 3 },
+  { key: 'chest', svg: 'lungs', top: '59%', left: '52%', width: '40%', ratio: '73.59 / 72.97', zIndex: 2 },
+  { key: 'stomach', svg: 'stomach', top: '77%', left: '55%', width: '25%', ratio: '129.77 / 159.73', zIndex: 2 },
+];
+
+function BodyFigure({ activeZone, setActiveZone, zoneColors, lang }) {
+  const [hoveredZone, setHoveredZone] = useState(null);
+  const L = lang === 'it';
+
   return (
-    <svg viewBox="0 0 120 300" style={{ width: '100%', maxWidth: 160, height: 'auto' }}>
-      <ellipse cx="60" cy="34" rx="22" ry="26"
-        fill={activeZone === 'mind' ? levelColor : '#DDDAD3'} stroke="#111010" strokeWidth="2"
-        opacity={activeZone === 'mind' ? 0.75 : 1} style={{ cursor: 'pointer' }} onClick={() => setActiveZone('mind')} />
-      <ellipse cx="51" cy="30" rx="5" ry="5"
-        fill={activeZone === 'eyes' ? levelColor : '#111010'} opacity="0.85"
-        style={{ cursor: 'pointer' }} onClick={() => setActiveZone('eyes')} />
-      <ellipse cx="69" cy="30" rx="5" ry="5"
-        fill={activeZone === 'eyes' ? levelColor : '#111010'} opacity="0.85"
-        style={{ cursor: 'pointer' }} onClick={() => setActiveZone('eyes')} />
-      <rect x="52" y="58" width="16" height="14"
-        fill={activeZone === 'throat' ? levelColor : '#DDDAD3'} stroke="#111010" strokeWidth="1.5"
-        opacity={activeZone === 'throat' ? 0.7 : 1} style={{ cursor: 'pointer' }} onClick={() => setActiveZone('throat')} />
-      <path d="M30,72 L90,72 L90,127 L30,127 Z"
-        fill={activeZone === 'chest' ? levelColor : '#DDDAD3'} stroke="#111010" strokeWidth="2"
-        opacity={activeZone === 'chest' ? 0.65 : 1} style={{ cursor: 'pointer' }} onClick={() => setActiveZone('chest')} />
-      <path d="M30,127 L90,127 L88,170 L32,170 Z"
-        fill={activeZone === 'stomach' ? levelColor : '#DDDAD3'} stroke="#111010" strokeWidth="1.5"
-        opacity={activeZone === 'stomach' ? 0.65 : 1} style={{ cursor: 'pointer' }} onClick={() => setActiveZone('stomach')} />
-      <path d="M30,72 L8,148 L20,152 L36,86" fill="#DDDAD3" stroke="#111010" strokeWidth="1.5" />
-      <path d="M90,72 L112,148 L100,152 L84,86" fill="#DDDAD3" stroke="#111010" strokeWidth="1.5" />
-      <path d="M42,170 L36,265 L52,265 L60,188 L68,265 L84,265 L78,170 Z" fill="#DDDAD3" stroke="#111010" strokeWidth="1.5" />
-      {activeZone === 'chest'   && <path d="M30,72 L90,72 L90,127 L30,127 Z"     fill="none" stroke={levelColor} strokeWidth="2.5" opacity="0.6" />}
-      {activeZone === 'stomach' && <path d="M30,127 L90,127 L88,170 L32,170 Z"  fill="none" stroke={levelColor} strokeWidth="2.5" opacity="0.6" />}
-    </svg>
+    <div className="body-image-wrap">
+      <div className="body-figure-sizer">
+        <img src="/assets/corpo.svg" alt={L ? 'Corpo umano con aree selezionabili' : 'Human body with selectable areas'} className="body-image body-image-base" />
+        <div className="body-organs-layer">
+        {ORGAN_LAYOUT.map((organ) => {
+          const isActive = activeZone === organ.key;
+          const isHovered = hoveredZone === organ.key;
+          const zone = ZONE_CATS[organ.key];
+          const zoneColor = zoneColors[organ.key];
+          return (
+            <button
+              key={organ.key}
+              type="button"
+              className={`body-organ-btn${isActive ? ' active' : ''}`}
+              aria-label={L ? zone.label_it : zone.label_en}
+              onClick={() => setActiveZone(organ.key)}
+              onMouseEnter={() => setHoveredZone(organ.key)}
+              onMouseLeave={() => setHoveredZone(null)}
+              style={{
+                top: organ.top,
+                left: organ.left,
+                width: organ.width,
+                aspectRatio: organ.ratio,
+                zIndex: organ.zIndex,
+                opacity: isActive ? 1 : 0.92,
+                transform: isHovered && !isActive ? 'translate(-50%, -50%) scale(1.08)' : 'translate(-50%, -50%) scale(1)',
+                filter: isActive ? `drop-shadow(0 0 8px ${zoneColor})` : 'none',
+              }}
+            >
+              <span
+                className="body-organ-fill"
+                style={{
+                  backgroundColor: zoneColor,
+                  WebkitMaskImage: `url('/assets/${organ.svg}.svg')`,
+                  maskImage: `url('/assets/${organ.svg}.svg')`,
+                }}
+              />
+            </button>
+          );
+        })}
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function SymptomsPage({ lang }) {
   const [activeCat, setActiveCat] = useState('particulates');
   const [activeZone, setActiveZone] = useState('chest');
+  const [activeDistrict, setActiveDistrict] = useState('all');
   const L = lang === 'it';
 
-  const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
-  const lv = LEVELS[globalAQI];
-  const zoneInfo = ZONE_CATS[activeZone];
+  const districts = [...new Set(SENSORS.map((s) => s.district))].sort((a, b) => a.localeCompare(b));
+
+  // Scope to last hour, filtered by selected neighborhood
+  const latestHourMs = HOURLY_DATA.reduce((max, row) => Math.max(max, row.dateObj.getTime()), 0);
+  const latestHourRows = HOURLY_DATA.filter((row) => row.dateObj.getTime() === latestHourMs);
+  const scopedRows = activeDistrict === 'all'
+    ? latestHourRows
+    : latestHourRows.filter((row) => row.district === activeDistrict);
+  const rowsForCalc = scopedRows.length ? scopedRows : latestHourRows;
+
+  // For each category, find the highest pollutant level captured in the last hour
+  const getCategoryLevel = (catKey) => {
+    const keys = Object.keys(POLLUTANTS).filter((k) => POLLUTANTS[k].category === catKey);
+    if (!keys.length) return 0;
+    return Math.max(...keys.map((pollutantKey) => {
+      const peak = Math.max(...rowsForCalc.map((row) => row[pollutantKey] || 0));
+      return getPollLevel(pollutantKey, peak);
+    }));
+  };
+
+  const categoryLevels = {
+    particulates: getCategoryLevel('particulates'),
+    gaseous:      getCategoryLevel('gaseous'),
+    systemic:     getCategoryLevel('systemic'),
+  };
+
+  // Each organ is colored by the level of its linked pollutant category
+  const zoneColors = Object.fromEntries(
+    Object.entries(ZONE_CATS).map(([zoneKey, zone]) => [
+      zoneKey,
+      LEVELS[categoryLevels[zone.primary]].color,
+    ])
+  );
+
+  // Right panel highlights the selected category's current level
+  const currentLevelIndex = categoryLevels[activeCat] ?? 0;
+  const lv = LEVELS[currentLevelIndex];
+
+  // Health suggestions always reflect the worst pollutant across all categories
+  const overallLevelIndex = Math.max(...Object.values(categoryLevels));
+  const lvSuggestion = LEVELS[overallLevelIndex];
 
   const handleZone = (key) => {
     setActiveZone(key);
     setActiveCat(ZONE_CATS[key].primary);
   };
 
-  const LEFT_LABELS = [
-    { key: 'mind',   it: 'Mente', en: 'Mind' },
-    { key: 'eyes',   it: 'Occhi', en: 'Eyes' },
-    { key: 'throat', it: 'Gola',  en: 'Throat' },
-  ];
-  const RIGHT_LABELS = [
-    { key: 'chest',   it: 'Petto',   en: 'Chest' },
-    { key: 'stomach', it: 'Stomaco', en: 'Stomach' },
-  ];
-
   return (
     <div className="symptoms-page">
       {/* TOP BAR */}
       <div className="symptoms-top-bar">
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <div style={{ fontFamily: 'var(--font-title)', fontWeight: 800, textTransform: 'uppercase', lineHeight: 1, letterSpacing: '-0.01em', fontSize: '50px' }}>
+          <div style={{ fontFamily: 'var(--font-title)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 1, letterSpacing: '-0.01em', fontSize: '50px' }}>
             {L ? 'Mappa Sintomi' : 'Symptoms Map'}
           </div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontStyle: 'italic', color: '#9B9790' }}>
-            {L ? "Seleziona un'area del corpo" : 'Select a body area'}
-          </div>
         </div>
-        <div className="symptoms-aqi-center" style={{ borderColor: lv.color }}>
-          <div className="symptoms-aqi-num" style={{ color: lv.color }}>{globalAQI + 1}</div>
-          <div>
-            <div className="symptoms-aqi-text" style={{ color: lv.color }}>{L ? lv.it : lv.en}</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontStyle: 'italic', color: '#9B9790' }}>
-              {L ? 'Media rete · Live' : 'Network avg · Live'}
-            </div>
-          </div>
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 18, color: 'var(--black)', justifySelf: 'center', textAlign: 'center' }}>
+          {L ? "Seleziona un'area del corpo" : 'Select a body area'}
         </div>
-        <div className="symptoms-suggestion-mini">
-          <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9790', marginBottom: 4 }}>
-            {L ? 'Raccomandazione' : 'Recommendation'}
-          </div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.55 }}>{SUGGESTIONS[lv.key]?.gen}</div>
-        </div>
+        
+        
       </div>
 
-      {/* 3-COLUMN BODY AREA */}
+      {/* SINGLE BODY AREA */}
       <div className="symptoms-body-area">
-        {/* LEFT: zone selector */}
+        {/* Mobile-only neighborhood selector (shown before body/organs) */}
+        <div className="symptoms-mobile-district-filter info-card">
+          <div className="info-card-label">{L ? 'Quartiere' : 'Neighborhood'}</div>
+          <select
+            className="symptoms-district-select"
+            value={activeDistrict}
+            onChange={(e) => setActiveDistrict(e.target.value)}
+            aria-label={L ? 'Seleziona quartiere' : 'Select neighborhood'}
+          >
+            <option value="all">{L ? 'Tutta la rete' : 'Whole network'}</option>
+            {districts.map((district) => (
+              <option key={district} value={district}>{district}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Body figure with overlaid info cards */}
         <div className="symptoms-left-panel">
-          <div style={{ padding: '12px 20px', borderBottom: 'var(--border)', fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9790' }}>
-            {L ? 'Aree del corpo' : 'Body areas'}
-          </div>
-          <div className="symptoms-zone-list">
-            {Object.entries(ZONE_CATS).map(([key, z]) => (
-              <button key={key} className={`symptoms-zone-btn${activeZone === key ? ' active' : ''}`} onClick={() => handleZone(key)}>
-                <div className="zone-indicator" />
-                <div>
-                  <div>{L ? z.label_it : z.label_en}</div>
-                  <div className="zone-desc">{L ? z.desc_it : z.desc_en}</div>
+          {Object.entries(ZONE_CATS).map(([key, z]) => {
+            const isActive = activeZone === key;
+            const zoneColor = zoneColors[key];
+            return (
+              <button
+                key={key}
+                className={`symptom-zone-filter-btn${isActive ? ' active' : ''}`}
+                style={isActive ? { background: zoneColor } : {}}
+                onClick={() => handleZone(key)}
+              >
+                <div className="symptom-level-dot" style={{ background: zoneColor, opacity: isActive ? 1 : 0.8 }} />
+                <div className="symptom-zone-body">
+                  <div className="filter-label" style={isActive ? { color: 'var(--white)' } : {}}>{L ? z.label_it : z.label_en}</div>
+                  <div className="symptom-cat-sub" style={isActive ? { color: 'rgba(255,255,255,0.65)' } : {}}>{L ? z.desc_it : z.desc_en}</div>
                 </div>
               </button>
-            ))}
-          </div>
-          <div style={{ borderTop: 'var(--border)' }}>
-            <div style={{ padding: '10px 16px 0', fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9790' }}>
-              {L ? 'Comportamento consigliato' : 'Recommended behavior'}
+            );
+          })}
+          <div className="symptoms-left-footer">
+            <div className="symptoms-left-disclaimer">
+              {L
+                ? 'I sintomi indicati sono indicativi e basati su letteratura scientifica. In caso di sintomi gravi consultare un medico.'
+                : 'Symptoms listed are indicative and based on scientific literature. In case of severe symptoms, consult a doctor.'}
             </div>
-            <div className="suggestion-mini-box" style={{ borderColor: lv.color + '80' }}>
-              <div className="suggestion-mini-label">{L ? 'Popolazione generale' : 'General population'}</div>
-              <div className="suggestion-mini-text">{SUGGESTIONS[lv.key]?.gen}</div>
-            </div>
-            <div className="suggestion-mini-box" style={{ marginTop: -6, borderColor: lv.color + '80' }}>
-              <div className="suggestion-mini-label">{L ? 'Popolazione sensibile' : 'Sensitive population'}</div>
-              <div className="suggestion-mini-text">{SUGGESTIONS[lv.key]?.sen}</div>
-            </div>
+            <button className="report-btn">
+              <span>⚠</span>
+              {L ? 'SEGNALA UN SINTOMO' : 'REPORT A SYMPTOM'}
+            </button>
           </div>
         </div>
 
-        {/* CENTER: body figure */}
         <div className="symptoms-figure-col">
-          <div style={{ position: 'absolute', top: 16, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
-            <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9790' }}>
-              {L ? zoneInfo.label_it : zoneInfo.label_en}
-            </div>
-          </div>
-          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', width: '100%' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-around', paddingLeft: 12 }}>
-              {LEFT_LABELS.map((z) => (
-                <div key={z.key} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', opacity: activeZone === z.key ? 1 : 0.4, transition: 'opacity 0.15s' }} onClick={() => handleZone(z.key)}>
-                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: activeZone === z.key ? lv.color : 'var(--black)' }}>
-                    {L ? z.it : z.en}
-                  </div>
-                  <div style={{ width: 24, height: 1, background: activeZone === z.key ? lv.color : '#9B9790' }} />
-                </div>
-              ))}
-            </div>
-            <BodyFigure activeZone={activeZone} setActiveZone={handleZone} levelColor={lv.color} />
-            <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-around', paddingRight: 12 }}>
-              {RIGHT_LABELS.map((z) => (
-                <div key={z.key} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', opacity: activeZone === z.key ? 1 : 0.4, transition: 'opacity 0.15s' }} onClick={() => handleZone(z.key)}>
-                  <div style={{ width: 24, height: 1, background: activeZone === z.key ? lv.color : '#9B9790' }} />
-                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: activeZone === z.key ? lv.color : 'var(--black)' }}>
-                    {L ? z.it : z.en}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontStyle: 'italic', color: '#9B9790', textAlign: 'center', maxWidth: 200 }}>
-              {L ? zoneInfo.desc_it : zoneInfo.desc_en}
-            </div>
-          </div>
-        </div>
+            <HeroDots level={lv.index} />
 
-        {/* RIGHT: symptom matrix */}
+            {/* Info cards overlaid on the left */}
+            <div className="symptoms-info-cards">
+              <div className="symptoms-suggestions-stack">
+                <div className="info-card info-suggestion-card" style={{ borderLeftColor: lvSuggestion.color, background: lvSuggestion.color }}>
+                  <div className="info-card-label" style={{ color: 'var(--white)' }}>{L ? 'Popolazione generale' : 'General population'}</div>
+                  <div className="info-card-text" style={{ color: 'rgba(255,255,255,0.85)', opacity: 1 }}>{SUGGESTIONS[lvSuggestion.key]?.gen}</div>
+                </div>
+                <div className="info-card info-suggestion-card" style={{ borderLeftColor: lvSuggestion.color, background: lvSuggestion.color }}>
+                  <div className="info-card-label" style={{ color: 'var(--white)' }}>{L ? 'Popolazione sensibile' : 'Sensitive population'}</div>
+                  <div className="info-card-text" style={{ color: 'rgba(255,255,255,0.85)', opacity: 1 }}>{SUGGESTIONS[lvSuggestion.key]?.sen}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="symptoms-body-visual" style={{ position: 'relative', display: 'flex', justifyContent: 'center', width: '100%', flex: 1, minHeight: 0, paddingTop: '10%' }}>
+              <BodyFigure activeZone={activeZone} setActiveZone={handleZone} zoneColors={zoneColors} lang={lang} />
+            </div>
+          </div>
+
+        {/* Symptom cards */}
         <div className="symptoms-right-panel">
-          <div className="symptoms-cat-tabs">
-            {CATS.map((c) => (
-              <button key={c.key} className={`symptom-cat-btn${activeCat === c.key ? ' active' : ''}`} onClick={() => setActiveCat(c.key)}>
-                {L ? c.it.split(' (')[0] : c.en.split(' (')[0]}
-              </button>
-            ))}
-          </div>
-          <div style={{ padding: '8px 14px 6px', borderBottom: '1px solid var(--gray)', fontFamily: 'var(--font-body)', fontSize: 11, fontStyle: 'italic', color: '#9B9790' }}>
-            {activeCat === 'particulates' ? 'PM2.5 / PM10' : activeCat === 'gaseous' ? 'NO₂ · SO₂ · O₃' : 'CO · NH₃ · C₆H₆'}
-          </div>
-          <div className="symptom-matrix">
-            {LEVELS.map((l) => {
-              const sym = SYMPTOMS[activeCat][l.key];
-              const isCurrent = l.key === lv.key;
-              const isFuture = l.index > lv.index;
-              return (
-                <div key={l.key} className={`matrix-row${isCurrent ? ' current-level' : isFuture ? ' faded' : ''}`}>
-                  <div className="matrix-level" style={{ background: l.color }} />
-                  <div className="matrix-level-label">
-                    <div className="matrix-level-num" style={{ color: isCurrent ? '#fff' : l.color }}>{l.index + 1}</div>
-                    <div className="matrix-level-name">{L ? l.it : l.en}</div>
+          <div className="symptoms-cards-overlay">
+            <div className="symptoms-district-filter info-card">
+              <div className="info-card-label">{L ? 'Quartiere' : 'Neighborhood'}</div>
+              <select
+                className="symptoms-district-select"
+                value={activeDistrict}
+                onChange={(e) => setActiveDistrict(e.target.value)}
+                aria-label={L ? 'Seleziona quartiere' : 'Select neighborhood'}
+              >
+                <option value="all">{L ? 'Tutta la rete' : 'Whole network'}</option>
+                {districts.map((district) => (
+                  <option key={district} value={district}>{district}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Category selector cards */}
+            <div className="symptoms-cat-cards">
+              {CATS.map((c) => (
+                <button key={c.key} className={`symptom-cat-filter-btn${activeCat === c.key ? ' active' : ''}`} onClick={() => setActiveCat(c.key)}>
+                  <span className="filter-label">{L ? c.it.split(' (')[0] : c.en.split(' (')[0]}</span>
+                  <span className="symptom-cat-sub">{c.key === 'particulates' ? 'PM2.5 / PM10' : c.key === 'gaseous' ? 'NO₂ · SO₂ · O₃' : 'CO · NH₃ · C₆H₆'}</span>
+                </button>
+              ))}
+            </div>
+            {/* Level symptom list */}
+            <div className="symptoms-level-list">
+              {LEVELS.map((l) => {
+                const sym = SYMPTOMS[activeCat][l.key];
+                const isCurrent = l.key === lv.key;
+                const isFuture = l.index > lv.index;
+                return (
+                  <div key={l.key} className={`symptom-level-row${isCurrent ? ' active' : ''}${isFuture ? ' faded' : ''}`} style={isCurrent ? { background: l.color } : {}}>
+                    <div className="symptom-level-dot" style={{ background: l.color, opacity: isCurrent ? 1 : 0.85 }} />
+                    <div className="symptom-level-body">
+                      <div className="symptom-level-header">
+                        <span style={{ fontFamily: 'var(--font-title)', fontSize: 15, fontWeight: 900, lineHeight: 1, color: isCurrent ? 'var(--white)' : l.color }}>{l.index + 1}</span>
+                        <span className="map-sensor-title" style={{ color: isCurrent ? 'var(--white)' : undefined }}>{L ? l.it : l.en}</span>
+                      </div>
+                      {sym?.gen === 'No symptoms'
+                        ? <div className="map-sensor-sub" style={{ color: isCurrent ? 'rgba(255,255,255,0.6)' : undefined }}>—</div>
+                        : <>
+                            <div className="map-sensor-sub" style={{ color: isCurrent ? 'rgba(255,255,255,0.75)' : undefined }}><span style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.7 }}>{L ? 'Gen · ' : 'Gen · '}</span>{sym?.gen}</div>
+                            <div className="map-sensor-sub" style={{ color: isCurrent ? 'rgba(255,255,255,0.75)' : undefined, marginTop: 2 }}><span style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.7 }}>{L ? 'Sen · ' : 'Sen · '}</span>{sym?.sen}</div>
+                          </>
+                      }
+                    </div>
                   </div>
-                  <div className="matrix-content">
-                    {sym?.gen === 'No symptoms'
-                      ? <div className="matrix-sym" style={{ fontStyle: 'italic' }}>—</div>
-                      : <>
-                          <div>
-                            <div className="matrix-who">{L ? 'Generale' : 'General'}</div>
-                            <div className="matrix-sym">{sym?.gen}</div>
-                          </div>
-                          <div>
-                            <div className="matrix-who">{L ? 'Sensibile' : 'Sensitive'}</div>
-                            <div className="matrix-sym sensitive">{sym?.sen}</div>
-                          </div>
-                        </>
-                    }
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* BOTTOM BAR */}
-      <div className="symptoms-bottom">
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.6, color: '#9B9790', fontStyle: 'italic' }}>
-          {L
-            ? 'I sintomi indicati sono indicativi e basati su letteratura scientifica. In caso di sintomi gravi consultare un medico.'
-            : 'Symptoms listed are indicative and based on scientific literature. In case of severe symptoms, consult a doctor.'}
-        </div>
-        <button className="report-btn">
-          <span>⚠</span>
-          {L ? 'SEGNALA UN SINTOMO' : 'REPORT A SYMPTOM'}
-        </button>
-      </div>
     </div>
   );
 }
+
