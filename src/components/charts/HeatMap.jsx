@@ -1,12 +1,12 @@
 import { LEVELS } from '../../data/levels';
 import { getPollLevel } from '../../utils/aqi';
 
-export default function HeatMap({ sensor, lang }) {
+export default function HeatMap({ sensor, lang, pollutantKey = 'pm25' }) {
   const days = lang === 'it'
     ? ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
     : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const hours = [0, 3, 6, 9, 12, 15, 18, 21];
-  const base = sensor.pm25;
+  const base = sensor[pollutantKey] || 0;
 
   const data = days.map((_, di) =>
     Array.from({ length: 24 }, (__, h) => {
@@ -24,7 +24,7 @@ export default function HeatMap({ sensor, lang }) {
   const W = padL + 24 * cellW;
   const H = padT + 7 * cellH + 16;
 
-  const getColor = (val) => LEVELS[getPollLevel('pm25', val)].color;
+  const getColor = (val) => LEVELS[getPollLevel(pollutantKey, val)].color;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>

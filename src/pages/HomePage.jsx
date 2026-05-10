@@ -5,6 +5,7 @@ import { SUGGESTIONS } from '../data/symptoms';
 import { getSensorAQI, getPollLevel } from '../utils/aqi';
 import Sparkline from '../components/charts/Sparkline';
 import MiniChart from '../components/charts/MiniChart';
+import HeroDots from '../components/HeroDots';
 
 const SPARK = [22, 28, 35, 42, 38, 55, 48, 61, 58, 52, 68, 72, 65, 58, 70, 63, 75, 82, 78, 90, 85, 78, 72, 68];
 
@@ -35,48 +36,33 @@ export default function HomePage({ lang, setPage, setSelectedSensor }) {
     { val: `${SENSORS.length}/8`, label: L ? 'Sensori attivi' : 'Active sensors' },
     { val: '8',                    label: L ? 'Inquinanti'     : 'Pollutants' },
     { val: 'Live',                 label: L ? 'Aggiornamento'  : 'Update' },
-    { val: '2026',                 label: L ? 'Progetto dal'   : 'Project since' },
   ];
 
   return (
     <div>
       <div className="home-hero">
-        <div className="home-hero-left">
-          <div>
-            <div className="hero-tagline">
-              {L
-                ? <>{`L'ARIA DI`}<br /><em style={{ color: lvl.color }}>TARANTO</em><br />OGGI</>
-                : <>TARANTO<br /><em style={{ color: lvl.color }}>AIR</em><br />TODAY</>}
-            </div>
-            <div className="hero-subtitle">
-              {L
-                ? "Rete indipendente di monitoraggio della qualità dell'aria. Dati in tempo reale dai sensori della comunità."
-                : 'Independent air quality monitoring network. Real-time data from community sensors.'}
-            </div>
-          </div>
-          <div>
-            <div className="chart-title" style={{ marginBottom: 8 }}>
-              {L ? 'PM2.5 — ultimi 24h (media rete)' : 'PM2.5 — last 24h (network avg)'}
-            </div>
-            <div style={{ height: 80 }}><Sparkline data={SPARK} color={lvl.color} /></div>
-          </div>
-        </div>
-
-        <div className="home-hero-right">
-          <div className="hero-aqi-block">
-            <div className="hero-aqi-num" style={{ color: lvl.color }}>{globalAQI + 1}</div>
-            <div className="hero-aqi-label" style={{ color: lvl.color }}>{L ? lvl.it : lvl.en}</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: '#9B9790', marginTop: 12, lineHeight: 1.65, maxWidth: 300 }}>
-              {SUGGESTIONS[lvl.key]?.gen}
-            </div>
-          </div>
-          <div className="hero-status-bar">
-            {STATUS.map((s, i) => (
-              <div className="hero-status-item" key={i}>
-                <div className="hero-status-val">{s.val}</div>
-                <div className="hero-status-key">{s.label}</div>
+        <div className="home-hero-content">
+          <div className="home-hero-left">
+            <HeroDots level={globalAQI} />
+            <div className="home-hero-copy">
+              <div className="hero-tagline">
+                {L
+                  ? (
+                    <>
+                      <span className="tagline-lead">ARIA BENE</span>
+                      <span className="hero-subtitle">Rete indipendente di monitoraggio della qualità dell'aria. Dati in tempo reale dai sensori della comunità.</span>
+                      <span className="tagline-rest">COMUNE</span>
+                    </>
+                  )
+                  : (
+                    <>
+                      <span className="tagline-lead">TARANTO</span>
+                      <span className="hero-subtitle">Independent air quality monitoring network. Real-time data from community sensors.</span>
+                      <span className="tagline-rest">AIR TODAY</span>
+                    </>
+                  )}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>
@@ -90,41 +76,68 @@ export default function HomePage({ lang, setPage, setSelectedSensor }) {
         </span>
       </div>
 
-      <div className="home-sensors">
-        {SENSORS.map((s) => {
-          const ai = getSensorAQI(s);
-          const lv = LEVELS[ai];
-          const sparkVals = [s.pm25 * 0.8, s.pm25 * 1.1, s.pm25 * 0.9, s.pm25 * 1.3, s.pm25, s.pm25 * 1.05, s.pm25 * 0.95];
-          return (
-            <div key={s.id} className="sensor-card" onClick={() => { setSelectedSensor(s); setPage('record'); }}>
-              <div className="sensor-card-top">
-                <div>
-                  <div className="sensor-name">{s.name}</div>
-                  <div className="sensor-location">{s.location}</div>
-                </div>
-                <div className="sensor-aqi-badge" style={{ background: lv.color }}>{ai + 1}</div>
+      <div className="home-sensors-layout">
+        <aside className="home-current-status">
+          <div className="home-current-status-title">{L ? 'Stato generale' : 'General status'}</div>
+          <div className="hero-aqi-block">
+            <div className="hero-aqi-num" style={{ color: lvl.color }}>{globalAQI + 1}</div>
+            <div className="hero-aqi-label" style={{ color: lvl.color }}>{L ? lvl.it : lvl.en}</div>
+            <div>
+              <div className="chart-title" style={{ marginBottom: 8 }}>
+                {L ? 'PM2.5 — ultimi 24h (media rete)' : 'PM2.5 — last 24h (network avg)'}
               </div>
-              <MiniChart color={lv.color} values={sparkVals} />
-              <div className="sensor-pollutants">
-                {['pm25', 'pm10', 'no2', 'co', 'nh3', 'c6h6'].map((k) => {
-                  const li = getPollLevel(k, s[k] || 0);
-                  return (
-                    <div key={k} className="pollutant-chip">
-                      <div className="pollutant-chip-name">{POLLUTANTS[k].name}</div>
-                      <div className="pollutant-chip-val" style={{ color: LEVELS[li].color }}>{s[k]}</div>
-                    </div>
-                  );
-                })}
-              </div>
+              <div style={{ height: 80 }}><Sparkline data={SPARK} color={lvl.color} /></div>
             </div>
-          );
-        })}
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--black)', marginTop: 12, lineHeight: 1.65, maxWidth: 420 }}>
+              {SUGGESTIONS[lvl.key]?.gen}
+            </div>
+          </div>
+          <div className="hero-status-bar">
+            {STATUS.map((s, i) => (
+              <div className="hero-status-item" key={i}>
+                <div className="hero-status-val">{s.val}</div>
+                <div className="hero-status-key">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <div className="home-sensors">
+          {SENSORS.map((s) => {
+            const ai = getSensorAQI(s);
+            const lv = LEVELS[ai];
+            const sparkVals = [s.pm25 * 0.8, s.pm25 * 1.1, s.pm25 * 0.9, s.pm25 * 1.3, s.pm25, s.pm25 * 1.05, s.pm25 * 0.95];
+            return (
+              <div key={s.id} className="sensor-card" onClick={() => { setSelectedSensor(s); setPage('record'); }}>
+                <div className="sensor-card-top">
+                  <div>
+                    <div className="sensor-name">{s.name}</div>
+                    <div className="sensor-location">{s.location}</div>
+                  </div>
+                  <div className="sensor-aqi-badge" style={{ background: lv.color }}>{ai + 1}</div>
+                </div>
+                <MiniChart color={lv.color} values={sparkVals} />
+                <div className="sensor-pollutants">
+                  {['pm25', 'pm10', 'no2', 'co', 'nh3', 'c6h6'].map((k) => {
+                    const li = getPollLevel(k, s[k] || 0);
+                    return (
+                      <div key={k} className="pollutant-chip">
+                        <div className="pollutant-chip-name">{POLLUTANTS[k].name}</div>
+                        <div className="pollutant-chip-val" style={{ color: LEVELS[li].color }}>{s[k]}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '2px solid #111010' }}>
         {INFO_ITEMS.map((item, i) => (
           <div key={i} style={{ padding: '24px 28px', borderRight: i < 2 ? '2px solid #111010' : 'none' }}>
-            <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10, color: '#9B9790' }}>
+            <div style={{ fontFamily: 'var(--font-title)', fontSize: 16, fontWeight: 400, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10, color: 'var(--black)' }}>
               {L ? item.title_it : item.title_en}
             </div>
             <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.65 }}>

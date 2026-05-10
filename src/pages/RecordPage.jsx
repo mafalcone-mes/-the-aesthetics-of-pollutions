@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
@@ -7,14 +8,24 @@ import Sparkline from '../components/charts/Sparkline';
 import HeatMap from '../components/charts/HeatMap';
 
 export default function RecordPage({ lang, sensor }) {
+  const [activePollutant, setActivePollutant] = useState('pm25');
+
   if (!sensor) {
-    return <div style={{ padding: 40, fontFamily: 'var(--font-body)', fontSize: 14, color: '#9B9790', fontStyle: 'italic' }}>Nessun sensore selezionato.</div>;
+    return <div style={{ padding: 40, fontFamily: 'var(--font-body)', fontSize: 14, color: '#9B9790' }}>Nessun sensore selezionato.</div>;
   }
 
   const L = lang === 'it';
   const ai = getSensorAQI(sensor);
   const lv = LEVELS[ai];
-  const hist = Array.from({ length: 24 }, (_, i) => Math.max(2, sensor.pm25 * (0.6 + Math.sin(i * 0.5) * 0.4 + (i % 3) * 0.1)));
+  const poll = POLLUTANTS[activePollutant] || POLLUTANTS.pm25;
+  const activeVal = sensor[activePollutant] || 0;
+  const activeLi = getPollLevel(activePollutant, activeVal);
+  const activeLv = LEVELS[activeLi];
+  const hist = Array.from({ length: 24 }, (_, i) => {
+    const wave = 0.6 + Math.sin(i * 0.5) * 0.4 + (i % 3) * 0.1;
+    const v = activeVal * wave;
+    return Math.max(0, Number(v.toFixed(2)));
+  });
   const now = new Date();
 
   return (
@@ -38,18 +49,47 @@ export default function RecordPage({ lang, sensor }) {
           </div>
         </div>
 
+        <div className="pollutants-grid">
+          {Object.entries(POLLUTANTS).map(([key, p]) => {
+            const val = sensor[key] || 0;
+            const li = getPollLevel(key, val);
+            const lvc = LEVELS[li];
+            const pct = Math.min((val / (p.ranges[p.ranges.length - 2][1] || 1)) * 100, 100);
+            const isActive = key === activePollutant;
+            return (
+              <div
+                key={key}
+                className={`pollutant-cell pollutant-selectable${isActive ? ' active' : ''}`}
+                onClick={() => setActivePollutant(key)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setActivePollutant(key);
+                  }
+                }}
+              >
+                <div className="poll-name">{p.name}</div>
+                <div className="poll-value" style={{ color: isActive ? 'var(--white)' : lvc.color }}>{val}</div>
+                <div className="poll-unit" style={isActive ? { color: 'rgba(255,255,255,0.75)' } : {}}>{p.unit}</div>
+                <div className="poll-bar"><div className="poll-bar-fill" style={{ width: `${pct}%`, background: isActive ? 'var(--white)' : lvc.color }} /></div>
+              </div>
+            );
+          })}
+        </div>
+
         <div className="chart-area">
-          <div className="chart-title">PM2.5 μg/m³ — {L ? 'ultime 24 ore' : 'last 24 hours'}</div>
-          <div className="sparkline-container"><Sparkline data={hist} color={lv.color} /></div>
+          <div className="chart-title">{poll.name} {poll.unit} — {L ? 'ultime 24 ore' : 'last 24 hours'}</div>
+          <div className="sparkline-container"><Sparkline data={hist} color={activeLv.color} /></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
             {['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'].map((t) => (
-              <span key={t} style={{ fontFamily: 'var(--font-body)', fontSize: 10, fontStyle: 'italic', color: '#9B9790' }}>{t}</span>
+              <span key={t} style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: '#9B9790' }}>{t}</span>
             ))}
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: 'var(--border)' }}>
-          {/* Mini map */}
           <div style={{ borderRight: 'var(--border)', padding: '16px 20px' }}>
             <div className="chart-title" style={{ marginBottom: 10 }}>{L ? 'Posizione sensore' : 'Sensor location'}</div>
             <svg viewBox="0 0 200 160" style={{ width: '100%', border: '1.5px solid var(--gray)', background: '#E8E4DC', display: 'block' }}>
@@ -62,88 +102,68 @@ export default function RecordPage({ lang, sensor }) {
                 <circle key={s.id} cx={s.x * 200} cy={s.y * 160} r="3" fill="#9B9790" opacity="0.45" />
               ))}
               <circle cx={sensor.x * 200} cy={sensor.y * 160} r="16" fill={lv.color} opacity="0.12" />
-              <circle cx={sensor.x * 200} cy={sensor.y * 160} r="9"  fill={lv.color} opacity="0.3" />
-              <circle cx={sensor.x * 200} cy={sensor.y * 160} r="5"  fill={lv.color} stroke="#111010" strokeWidth="1.5" />
+              <circle cx={sensor.x * 200} cy={sensor.y * 160} r="9" fill={lv.color} opacity="0.3" />
+              <circle cx={sensor.x * 200} cy={sensor.y * 160} r="5" fill={lv.color} stroke="#111010" strokeWidth="1.5" />
               <text x={sensor.x * 200} y={sensor.y * 160 + 3} textAnchor="middle" fontSize="5" fontFamily="Epilogue" fontWeight="700" fill="#111010">{sensor.id}</text>
               <rect x={Math.min(Math.max(sensor.x * 200 - 24, 2), 150)} y={sensor.y * 160 - 20} width="48" height="11" fill="white" stroke="#111010" strokeWidth="0.8" />
               <text x={sensor.x * 200} y={sensor.y * 160 - 12} textAnchor="middle" fontSize="5.5" fontFamily="Epilogue" fontWeight="700" fill="#111010">{sensor.name}</text>
             </svg>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontStyle: 'italic', color: '#9B9790', marginTop: 6 }}>{sensor.district} — {sensor.location}</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: '#9B9790', marginTop: 6 }}>{sensor.district} — {sensor.location}</div>
           </div>
-          {/* Heatmap */}
           <div style={{ padding: '16px 20px' }}>
-            <div className="chart-title" style={{ marginBottom: 10 }}>{L ? 'Heatmap PM2.5 — 7 giorni × 24h' : 'PM2.5 Heatmap — 7 days × 24h'}</div>
-            <HeatMap sensor={sensor} lang={lang} />
+            <div className="chart-title" style={{ marginBottom: 10 }}>{L ? `Heatmap ${poll.name} — 7 giorni × 24h` : `${poll.name} Heatmap — 7 days × 24h`}</div>
+            <HeatMap sensor={sensor} lang={lang} pollutantKey={activePollutant} />
           </div>
-        </div>
-
-        <div className="pollutants-grid">
-          {Object.entries(POLLUTANTS).map(([key, p]) => {
-            const val = sensor[key] || 0;
-            const li = getPollLevel(key, val);
-            const lvc = LEVELS[li];
-            const pct = Math.min((val / (p.ranges[p.ranges.length - 2][1] || 1)) * 100, 100);
-            return (
-              <div key={key} className="pollutant-cell">
-                <div className="poll-name">{p.name}</div>
-                <div className="poll-value" style={{ color: lvc.color }}>{val}</div>
-                <div className="poll-unit">{p.unit}</div>
-                <div className="poll-bar"><div className="poll-bar-fill" style={{ width: `${pct}%`, background: lvc.color }} /></div>
-              </div>
-            );
-          })}
         </div>
       </div>
 
       <div className="record-right">
-        <div style={{ fontFamily: 'var(--font-title)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20, color: '#9B9790' }}>
-          {L ? 'Raccomandazioni' : 'Recommendations'}
-        </div>
-        <div style={{ height: 4, background: lv.color, marginBottom: 16 }} />
-        {[
-          { who: L ? 'Popolazione generale'  : 'General population',   text: SUGGESTIONS[lv.key]?.gen },
-          { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: SUGGESTIONS[lv.key]?.sen },
-        ].map((s, i) => (
-          <div key={i} className="suggestion-box" style={{ marginBottom: 10 }}>
-            <div className="suggestion-box-label">{s.who}</div>
-            <div>{s.text}</div>
-          </div>
-        ))}
-
-        <div style={{ marginTop: 24, fontFamily: 'var(--font-title)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9790', marginBottom: 12 }}>
-          {L ? 'Sintomi associati' : 'Associated symptoms'}
-        </div>
-        {[
-          { catKey: 'particulates', label: L ? 'Particolato (PM2.5/PM10)' : 'Particulates' },
-          { catKey: 'gaseous',      label: L ? 'Gas irritanti (NO₂/SO₂/O₃)' : 'Gaseous irritants' },
-          { catKey: 'systemic',     label: L ? 'Sistemici (CO/NH₃/C₆H₆)' : 'Systemic' },
-        ].map(({ catKey, label }) => {
-          const s = SYMPTOMS[catKey][lv.key];
-          if (!s) return null;
-          return (
-            <div key={catKey} className="suggestion-box">
-              <div className="suggestion-box-label">{label}</div>
-              <div style={{ marginBottom: 6, fontSize: 13 }}>
-                <strong style={{ fontFamily: 'var(--font-title)', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{L ? 'Generale' : 'General'}</strong><br />{s.gen}
-              </div>
-              <div style={{ fontSize: 13, color: '#666' }}>
-                <strong style={{ fontFamily: 'var(--font-title)', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#111' }}>{L ? 'Sensibile' : 'Sensitive'}</strong><br />{s.sen}
-              </div>
+        <div className="record-right-inner">
+          <div className="record-side-title">{L ? 'Raccomandazioni' : 'Recommendations'}</div>
+          <div className="record-side-accent" style={{ background: lv.color }} />
+          {[
+            { who: L ? 'Popolazione generale' : 'General population', text: SUGGESTIONS[lv.key]?.gen },
+            { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: SUGGESTIONS[lv.key]?.sen },
+          ].map((s, i) => (
+            <div key={i} className="suggestion-box">
+              <div className="suggestion-box-label">{s.who}</div>
+              <div>{s.text}</div>
             </div>
-          );
-        })}
-
-        <div style={{ marginTop: 24, fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9790', marginBottom: 6 }}>
-          {L ? 'Scala AQI' : 'AQI Scale'}
-        </div>
-        <div style={{ display: 'flex' }}>
-          {LEVELS.map((l) => (
-            <div key={l.key} style={{ flex: 1, height: 8, background: l.color, outline: l.key === lv.key ? '2px solid #111010' : 'none', outlineOffset: 1 }} title={L ? l.it : l.en} />
           ))}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, fontStyle: 'italic', color: '#9B9790' }}>1 — {L ? 'Buono' : 'Good'}</span>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, fontStyle: 'italic', color: '#9B9790' }}>6 — {L ? 'Estremo' : 'Extreme'}</span>
+
+          <div className="record-side-title record-side-title-spaced">{L ? 'Sintomi associati' : 'Associated symptoms'}</div>
+          {[
+            { catKey: 'particulates', label: L ? 'Particolato (PM2.5/PM10)' : 'Particulates' },
+            { catKey: 'gaseous', label: L ? 'Gas irritanti (NO2/SO2/O3)' : 'Gaseous irritants' },
+            { catKey: 'systemic', label: L ? 'Sistemici (CO/NH3/C6H6)' : 'Systemic' },
+          ].map(({ catKey, label }) => {
+            const s = SYMPTOMS[catKey][lv.key];
+            if (!s) return null;
+            return (
+              <div key={catKey} className="suggestion-box">
+                <div className="suggestion-box-label">{label}</div>
+                <div style={{ marginBottom: 6, fontSize: 13 }}>
+                  <strong style={{ fontFamily: 'var(--font-title)', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{L ? 'Generale' : 'General'}</strong><br />{s.gen}
+                </div>
+                <div style={{ fontSize: 13, color: '#666' }}>
+                  <strong style={{ fontFamily: 'var(--font-title)', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#111' }}>{L ? 'Sensibile' : 'Sensitive'}</strong><br />{s.sen}
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="record-side-scale-wrap">
+            <div className="record-side-title record-side-title-small">{L ? 'Scala AQI' : 'AQI Scale'}</div>
+            <div style={{ display: 'flex' }}>
+              {LEVELS.map((l) => (
+                <div key={l.key} style={{ flex: 1, height: 8, background: l.color, outline: l.key === lv.key ? '2px solid #111010' : 'none', outlineOffset: 1 }} title={L ? l.it : l.en} />
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: '#9B9790' }}>1 — {L ? 'Buono' : 'Good'}</span>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: '#9B9790' }}>6 — {L ? 'Estremo' : 'Extreme'}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
