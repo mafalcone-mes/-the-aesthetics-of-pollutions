@@ -1,13 +1,24 @@
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
+import { HOURLY_DATA } from '../data/timeseries';
 import { SUGGESTIONS } from '../data/symptoms';
 import { getSensorAQI, getPollLevel } from '../utils/aqi';
 import Sparkline from '../components/charts/Sparkline';
 import MiniChart from '../components/charts/MiniChart';
 import HeroDots from '../components/HeroDots';
 
-const SPARK = [22, 28, 35, 42, 38, 55, 48, 61, 58, 52, 68, 72, 65, 58, 70, 63, 75, 82, 78, 90, 85, 78, 72, 68];
+// Network-average PM2.5 for the last 24 hourly timestamps
+const allTimestamps = [...new Set(HOURLY_DATA.map(r => r.dateObj.getTime()))].sort();
+const last24Ts = allTimestamps.slice(-24);
+const SPARK = last24Ts.map(ts => {
+  const rows = HOURLY_DATA.filter(r => r.dateObj.getTime() === ts);
+  return Math.round(rows.reduce((s, r) => s + r.pm25, 0) / rows.length);
+});
+const SPARK_LABELS = last24Ts.map(ts => {
+  const d = new Date(ts);
+  return String(d.getHours()).padStart(2, '0') + ':00';
+});
 
 const INFO_ITEMS = [
   {
@@ -86,7 +97,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor }) {
               <div className="chart-title" style={{ marginBottom: 8 }}>
                 {L ? 'PM2.5 — ultimi 24h (media rete)' : 'PM2.5 — last 24h (network avg)'}
               </div>
-              <div style={{ height: 80 }}><Sparkline data={SPARK} color={lvl.color} /></div>
+              <div style={{ height: 80 }}><Sparkline data={SPARK} color={lvl.color} labels={SPARK_LABELS} /></div>
             </div>
             <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--black)', marginTop: 12, lineHeight: 1.65, maxWidth: 420 }}>
               {SUGGESTIONS[lvl.key]?.gen}
@@ -106,7 +117,8 @@ export default function HomePage({ lang, setPage, setSelectedSensor }) {
           {SENSORS.map((s) => {
             const ai = getSensorAQI(s);
             const lv = LEVELS[ai];
-            const sparkVals = [s.pm25 * 0.8, s.pm25 * 1.1, s.pm25 * 0.9, s.pm25 * 1.3, s.pm25, s.pm25 * 1.05, s.pm25 * 0.95];
+            const sensorRows = HOURLY_DATA.filter(r => r.sensorId === s.id);
+            const sparkVals = sensorRows.slice(-7).map(r => r.pm25);
             return (
               <div key={s.id} className="sensor-card" onClick={() => { setSelectedSensor(s); setPage('record'); }}>
                 <div className="sensor-card-top">

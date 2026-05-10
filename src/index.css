@@ -837,3 +837,123 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   .home-sensors { grid-template-columns: 1fr; }
 }
 
+/* REPORT PAGE */
+.report-page { display: flex; flex-direction: column; min-height: calc(100vh - 48px); }
+
+.report-page-header {
+  padding: 32px 40px 28px;
+  border-bottom: var(--border);
+}
+.report-page-title {
+  font-family: var(--font-title); font-size: 42px; font-weight: 800;
+  letter-spacing: -0.01em; line-height: 1; text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.report-page-subtitle {
+  font-family: var(--font-body); font-size: 15px; line-height: 1.6; color: var(--gray2);
+  max-width: 580px;
+}
+
+.report-page-body {
+  display: grid; grid-template-columns: 1fr 1fr;
+  align-items: start; flex: 1;
+}
+
+.report-form {
+  border-right: var(--border);
+  padding: 32px 40px;
+  display: flex; flex-direction: column; gap: 28px;
+}
+.report-form-row { display: flex; flex-direction: column; gap: 8px; }
+
+.report-label {
+  font-family: var(--font-title); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray2);
+}
+.report-input,
+.report-select,
+.report-textarea {
+  border: var(--border); background: var(--white); color: var(--black);
+  font-family: var(--font-body); font-size: 14px;
+  padding: 10px 12px; width: 100%; outline: none;
+  transition: border-color 0.12s;
+}
+.report-input:focus,
+.report-select:focus,
+.report-textarea:focus { border-color: var(--black); }
+.report-textarea { resize: vertical; min-height: 96px; }
+
+.report-symptoms-grid {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.report-symptom-chip {
+  padding: 6px 14px;
+  border: 1.5px solid var(--gray);
+  background: transparent; color: var(--black);
+  font-family: var(--font-title); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer; transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+.report-symptom-chip:hover { border-color: var(--black); }
+.report-symptom-chip.active { background: var(--black); color: var(--white); border-color: var(--black); }
+
+.report-form-footer { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.report-success {
+  font-family: var(--font-title); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; color: #4CAF6F;
+}
+.report-submit-btn {
+  padding: 12px 28px;
+  background: var(--black); color: var(--white); border: var(--border);
+  font-family: var(--font-title); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+  transition: opacity 0.12s;
+}
+.report-submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.report-submit-btn:not(:disabled):hover { opacity: 0.8; }
+
+.report-history { padding: 32px 40px; }
+.report-history-header {
+  font-family: var(--font-title); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray2);
+  margin-bottom: 20px;
+}
+.report-history-list { display: flex; flex-direction: column; }
+.report-history-item {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--gray);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.report-history-item:last-child { border-bottom: none; }
+.report-history-meta {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+}
+.report-history-name {
+  font-family: var(--font-title); font-size: 13px; font-weight: 700;
+}
+.report-history-district {
+  font-family: var(--font-body); font-size: 12px; font-style: italic; color: var(--gray2);
+}
+.report-history-time {
+  font-family: var(--font-body); font-size: 11px; color: var(--gray2); margin-left: auto;
+}
+.report-history-symptoms { display: flex; flex-wrap: wrap; gap: 5px; }
+.report-history-chip {
+  padding: 3px 10px;
+  border: 1.5px solid var(--black);
+  font-family: var(--font-title); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.report-history-note {
+  font-family: var(--font-body); font-size: 13px; line-height: 1.55; color: var(--gray2);
+  font-style: italic;
+}
+
+@media (max-width: 860px) {
+  .report-page-body { grid-template-columns: 1fr; }
+  .report-form { border-right: none; border-bottom: var(--border); padding: 24px; }
+  .report-history { padding: 24px; }
+  .report-page-header { padding: 24px; }
+  .report-page-title { font-size: 28px; }
+}
+

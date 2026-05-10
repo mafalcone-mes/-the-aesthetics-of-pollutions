@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
+import { HOURLY_DATA } from '../data/timeseries';
 import { SYMPTOMS, SUGGESTIONS } from '../data/symptoms';
 import { getSensorAQI, getPollLevel } from '../utils/aqi';
 import Sparkline from '../components/charts/Sparkline';
@@ -21,12 +22,21 @@ export default function RecordPage({ lang, sensor }) {
   const activeVal = sensor[activePollutant] || 0;
   const activeLi = getPollLevel(activePollutant, activeVal);
   const activeLv = LEVELS[activeLi];
-  const hist = Array.from({ length: 24 }, (_, i) => {
-    const wave = 0.6 + Math.sin(i * 0.5) * 0.4 + (i % 3) * 0.1;
-    const v = activeVal * wave;
-    return Math.max(0, Number(v.toFixed(2)));
-  });
-  const now = new Date();
+
+  const sensorRows = HOURLY_DATA.filter(r => r.sensorId === sensor.id);
+  const histRows = sensorRows.slice(-24);
+  const hist = histRows.map(r => r[activePollutant] ?? 0);
+
+  // 7 evenly-spaced axis labels drawn from the real timestamps
+  const axisIdxs = [0, 4, 8, 12, 16, 20, 23];
+  const axisLabels = axisIdxs.map(i => histRows[i]?.hourStr ?? '');
+
+  // Tooltip label per data point (hourStr for every point)
+  const sparkLabels = histRows.map(r => r.hourStr);
+
+  // Most recent recorded timestamp drives the header date
+  const latestRow = sensorRows[sensorRows.length - 1];
+  const now = latestRow ? latestRow.dateObj : new Date();
 
   return (
     <div className="record-page">
@@ -81,10 +91,10 @@ export default function RecordPage({ lang, sensor }) {
 
         <div className="chart-area">
           <div className="chart-title">{poll.name} {poll.unit} — {L ? 'ultime 24 ore' : 'last 24 hours'}</div>
-          <div className="sparkline-container"><Sparkline data={hist} color={activeLv.color} /></div>
+          <div className="sparkline-container"><Sparkline data={hist} color={activeLv.color} labels={sparkLabels} /></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-            {['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'].map((t) => (
-              <span key={t} style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: '#9B9790' }}>{t}</span>
+            {axisLabels.map((t, i) => (
+              <span key={i} style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: '#9B9790' }}>{t}</span>
             ))}
           </div>
         </div>
@@ -112,7 +122,7 @@ export default function RecordPage({ lang, sensor }) {
           </div>
           <div style={{ padding: '16px 20px' }}>
             <div className="chart-title" style={{ marginBottom: 10 }}>{L ? `Heatmap ${poll.name} — 7 giorni × 24h` : `${poll.name} Heatmap — 7 days × 24h`}</div>
-            <HeatMap sensor={sensor} lang={lang} pollutantKey={activePollutant} />
+            <HeatMap readings={sensorRows} lang={lang} pollutantKey={activePollutant} />
           </div>
         </div>
       </div>

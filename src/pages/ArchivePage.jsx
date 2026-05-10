@@ -34,8 +34,8 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
   const [fSensors, setFSensors]   = useState(new Set(['all']));
   const [fDistricts, setFDistricts] = useState(new Set(['all']));
   const [fAqi, setFAqi]           = useState(new Set([0, 1, 2, 3, 4, 5]));
-  const [fDateFrom, setFDateFrom] = useState('2026-04-26');
-  const [fDateTo, setFDateTo]     = useState('2026-05-03');
+  const [fDateFrom, setFDateFrom] = useState('2026-04-30');
+  const [fDateTo, setFDateTo]     = useState('2026-05-07');
   const [chartPolls, setChartPolls] = useState(new Set(['pm25', 'pm10', 'no2', 'co']));
   const [currentPage, setCurrentPage] = useState(1);
 

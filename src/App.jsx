@@ -9,6 +9,7 @@ import MapPage from './pages/MapPage';
 import ArchivePage from './pages/ArchivePage';
 import RecordPage from './pages/RecordPage';
 import SymptomsPage from './pages/SymptomsPage';
+import ReportPage from './pages/ReportPage';
 
 const TWEAK_DEFAULTS = {
   darkMode: false,
@@ -50,6 +51,7 @@ export default function App() {
         {page === 'archive'  && <ArchivePage  lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
         {page === 'record'   && <RecordPage   lang={lang} sensor={selectedSensor} />}
         {page === 'symptoms' && <SymptomsPage lang={lang} />}
+        {page === 'report'   && <ReportPage   lang={lang} />}
       </main>
       <footer className="footer">
         <span className="footer-text">Aria Bene Comune — Linux Group Taranto — 2026</span>
