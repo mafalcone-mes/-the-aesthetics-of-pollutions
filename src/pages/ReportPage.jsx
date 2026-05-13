@@ -1,26 +1,32 @@
 import { useState } from 'react';
 import { SENSORS } from '../data/sensors';
+import { LEVELS } from '../data/levels';
+import { getSensorAQI } from '../utils/aqi';
+import HeroDots from '../components/HeroDots';
 
 const DISTRICTS = [...new Set(SENSORS.map((s) => s.district))].sort((a, b) => a.localeCompare(b));
 
 const SYMPTOM_OPTIONS = [
-  { key: 'cough',      it: 'Tosse',                       en: 'Cough' },
-  { key: 'breath',     it: 'Difficoltà respiratorie',      en: 'Breathing difficulty' },
-  { key: 'eyes',       it: 'Irritazione agli occhi',       en: 'Eye irritation' },
-  { key: 'throat',     it: 'Bruciore / gola secca',        en: 'Throat burning / dryness' },
-  { key: 'headache',   it: 'Mal di testa',                 en: 'Headache' },
-  { key: 'nausea',     it: 'Nausea',                       en: 'Nausea' },
-  { key: 'dizziness',  it: 'Vertigini',                    en: 'Dizziness' },
-  { key: 'fatigue',    it: 'Stanchezza / affaticamento',   en: 'Fatigue' },
-  { key: 'chest',      it: 'Oppressione al petto',         en: 'Chest tightness' },
-  { key: 'other',      it: 'Altro',                        en: 'Other' },
+  { key: 'cough',     it: 'Tosse',                     en: 'Cough' },
+  { key: 'breath',    it: 'Difficoltà respiratorie',    en: 'Breathing difficulty' },
+  { key: 'eyes',      it: 'Irritazione agli occhi',     en: 'Eye irritation' },
+  { key: 'throat',    it: 'Bruciore / gola secca',      en: 'Throat burning / dryness' },
+  { key: 'headache',  it: 'Mal di testa',               en: 'Headache' },
+  { key: 'nausea',    it: 'Nausea',                     en: 'Nausea' },
+  { key: 'dizziness', it: 'Vertigini',                  en: 'Dizziness' },
+  { key: 'fatigue',   it: 'Stanchezza / affaticamento', en: 'Fatigue' },
+  { key: 'chest',     it: 'Oppressione al petto',       en: 'Chest tightness' },
+  { key: 'other',     it: 'Altro',                      en: 'Other' },
 ];
 
 const EMPTY_FORM = { name: '', district: '', symptoms: new Set(), note: '' };
 
 function formatTime(date) {
-  return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + ' · ' +
-    date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return (
+    date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) +
+    ' · ' +
+    date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  );
 }
 
 export default function ReportPage({ lang }) {
@@ -28,6 +34,9 @@ export default function ReportPage({ lang }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [reports, setReports] = useState([]);
   const [submitted, setSubmitted] = useState(false);
+
+  const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
+  const lvl = LEVELS[globalAQI];
 
   const toggleSymptom = (key) => {
     const next = new Set(form.symptoms);
@@ -56,16 +65,42 @@ export default function ReportPage({ lang }) {
 
   return (
     <div className="report-page">
+
+      {/* HERO HEADER */}
       <div className="report-page-header">
-        <div className="report-page-title">{L ? 'SEGNALA UN SINTOMO' : 'REPORT A SYMPTOM'}</div>
-        <div className="report-page-subtitle">
-          {L
-            ? "Hai avvertito disturbi che potrebbero essere legati alla qualità dell'aria? Segnalacelo."
-            : 'Have you experienced discomfort that may be linked to air quality? Let us know.'}
+        <HeroDots level={globalAQI} />
+        <div className="report-page-header-content">
+          <div className="report-page-title">
+            {L ? 'Segnala un Sintomo' : 'Report a Symptom'}
+          </div>
+          <div className="report-page-subtitle">
+            {L
+              ? "Hai avvertito disturbi legati alla qualità dell'aria? Segnalacelo — ogni voce contribuisce alla mappa collettiva."
+              : 'Have you experienced discomfort linked to air quality? Let us know — every report builds the collective map.'}
+          </div>
+          <div className="report-page-aqi-badge">
+            <div className="report-page-aqi-dot" style={{ background: lvl.color }} />
+            <span style={{ color: lvl.color }}>AQI {globalAQI + 1} — {L ? lvl.it : lvl.en}</span>
+          </div>
         </div>
       </div>
 
+      {/* SECTION LABEL — full-width */}
+      <div className="section-label">
+        <span className="section-label-text">
+          {L ? 'Compila il modulo' : 'Fill in the form'}
+        </span>
+        {submitted && (
+          <span className="report-success-inline">
+            ✓ {L ? 'Segnalazione inviata. Grazie.' : 'Report submitted. Thank you.'}
+          </span>
+        )}
+      </div>
+
+      {/* BODY: form + history */}
       <div className="report-page-body">
+
+        {/* FORM */}
         <form className="report-form" onSubmit={handleSubmit} noValidate>
 
           <div className="report-form-row">
@@ -134,44 +169,52 @@ export default function ReportPage({ lang }) {
           </div>
 
           <div className="report-form-footer">
-            {submitted && (
-              <div className="report-success">
-                {L ? '✓ Segnalazione inviata. Grazie.' : '✓ Report submitted. Thank you.'}
-              </div>
-            )}
-            <button type="submit" className="report-submit-btn" disabled={!valid}>
+            <button type="submit" className="report-btn" disabled={!valid}
+              style={{ opacity: valid ? 1 : 0.35, cursor: valid ? 'pointer' : 'not-allowed' }}>
               {L ? 'INVIA SEGNALAZIONE →' : 'SUBMIT REPORT →'}
             </button>
           </div>
         </form>
 
-        {reports.length > 0 && (
-          <div className="report-history">
-            <div className="report-history-header">
-              {L ? `ULTIME ${reports.length} SEGNALAZIONI` : `LAST ${reports.length} REPORTS`}
+        {/* HISTORY */}
+        <div className="report-history">
+          {reports.length === 0 ? (
+            <div className="report-history-empty">
+              <div className="report-history-empty-text">
+                {L
+                  ? 'Le segnalazioni inviate in questa sessione appariranno qui.'
+                  : 'Reports submitted in this session will appear here.'}
+              </div>
             </div>
-            <div className="report-history-list">
-              {reports.map((r, i) => (
-                <div key={r.id} className="report-history-item">
-                  <div className="report-history-meta">
-                    <span className="report-history-name">{r.name}</span>
-                    <span className="report-history-district">{r.district}</span>
-                    <span className="report-history-time">{formatTime(r.time)}</span>
+          ) : (
+            <>
+              <div className="report-history-header">
+                {L ? `ULTIME ${reports.length} SEGNALAZIONI` : `LAST ${reports.length} REPORTS`}
+              </div>
+              <div className="report-history-list">
+                {reports.map((r) => (
+                  <div key={r.id} className="report-history-item">
+                    <div className="report-history-meta">
+                      <span className="report-history-name">{r.name}</span>
+                      <span className="report-history-district">{r.district}</span>
+                      <span className="report-history-time">{formatTime(r.time)}</span>
+                    </div>
+                    <div className="report-history-symptoms">
+                      {r.symptoms.map((k) => {
+                        const opt = SYMPTOM_OPTIONS.find((o) => o.key === k);
+                        return opt
+                          ? <span key={k} className="report-history-chip">{L ? opt.it : opt.en}</span>
+                          : null;
+                      })}
+                    </div>
+                    {r.note && <div className="report-history-note">{r.note}</div>}
                   </div>
-                  <div className="report-history-symptoms">
-                    {r.symptoms.map((k) => {
-                      const opt = SYMPTOM_OPTIONS.find((o) => o.key === k);
-                      return opt
-                        ? <span key={k} className="report-history-chip">{L ? opt.it : opt.en}</span>
-                        : null;
-                    })}
-                  </div>
-                  {r.note && <div className="report-history-note">{r.note}</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
       </div>
     </div>
   );

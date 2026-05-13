@@ -10,6 +10,7 @@ import ArchivePage from './pages/ArchivePage';
 import RecordPage from './pages/RecordPage';
 import SymptomsPage from './pages/SymptomsPage';
 import ReportPage from './pages/ReportPage';
+import AboutPanel from './components/AboutPanel';
 
 const TWEAK_DEFAULTS = {
   darkMode: false,
@@ -22,6 +23,7 @@ export default function App() {
   const [page, setPage] = useState('home');
   const [lang, setLang] = useState('it');
   const [selectedSensor, setSelectedSensor] = useState(SENSORS[1]);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function App() {
         {page === 'map'      && <MapPage      lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
         {page === 'archive'  && <ArchivePage  lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
         {page === 'record'   && <RecordPage   lang={lang} sensor={selectedSensor} />}
-        {page === 'symptoms' && <SymptomsPage lang={lang} />}
+        {page === 'symptoms' && <SymptomsPage lang={lang} setPage={setPage} />}
         {page === 'report'   && <ReportPage   lang={lang} />}
       </main>
       <footer className="footer">
@@ -58,6 +60,15 @@ export default function App() {
         <span className="footer-text">{lang === 'it' ? 'Dati simulati a scopo dimostrativo' : 'Simulated data for demonstration'}</span>
       </footer>
       <MobileNav page={page} setPage={setPage} lang={lang} />
+      <button
+        className={`about-tab${aboutOpen ? ' open' : ''}`}
+        onClick={() => setAboutOpen(prev => !prev)}
+        aria-label={lang === 'it' ? 'Limiti inquinanti' : 'Pollutant thresholds'}
+        aria-pressed={aboutOpen}
+      >
+        {lang === 'it' ? 'Limiti inquinanti' : 'Thresholds'}
+      </button>
+      <AboutPanel open={aboutOpen} onClose={() => setAboutOpen(false)} lang={lang} />
 
       <TweaksPanel title="Tweaks">
         <TweakSection title="Aspetto">

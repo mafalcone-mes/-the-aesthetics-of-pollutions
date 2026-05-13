@@ -53,7 +53,7 @@
   border: 1.5px solid #111010; user-select: none;
 }
 .twk-seg-thumb {
-  position: absolute; top: 2px; bottom: 2px; background: #111010;
+  position: absolute; top: 2px; bottom: 2px; background: var(--primary);
   transition: left .15s cubic-bezier(.3,.7,.4,1), width .15s;
 }
 .twk-seg.dragging .twk-seg-thumb { transition: none; }
@@ -68,15 +68,15 @@
   background: rgba(0,0,0,.1); transition: background .15s;
   cursor: default; padding: 0; border-radius: 0;
 }
-.twk-toggle[data-on="1"] { background: #111010; }
+.twk-toggle[data-on="1"] { background: var(--primary); }
 .twk-toggle i {
   position: absolute; top: 2px; left: 2px; width: 10px; height: 10px;
-  background: #111010; transition: transform .15s;
+  background: var(--primary); transition: transform .15s;
 }
 .twk-toggle[data-on="1"] i { background: #fff; transform: translateX(14px); }
 .twk-btn {
   appearance: none; height: 26px; padding: 0 12px;
-  border: 1.5px solid #111010; background: #111010;
+  border: 1.5px solid #111010; background: var(--primary);
   color: #fff; font: inherit; font-weight: 600; cursor: default;
 }
 .twk-btn:hover { background: #333; }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import HeroDots from '../components/HeroDots';
+import ReportPage from './ReportPage';
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
@@ -136,37 +136,41 @@ export default function SymptomsPage({ lang }) {
   return (
     <div className="symptoms-page">
       {/* TOP BAR */}
-      <div className="symptoms-top-bar">
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <div style={{ fontFamily: 'var(--font-title)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 1, letterSpacing: '-0.01em', fontSize: '50px' }}>
-            {L ? 'Mappa Sintomi' : 'Symptoms Map'}
+      <div style={{ padding: '24px 28px 0 28px' }}>
+        <span style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
+          {L ? 'Mappa Sintomi' : 'Symptoms Map'}
+        </span>
+      </div>
+
+      {/* STATUS BAR */}
+      <div style={{ borderBottom: '1px solid var(--gray)', marginTop: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 28px', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--black)' }}>
+            {L ? "Seleziona un'area del corpo" : 'Select a body area'}
+            {' — '}
+            <span style={{ color: lvSuggestion.color }}>{L ? lvSuggestion.it : lvSuggestion.en}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <select
+              value={activeDistrict}
+              onChange={(e) => setActiveDistrict(e.target.value)}
+              style={{ border: '1.5px solid var(--gray2)', fontFamily: 'Epilogue', fontSize: 11, fontWeight: 400, padding: '6px 12px', background: 'var(--white)', letterSpacing: '0.04em', cursor: 'pointer' }}
+              aria-label={L ? 'Seleziona quartiere' : 'Select neighborhood'}
+            >
+              <option value="all">{L ? 'Tutta la rete' : 'Whole network'}</option>
+              {districts.map((district) => (
+                <option key={district} value={district}>{district}</option>
+              ))}
+            </select>
+            <span style={{ padding: '7px 14px', background: lvSuggestion.color, color: '#fff', fontFamily: 'Epilogue', fontSize: 11, fontWeight: 400, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              {SUGGESTIONS[lvSuggestion.key]?.gen}
+            </span>
           </div>
         </div>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 18, color: 'var(--black)', justifySelf: 'center', textAlign: 'center' }}>
-          {L ? "Seleziona un'area del corpo" : 'Select a body area'}
-        </div>
-        
-        
       </div>
 
       {/* SINGLE BODY AREA */}
       <div className="symptoms-body-area">
-        {/* Mobile-only neighborhood selector (shown before body/organs) */}
-        <div className="symptoms-mobile-district-filter info-card">
-          <div className="info-card-label">{L ? 'Quartiere' : 'Neighborhood'}</div>
-          <select
-            className="symptoms-district-select"
-            value={activeDistrict}
-            onChange={(e) => setActiveDistrict(e.target.value)}
-            aria-label={L ? 'Seleziona quartiere' : 'Select neighborhood'}
-          >
-            <option value="all">{L ? 'Tutta la rete' : 'Whole network'}</option>
-            {districts.map((district) => (
-              <option key={district} value={district}>{district}</option>
-            ))}
-          </select>
-        </div>
-
         {/* Body figure with overlaid info cards */}
         <div className="symptoms-left-panel">
           {Object.entries(ZONE_CATS).map(([key, z]) => {
@@ -201,22 +205,6 @@ export default function SymptomsPage({ lang }) {
         </div>
 
         <div className="symptoms-figure-col">
-            <HeroDots level={lv.index} />
-
-            {/* Info cards overlaid on the left */}
-            <div className="symptoms-info-cards">
-              <div className="symptoms-suggestions-stack">
-                <div className="info-card info-suggestion-card" style={{ borderLeftColor: lvSuggestion.color, background: lvSuggestion.color }}>
-                  <div className="info-card-label" style={{ color: 'var(--white)' }}>{L ? 'Popolazione generale' : 'General population'}</div>
-                  <div className="info-card-text" style={{ color: 'rgba(255,255,255,0.85)', opacity: 1 }}>{SUGGESTIONS[lvSuggestion.key]?.gen}</div>
-                </div>
-                <div className="info-card info-suggestion-card" style={{ borderLeftColor: lvSuggestion.color, background: lvSuggestion.color }}>
-                  <div className="info-card-label" style={{ color: 'var(--white)' }}>{L ? 'Popolazione sensibile' : 'Sensitive population'}</div>
-                  <div className="info-card-text" style={{ color: 'rgba(255,255,255,0.85)', opacity: 1 }}>{SUGGESTIONS[lvSuggestion.key]?.sen}</div>
-                </div>
-              </div>
-            </div>
-
             <div className="symptoms-body-visual" style={{ position: 'relative', display: 'flex', justifyContent: 'center', width: '100%', flex: 1, minHeight: 0, paddingTop: '10%' }}>
               <BodyFigure activeZone={activeZone} setActiveZone={handleZone} zoneColors={zoneColors} lang={lang} />
             </div>
@@ -225,21 +213,6 @@ export default function SymptomsPage({ lang }) {
         {/* Symptom cards */}
         <div className="symptoms-right-panel">
           <div className="symptoms-cards-overlay">
-            <div className="symptoms-district-filter info-card">
-              <div className="info-card-label">{L ? 'Quartiere' : 'Neighborhood'}</div>
-              <select
-                className="symptoms-district-select"
-                value={activeDistrict}
-                onChange={(e) => setActiveDistrict(e.target.value)}
-                aria-label={L ? 'Seleziona quartiere' : 'Select neighborhood'}
-              >
-                <option value="all">{L ? 'Tutta la rete' : 'Whole network'}</option>
-                {districts.map((district) => (
-                  <option key={district} value={district}>{district}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Category selector cards */}
             <div className="symptoms-cat-cards">
               {CATS.map((c) => (
@@ -279,6 +252,7 @@ export default function SymptomsPage({ lang }) {
         </div>
       </div>
 
+      <ReportPage lang={lang} />
     </div>
   );
 }
