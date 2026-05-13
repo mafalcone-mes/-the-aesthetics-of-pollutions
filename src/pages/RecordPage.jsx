@@ -12,7 +12,7 @@ import HeatMap from '../components/charts/HeatMap';
 
 const SUB_LABEL = {
   fontFamily: 'Epilogue', fontSize: 10, fontWeight: 400,
-  letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gray2)',
+  letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--black)',
 };
 
 export default function RecordPage({ lang, sensor }) {
@@ -52,7 +52,7 @@ export default function RecordPage({ lang, sensor }) {
           <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--black)' }}>
             {sensor.location}
             {' — '}
-            <span style={{ color: 'var(--gray2)' }}>
+            <span style={{ color: 'var(--black)' }}>
               {now.toLocaleDateString(L ? 'it-IT' : 'en-GB', { weekday: 'long', day: '2-digit', month: 'short' })}
             </span>
           </div>
@@ -71,39 +71,9 @@ export default function RecordPage({ lang, sensor }) {
         {/* ── LEFT PANEL ── */}
         <div className="record-left">
 
-          {/* POLLUTANTS */}
-          <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--gray)' }}>
-            <div style={{ ...SUB_LABEL, marginBottom: 10 }}>{L ? 'Inquinanti · Seleziona per esplorare' : 'Pollutants · Select to explore'}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {Object.entries(POLLUTANTS).map(([key, p]) => {
-                const val = sensor[key] || 0;
-                const li = getPollLevel(key, val);
-                const lvc = LEVELS[li];
-                const isActive = key === activePollutant;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setActivePollutant(key)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActivePollutant(key); } }}
-                    style={{
-                      padding: '5px 14px',
-                      border: '1.5px solid ' + (isActive ? lvc.color : 'var(--gray2)'),
-                      background: isActive ? lvc.color : 'transparent',
-                      color: isActive ? '#fff' : 'var(--black)',
-                      fontFamily: 'Epilogue', fontSize: 11, fontWeight: 400,
-                      letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
-                    }}
-                  >
-                    {p.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* POLLUTANT TABLE */}
           <div style={{ borderBottom: '1px solid var(--gray)', overflowX: 'auto' }}>
-            <table className="archive-table">
+            <table className="archive-table record-table">
               <thead>
                 <tr>
                   <th>{L ? 'Inquinante' : 'Pollutant'}</th>
@@ -130,7 +100,7 @@ export default function RecordPage({ lang, sensor }) {
                       <td style={{ textAlign: 'right', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 13, color: isActive ? '#fff' : lvc.color }}>
                         {val}
                       </td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--font-body)', fontSize: 11, color: isActive ? 'rgba(255,255,255,0.65)' : 'var(--gray2)' }}>
+                      <td style={{ textAlign: 'right', fontFamily: 'var(--font-body)', fontSize: 11, color: isActive ? 'rgba(255,255,255,0.65)' : 'var(--black)' }}>
                         {p.unit}
                       </td>
                       <td>
@@ -184,6 +154,35 @@ export default function RecordPage({ lang, sensor }) {
 
           {/* CHART */}
           <div className="chart-area">
+            {/* POLLUTANTS */}
+            <div style={{ marginBottom: 16, borderBottom: '1px solid var(--gray)', paddingBottom: 16 }}>
+              <div style={{ ...SUB_LABEL, marginBottom: 10 }}>{L ? 'Inquinanti · Seleziona per esplorare' : 'Pollutants · Select to explore'}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {Object.entries(POLLUTANTS).map(([key, p]) => {
+                  const val = sensor[key] || 0;
+                  const li = getPollLevel(key, val);
+                  const lvc = LEVELS[li];
+                  const isActive = key === activePollutant;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setActivePollutant(key)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActivePollutant(key); } }}
+                      style={{
+                        padding: '5px 14px',
+                        border: '1.5px solid ' + (isActive ? lvc.color : 'var(--black)'),
+                        background: isActive ? lvc.color : 'transparent',
+                        color: isActive ? '#fff' : 'var(--black)',
+                        fontFamily: 'Epilogue', fontSize: 11, fontWeight: 400,
+                        letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
+                      }}
+                    >
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="chart-title">{poll.name} {poll.unit} — {L ? 'ultime 24 ore' : 'last 24 hours'}</div>
             <MultiLineChart
               data={histRows}
@@ -196,8 +195,8 @@ export default function RecordPage({ lang, sensor }) {
           </div>
 
           {/* HEATMAP */}
-          <div style={{ padding: '16px 28px' }}>
-            <div className="chart-title" style={{ marginBottom: 10 }}>{L ? `Heatmap ${poll.name} — 30 giorni` : `${poll.name} Heatmap — 30 days`}</div>
+          <div className="chart-area">
+            <div className="chart-title">{L ? `Heatmap ${poll.name} — ultima settimana` : `${poll.name} Heatmap — last week`}</div>
             <HeatMap readings={sensorRows} lang={lang} pollutantKey={activePollutant} showLegend={false} dailyView={true} />
           </div>
 
@@ -208,7 +207,7 @@ export default function RecordPage({ lang, sensor }) {
           <div style={{ display: 'flex', flexDirection: 'column' }}>
 
             {/* Raccomandazioni */}
-            <div style={{ ...SUB_LABEL, padding: '14px 20px', borderBottom: '1px solid var(--gray)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ ...SUB_LABEL, fontSize: 14, padding: '14px 20px', borderBottom: '1px solid var(--gray)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--primary)', color: 'var(--white)' }}>
               {L ? 'Raccomandazioni' : 'Recommendations'}
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: lv.color, display: 'inline-block' }} />
             </div>
@@ -226,7 +225,7 @@ export default function RecordPage({ lang, sensor }) {
             </div>
 
             {/* Sintomi associati */}
-            <div style={{ ...SUB_LABEL, padding: '14px 20px', borderBottom: '1px solid var(--gray)' }}>
+            <div style={{ ...SUB_LABEL, fontSize: 14, padding: '14px 20px', borderBottom: '1px solid var(--gray)', background: 'var(--primary)', color: 'var(--white)' }}>
               {L ? 'Sintomi associati' : 'Associated symptoms'}
             </div>
 
@@ -245,7 +244,7 @@ export default function RecordPage({ lang, sensor }) {
                       <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--black)', lineHeight: 1.5 }}>
                         <span style={{ ...SUB_LABEL, fontSize: 9, marginRight: 6 }}>Gen</span>{s.gen}
                       </div>
-                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--gray2)', lineHeight: 1.5 }}>
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--black)', lineHeight: 1.5 }}>
                         <span style={{ ...SUB_LABEL, fontSize: 9, marginRight: 6 }}>Sen</span>{s.sen}
                       </div>
                     </div>
@@ -255,7 +254,7 @@ export default function RecordPage({ lang, sensor }) {
             </div>
 
             {/* Scala AQI */}
-            <div style={{ ...SUB_LABEL, padding: '14px 20px', borderBottom: '1px solid var(--gray)' }}>
+            <div style={{ ...SUB_LABEL, fontSize: 14, padding: '14px 20px', borderBottom: '1px solid var(--gray)', background: 'var(--primary)', color: 'var(--white)' }}>
               {L ? 'Scala AQI' : 'AQI Scale'}
             </div>
 

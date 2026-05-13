@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { SENSORS } from '../data/sensors';
 import { LEVELS } from '../data/levels';
 import { getSensorAQI } from '../utils/aqi';
-import HeroDots from '../components/HeroDots';
 
 const DISTRICTS = [...new Set(SENSORS.map((s) => s.district))].sort((a, b) => a.localeCompare(b));
 
@@ -63,38 +62,38 @@ export default function ReportPage({ lang }) {
 
   const valid = form.name.trim() && form.district && form.symptoms.size > 0;
 
+  const SUB_LABEL = {
+    fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 400,
+    letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--black)',
+  };
+
   return (
     <div className="report-page">
 
-      {/* HERO HEADER */}
-      <div className="report-page-header">
-        <HeroDots level={globalAQI} />
-        <div className="report-page-header-content">
-          <div className="report-page-title">
-            {L ? 'Segnala un Sintomo' : 'Report a Symptom'}
-          </div>
-          <div className="report-page-subtitle">
-            {L
-              ? "Hai avvertito disturbi legati alla qualità dell'aria? Segnalacelo — ogni voce contribuisce alla mappa collettiva."
-              : 'Have you experienced discomfort linked to air quality? Let us know — every report builds the collective map.'}
-          </div>
-          <div className="report-page-aqi-badge">
-            <div className="report-page-aqi-dot" style={{ background: lvl.color }} />
-            <span style={{ color: lvl.color }}>AQI {globalAQI + 1} — {L ? lvl.it : lvl.en}</span>
-          </div>
-        </div>
+      {/* TOP BAR */}
+      <div style={{ padding: '24px 28px 0 28px' }}>
+        <span style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
+          {L ? 'Segnala un Sintomo' : 'Report a Symptom'}
+        </span>
       </div>
 
-      {/* SECTION LABEL — full-width */}
-      <div className="section-label">
-        <span className="section-label-text">
-          {L ? 'Compila il modulo' : 'Fill in the form'}
-        </span>
-        {submitted && (
-          <span className="report-success-inline">
-            ✓ {L ? 'Segnalazione inviata. Grazie.' : 'Report submitted. Thank you.'}
-          </span>
-        )}
+      {/* STATUS BAR */}
+      <div style={{ borderBottom: '1px solid var(--gray)', marginTop: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 28px', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.6, color: 'var(--black)', maxWidth: 560, fontSize: 18 }}>
+            {L
+              ? <>Hai avvertito disturbi legati alla qualità dell'aria? <br /> Segnalacelo — ogni voce contribuisce alla mappa collettiva.</>
+              : <>Have you experienced discomfort linked to air quality? <br /> Let us know — every report builds the collective map.</>}
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
+            {submitted && (
+              <span style={{ fontFamily: 'var(--font-title)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: lvl.color }}>
+                ✓ {L ? 'Segnalazione inviata. Grazie.' : 'Report submitted. Thank you.'}
+              </span>
+            )}
+            
+          </div>
+        </div>
       </div>
 
       {/* BODY: form + history */}
@@ -102,6 +101,9 @@ export default function ReportPage({ lang }) {
 
         {/* FORM */}
         <form className="report-form" onSubmit={handleSubmit} noValidate>
+          <div style={{ ...SUB_LABEL, padding: '12px 28px', borderBottom: '1px solid var(--gray)', background: 'var(--primary)', color: 'var(--white)', fontSize: 14 }}>
+            {L ? 'Compila il modulo' : 'Fill in the form'}
+          </div>
 
           <div className="report-form-row">
             <label className="report-label" htmlFor="r-name">
@@ -178,6 +180,9 @@ export default function ReportPage({ lang }) {
 
         {/* HISTORY */}
         <div className="report-history">
+          <div style={{ ...SUB_LABEL, padding: '12px 28px', borderBottom: '1px solid var(--gray)', background: 'var(--primary)', color: 'var(--white)', fontSize: 14 }}>
+            {L ? 'Segnalazioni recenti' : 'Recent reports'}
+          </div>
           {reports.length === 0 ? (
             <div className="report-history-empty">
               <div className="report-history-empty-text">

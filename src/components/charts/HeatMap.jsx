@@ -28,7 +28,7 @@ function buildDailyGrid(readings, pollutantKey) {
       }
     }
   }
-  return [...dayMap.keys()].sort().slice(-30).map(k => dayMap.get(k));
+  return [...dayMap.keys()].sort().slice(-7).map(k => dayMap.get(k));
 }
 
 export default function HeatMap({ readings = [], lang, pollutantKey = 'pm25', showLegend = false, dailyView = false }) {
@@ -43,9 +43,9 @@ export default function HeatMap({ readings = [], lang, pollutantKey = 'pm25', sh
 
   if (dailyView) {
     // Daily view: 1 row × 30 days
-    const cellW = 160, cellH = 120, padL = 32, padT = 40;
-    const W = padL + 30 * cellW + 32;
-    const H = padT + cellH + 40 + (showLegend ? 40 : 0);
+    const cellW = 128, cellH = 60, padL = 8, padT = 24;
+    const W = padL + 7 * cellW + 8;
+    const H = padT + cellH + 28 + (showLegend ? 24 : 0);
 
     function fmtDate(d) {
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -58,9 +58,9 @@ export default function HeatMap({ readings = [], lang, pollutantKey = 'pm25', sh
     return (
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
         {/* Date labels */}
-        {grid.map(({ date }, di) => di % 5 === 0 && (
-          <text key={`label-${di}`} x={padL + di * cellW + cellW / 2} y={padT - 12}
-            textAnchor="middle" fontSize="14" fontFamily="Epilogue" fill="#9B9790">
+        {grid.map(({ date }, di) => (
+          <text key={`label-${di}`} x={padL + di * cellW + cellW / 2} y={padT - 6}
+            textAnchor="middle" fontSize="12" fontFamily="Epilogue" fill="#9B9790">
             {fmtDate(date)}
           </text>
         ))}
