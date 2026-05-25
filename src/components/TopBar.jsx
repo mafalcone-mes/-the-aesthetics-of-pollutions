@@ -1,9 +1,10 @@
 const NAV = [
+  { id: 'map',      it: 'Mappa',    en: 'Map' },
   { id: 'archive',  it: 'Archivio', en: 'Archive' },
   { id: 'symptoms', it: 'Sintomi',  en: 'Symptoms' },
 ];
 
-export default function TopBar({ page, setPage, lang, setLang }) {
+export default function TopBar({ page, setPage, lang, setLang, onNavHover }) {
   const now = new Date();
   return (
     <nav className="topbar">
@@ -22,7 +23,13 @@ export default function TopBar({ page, setPage, lang, setLang }) {
       </div>
       <div className="topbar-nav">
         {NAV.map((n) => (
-          <a key={n.id} className={page === n.id ? 'active' : ''} onClick={() => setPage(n.id)}>
+          <a
+            key={n.id}
+            className={page === n.id ? 'active' : ''}
+            onClick={() => setPage(n.id)}
+            onMouseEnter={() => onNavHover && onNavHover(n.id)}
+            onMouseLeave={() => onNavHover && onNavHover(null)}
+          >
             {lang === 'it' ? n.it : n.en}
           </a>
         ))}

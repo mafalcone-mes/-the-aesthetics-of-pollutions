@@ -24,6 +24,7 @@ export default function App() {
   const [lang, setLang] = useState('it');
   const [selectedSensor, setSelectedSensor] = useState(SENSORS[1]);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [hoveredNav, setHoveredNav] = useState(null);
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
 
   useEffect(() => {
@@ -46,9 +47,9 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <TopBar page={page} setPage={setPage} lang={lang} setLang={setLang} />
+      <TopBar page={page} setPage={setPage} lang={lang} setLang={setLang} onNavHover={setHoveredNav} />
       <main className="main-content">
-        {page === 'home'     && <HomePage     lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
+        {page === 'home'     && <HomePage     lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} hoveredNav={hoveredNav} />}
         {page === 'map'      && <MapPage      lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
         {page === 'archive'  && <ArchivePage  lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
         {page === 'record'   && <RecordPage   lang={lang} sensor={selectedSensor} />}
