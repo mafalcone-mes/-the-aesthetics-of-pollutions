@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(node *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Read(//c/Users/mafal/Desktop/universita/master/Tesi_Materializzazione/dati_arpa/**)",
+      "Bash(python -c ' *)",
+      "Bash(cp \"C:\\\\Users\\\\mafal\\\\Desktop\\\\universita\\\\master\\\\Tesi_Materializzazione\\\\dati_arpa\\\\hourly_taranto_2026-01.csv\" \"C:\\\\Users\\\\mafal\\\\Desktop\\\\universita\\\\master\\\\ID2\\\\-the-aesthetics-of-pollutions\\\\src\\\\data\\\\hourly_taranto.csv\")",
+      "Bash(cp \"C:\\\\Users\\\\mafal\\\\Desktop\\\\universita\\\\master\\\\Tesi_Materializzazione\\\\dati_arpa\\\\wind_daily_taranto_2026-01.csv\" \"C:\\\\Users\\\\mafal\\\\Desktop\\\\universita\\\\master\\\\ID2\\\\-the-aesthetics-of-pollutions\\\\src\\\\data\\\\wind_daily.csv\")",
+      "Bash(cp \"C:\\\\Users\\\\mafal\\\\Desktop\\\\universita\\\\master\\\\Tesi_Materializzazione\\\\dati_arpa\\\\stations_taranto.csv\" \"C:\\\\Users\\\\mafal\\\\Desktop\\\\universita\\\\master\\\\ID2\\\\-the-aesthetics-of-pollutions\\\\src\\\\data\\\\stations_taranto.csv\")",
+      "Bash(git add *)",
+      "Read(//c/Users/mafal/Desktop/universita/master/Tesi_Materializzazione/-the-aesthetics-of-pollutions-Trial-activist/**)",
+      "Bash(npm install *)"
     ]
   }
 }
