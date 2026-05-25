@@ -1,0 +1,12 @@
+﻿id_station,denominazione,comune,provincia,longitude,latitude,tipologia_area,tipologia_stazione
+18,"Statte - Sorgenti",Statte,Taranto,17.203325,40.562499,suburbana,industriale
+19,"Taranto - Archimede",Taranto,Taranto,17.233048,40.494441,null,null
+20,"Taranto - Machiavelli",Taranto,Taranto,17.225823,40.488608,null,null
+21,"Taranto - San Vito",Taranto,Taranto,17.225272,40.423328,null,null
+22,"Taranto - Alto Adige",Taranto,Taranto,17.263602,40.460553,null,null
+37,"Taranto - CISI",Taranto,Taranto,17.253416,40.520934,Rurale,Industriale
+38,"Taranto - Talsano",Taranto,Taranto,17.283879,40.411943,null,null
+40,"Statte - Wind",Statte,Taranto,17.173611,40.526111,Rurale,Industriale
+41,"Grottaglie",Grottaglie,Taranto,17.423879,40.537776,Suburbana,Fondo
+42,"Martina Franca",Martina Franca,Taranto,17.331939,40.700826,Urbana,Traffico
+75,"Massafra",Massafra,Taranto,17.116690,40.593761,Urbana,Industriale

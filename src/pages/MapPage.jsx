@@ -61,6 +61,92 @@ function WindMarker() {
   return null;
 }
 
+function WindSpreadOverlay({ wind }) {
+  const map = useMap();
+  const svgRef = useRef(null);
+
+  useEffect(() => {
+    if (!wind) return;
+
+    const render = () => {
+      if (svgRef.current) { svgRef.current.remove(); svgRef.current = null; }
+
+      const container = map.getContainer();
+      const w = container.offsetWidth;
+      const h = container.offsetHeight;
+      const mag = Math.hypot(wind.u, wind.v) || 1;
+      const angleDeg = Math.atan2(-wind.v, wind.u) * 180 / Math.PI;
+
+      const ns = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('width', w);
+      svg.setAttribute('height', h);
+      svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:350';
+
+      const defs = document.createElementNS(ns, 'defs');
+
+      SENSORS.forEach(s => {
+        const ai = getSensorAQI(s);
+        const lv = LEVELS[ai];
+        let pt;
+        try { pt = map.latLngToContainerPoint([s.lat, s.lon]); } catch { return; }
+
+        const rx = Math.max(55, 40 + mag * 28);
+        const ry = 28;
+
+        const grad = document.createElementNS(ns, 'radialGradient');
+        grad.setAttribute('id', `wg-${s.id}`);
+        grad.setAttribute('cx', '35%');
+        grad.setAttribute('cy', '50%');
+        grad.setAttribute('r', '75%');
+        const st0 = document.createElementNS(ns, 'stop');
+        st0.setAttribute('offset', '0%'); st0.setAttribute('stop-color', lv.color); st0.setAttribute('stop-opacity', '0.42');
+        const st1 = document.createElementNS(ns, 'stop');
+        st1.setAttribute('offset', '100%'); st1.setAttribute('stop-color', lv.color); st1.setAttribute('stop-opacity', '0');
+        grad.appendChild(st0); grad.appendChild(st1);
+        defs.appendChild(grad);
+
+        const ellipse = document.createElementNS(ns, 'ellipse');
+        ellipse.setAttribute('cx', pt.x); ellipse.setAttribute('cy', pt.y);
+        ellipse.setAttribute('rx', rx); ellipse.setAttribute('ry', ry);
+        ellipse.setAttribute('transform', `rotate(${angleDeg}, ${pt.x}, ${pt.y})`);
+        ellipse.setAttribute('fill', `url(#wg-${s.id})`);
+        svg.appendChild(ellipse);
+
+        const seed = s.id * 137;
+        const rad = angleDeg * Math.PI / 180;
+        for (let i = 0; i < 6; i++) {
+          const t = ((seed * (i + 1) * 0.618) % 1) * Math.PI * 2;
+          const r2 = 0.25 + ((seed * (i + 1) * 0.314) % 1) * 0.7;
+          const dxL = Math.cos(t) * r2 * rx * 0.85;
+          const dyL = Math.sin(t) * r2 * ry * 0.85;
+          const cx = pt.x + dxL * Math.cos(rad) - dyL * Math.sin(rad);
+          const cy = pt.y + dxL * Math.sin(rad) + dyL * Math.cos(rad);
+          const dot = document.createElementNS(ns, 'circle');
+          dot.setAttribute('cx', cx); dot.setAttribute('cy', cy);
+          dot.setAttribute('r', 2.5);
+          dot.setAttribute('fill', lv.color);
+          dot.setAttribute('opacity', 0.5);
+          svg.appendChild(dot);
+        }
+      });
+
+      svg.insertBefore(defs, svg.firstChild);
+      container.appendChild(svg);
+      svgRef.current = svg;
+    };
+
+    render();
+    map.on('move zoom moveend zoomend viewreset', render);
+    return () => {
+      map.off('move zoom moveend zoomend viewreset', render);
+      if (svgRef.current) { svgRef.current.remove(); svgRef.current = null; }
+    };
+  }, [map, wind]);
+
+  return null;
+}
+
 function FlyTo({ sensor }) {
   const map = useMap();
   useEffect(() => {
@@ -203,6 +289,7 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
           />
           <ZoomControl position="bottomright" />
           <FlyTo sensor={selectedSensor} />
+          <WindSpreadOverlay wind={wind} />
           <WindMarker />
           {SENSORS.map((s) => {
             const ai = getSensorAQI(s);

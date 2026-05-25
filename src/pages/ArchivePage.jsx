@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
@@ -36,13 +36,20 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
   const [fSensors, setFSensors]   = useState(new Set(['all']));
   const [fDistricts, setFDistricts] = useState(new Set(['all']));
   const [fAqi, setFAqi]           = useState(new Set([0, 1, 2, 3, 4, 5]));
-  const [fDateFrom, setFDateFrom] = useState('2026-04-30');
-  const [fDateTo, setFDateTo]     = useState('2026-05-07');
+  const [fDateFrom, setFDateFrom] = useState('2026-01-01');
+  const [fDateTo, setFDateTo]     = useState('2026-01-31');
   const [chartPolls, setChartPolls] = useState(new Set(['pm25', 'pm10', 'no2', 'co']));
   const [chartType, setChartType] = useState('line');
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterKey, setFilterKey] = useState(0);
 
   const districts = [...new Set(SENSORS.map((s) => s.district))];
+
+  // bump filterKey whenever filters change so rows re-animate
+  const prevFilter = useRef('');
+  const filterStr = fSensors.size + fDistricts.size + fAqi.size + fDateFrom + fDateTo;
+  if (filterStr !== prevFilter.current) { prevFilter.current = filterStr; }
+  useEffect(() => { setFilterKey(k => k + 1); setCurrentPage(1); }, [fSensors, fDistricts, fAqi, fDateFrom, fDateTo]);
 
   const filtered = useMemo(() => {
     const from = new Date(fDateFrom);
@@ -255,7 +262,12 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
               const lv = LEVELS[r.aqi];
               const isDark = r.aqi <= 1;
               return (
-                <tr key={`${r.sensorId}-${r.dateObj}`} onClick={() => { setSelectedSensor(SENSORS.find((s) => s.id === r.sensorId)); setPage('record'); }}>
+                <tr
+                  key={`${filterKey}-${r.sensorId}-${r.dateObj}`}
+                  className="archive-row-animate"
+                  style={{ animationDelay: `${i * 18}ms` }}
+                  onClick={() => { setSelectedSensor(SENSORS.find((s) => s.id === r.sensorId)); setPage('record'); }}
+                >
                   <td style={{ color: '#9B9790', fontSize: 11 }}>{(currentPage - 1) * PAGE_SIZE + i + 1}</td>
                   <td><span style={{ fontFamily: 'Epilogue', fontWeight: 700 }}>{r.sensorName}</span></td>
                   <td><span style={{  }}>{r.district}</span></td>

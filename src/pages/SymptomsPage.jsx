@@ -311,45 +311,56 @@ export default function SymptomsPage({ lang }) {
 
       {/* SYMPTOMS MATRIX */}
       <div className="symptoms-matrix-section">
-        {CATS.map((cat) => (
-          <div key={cat.key} className="symptoms-matrix-cat">
-            <div className="symptoms-matrix-cat-header">
-              <span className="symptoms-matrix-cat-title">{L ? cat.it.split(' (')[0] : cat.en.split(' (')[0]}</span>
-              <span className="symptoms-matrix-cat-sub">
-                {cat.key === 'particulates' ? 'PM2.5 · PM10' : cat.key === 'gaseous' ? 'NO₂ · SO₂ · O₃' : 'CO · NH₃ · C₆H₆'}
-              </span>
-            </div>
-            <div className="symptoms-matrix-levels">
-              {LEVELS.map((lv) => {
-                const sym = SYMPTOMS[cat.key][lv.key];
-                const isCurrent = categoryLevels[cat.key] === lv.index;
-                const noSym = !sym || sym.gen === 'No symptoms';
-                return (
-                  <div key={lv.key} className={`symptoms-matrix-cell${isCurrent ? ' current' : ''}`} style={{ borderTop: `3px solid ${lv.color}` }}>
-                    <div className="symptoms-matrix-level-badge" style={{ background: lv.color }}>
-                      <span>{lv.index + 1}</span>
-                      <span>{L ? lv.it : lv.en}</span>
+        {CATS.map((cat) => {
+          const lvIdx = categoryLevels[cat.key];
+          const catLv = LEVELS[lvIdx];
+          return (
+            <div key={cat.key} className="symptoms-matrix-cat" style={{ borderLeft: `5px solid ${catLv.color}` }}>
+              <div
+                className="symptoms-matrix-cat-header"
+                style={{ background: `color-mix(in srgb, ${catLv.color} 14%, var(--white))` }}
+              >
+                <span className="symptoms-matrix-cat-title">{L ? cat.it.split(' (')[0] : cat.en.split(' (')[0]}</span>
+                <span className="symptoms-matrix-cat-sub">
+                  {cat.key === 'particulates' ? 'PM2.5 · PM10' : cat.key === 'gaseous' ? 'NO₂ · SO₂ · O₃' : 'CO · NH₃ · C₆H₆'}
+                </span>
+                <span className="symptoms-matrix-current-badge" style={{ background: catLv.color }}>
+                  <span>{lvIdx + 1}</span>
+                  <span>{L ? catLv.it : catLv.en}</span>
+                </span>
+              </div>
+              <div className="symptoms-matrix-levels">
+                {LEVELS.map((lv) => {
+                  const sym = SYMPTOMS[cat.key][lv.key];
+                  const isCurrent = categoryLevels[cat.key] === lv.index;
+                  const noSym = !sym || sym.gen === 'No symptoms';
+                  return (
+                    <div key={lv.key} className={`symptoms-matrix-cell${isCurrent ? ' current' : ''}`} style={{ borderTop: `3px solid ${lv.color}` }}>
+                      <div className="symptoms-matrix-level-badge" style={{ background: lv.color }}>
+                        <span>{lv.index + 1}</span>
+                        <span>{L ? lv.it : lv.en}</span>
+                      </div>
+                      {noSym ? (
+                        <div className="symptoms-matrix-none">—</div>
+                      ) : (
+                        <>
+                          <div className="symptoms-matrix-row">
+                            <span className="symptoms-matrix-who">{L ? 'Gen.' : 'Gen.'}</span>
+                            <span className="symptoms-matrix-text">{sym.gen}</span>
+                          </div>
+                          <div className="symptoms-matrix-row">
+                            <span className="symptoms-matrix-who">{L ? 'Sen.' : 'Sen.'}</span>
+                            <span className="symptoms-matrix-text">{sym.sen}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    {noSym ? (
-                      <div className="symptoms-matrix-none">—</div>
-                    ) : (
-                      <>
-                        <div className="symptoms-matrix-row">
-                          <span className="symptoms-matrix-who">{L ? 'Gen.' : 'Gen.'}</span>
-                          <span className="symptoms-matrix-text">{sym.gen}</span>
-                        </div>
-                        <div className="symptoms-matrix-row">
-                          <span className="symptoms-matrix-who">{L ? 'Sen.' : 'Sen.'}</span>
-                          <span className="symptoms-matrix-text">{sym.sen}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div id="report-section">

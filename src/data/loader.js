@@ -1,27 +1,89 @@
-// Single source of truth: parse mock_data.csv, derive SENSORS + HOURLY_DATA.
-// All pages read from these two exports — nothing generates its own numbers.
+// Single source of truth: parse real ARPA Taranto CSVs.
+// Exports SENSORS, HOURLY_DATA, WIND_DAILY.
 
-import rawCsv from './mock_data.csv?raw';
-import { SENSOR_META } from './sensor_meta';
+import rawStations from './stations_taranto.csv?raw';
+import rawHourly   from './hourly_taranto.csv?raw';
+import rawWind     from './wind_daily.csv?raw';
 import { POLLUTANTS } from './pollutants';
 import { getPollLevel } from '../utils/aqi';
 
 const POLL_KEYS = Object.keys(POLLUTANTS);
 
-function parseRows(raw) {
+// ── stations ────────────────────────────────────────────────────────────────
+function parseStations(raw) {
   const lines = raw.trim().split('\n');
-  // Skip header line
+  return lines.slice(1).map(line => {
+    // Handle quoted fields (denominazione may have commas)
+    const cols = line.match(/(".*?"|[^,]+)(?=,|$)/g).map(c => c.replace(/^"|"$/g, ''));
+    const [id, name, comune, provincia, longitude, latitude, tipologia_area, tipologia_stazione] = cols;
+    return {
+      id: Number(id),
+      name: name.trim(),
+      comune: comune.trim(),
+      longitude: Number(longitude),
+      latitude:  Number(latitude),
+      tipologia_area:     (tipologia_area     || '').trim(),
+      tipologia_stazione: (tipologia_stazione || '').trim(),
+    };
+  });
+}
+
+const ALL_STATIONS = parseStations(rawStations);
+
+// Stations that actually have hourly readings (19,20,21,22,37,38)
+const ACTIVE_IDS = new Set([19, 20, 21, 22, 37, 38]);
+
+// district label derived from station name / tipologia
+function districtOf(s) {
+  if (s.name.includes('CISI'))        return 'Industriale';
+  if (s.name.includes('Archimede'))   return 'Centro';
+  if (s.name.includes('Machiavelli')) return 'Centro';
+  if (s.name.includes('San Vito'))    return 'San Vito';
+  if (s.name.includes('Alto Adige'))  return 'Tamburi';
+  if (s.name.includes('Talsano'))     return 'Talsano';
+  if (s.comune !== 'Taranto')         return s.comune;
+  return s.comune;
+}
+
+export const SENSOR_META = ALL_STATIONS
+  .filter(s => ACTIVE_IDS.has(s.id))
+  .map(s => ({
+    id:       s.id,
+    name:     s.name,
+    location: s.name,          // full denominazione as location label
+    district: districtOf(s),
+    lat:      s.latitude,
+    lon:      s.longitude,
+    // fractional x/y for any SVG positioning (computed from bounding box)
+    x: null,
+    y: null,
+  }));
+
+// compute fractional x/y after we have the full list
+const lats = SENSOR_META.map(s => s.lat);
+const lons = SENSOR_META.map(s => s.lon);
+const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+SENSOR_META.forEach(s => {
+  s.x = maxLon === minLon ? 0.5 : (s.lon - minLon) / (maxLon - minLon);
+  s.y = maxLat === minLat ? 0.5 : 1 - (s.lat - minLat) / (maxLat - minLat);
+});
+
+// ── hourly data ──────────────────────────────────────────────────────────────
+function parseHourly(raw) {
+  const lines = raw.trim().split('\n');
   return lines.slice(1).map(line => {
     const cols = line.split(',');
     const [tsStr, sensorIdStr, pm25, pm10, no2, o3, so2, co, nh3, c6h6, temp, hum] = cols;
 
     const [datePart, timePart] = tsStr.split('T');
     const [yr, mo, dy] = datePart.split('-').map(Number);
-    const hr = Number(timePart.split(':')[0]);
+    const hr = Number((timePart || '00:00').split(':')[0]);
     const dateObj = new Date(yr, mo - 1, dy, hr);
 
     const sensorId = Number(sensorIdStr);
     const meta = SENSOR_META.find(s => s.id === sensorId);
+    if (!meta) return null;
 
     const poll = {
       pm25: Number(pm25), pm10: Number(pm10),
@@ -44,18 +106,46 @@ function parseRows(raw) {
       ...poll,
       aqi: Math.max(...POLL_KEYS.map(k => getPollLevel(k, poll[k] || 0))),
     };
-  });
+  }).filter(Boolean);
 }
 
-export const HOURLY_DATA = parseRows(rawCsv).sort((a, b) => a.dateObj - b.dateObj);
+export const HOURLY_DATA = parseHourly(rawHourly).sort((a, b) => a.dateObj - b.dateObj);
 
-// "Current" reading per sensor = its latest row in the CSV
+// "current" reading per sensor = latest row in hourly data
 export const SENSORS = SENSOR_META.map(meta => {
   const rows = HOURLY_DATA.filter(r => r.sensorId === meta.id);
+  if (!rows.length) return { ...meta, pm25:0, pm10:0, no2:0, o3:0, so2:0, co:0, nh3:0, c6h6:0 };
   const last = rows[rows.length - 1];
   return {
     ...meta,
-    pm25: last.pm25, pm10: last.pm10, no2: last.no2,  o3:   last.o3,
-    so2:  last.so2,  co:   last.co,   nh3: last.nh3,  c6h6: last.c6h6,
+    pm25: last.pm25, pm10: last.pm10,
+    no2:  last.no2,  o3:   last.o3,
+    so2:  last.so2,  co:   last.co,
+    nh3:  last.nh3,  c6h6: last.c6h6,
   };
 });
+
+// ── wind data ────────────────────────────────────────────────────────────────
+function parseWind(raw) {
+  const lines = raw.trim().split('\n');
+  const result = {};
+  lines.slice(1).forEach(line => {
+    const [date, spd, dir, gusts, u, v] = line.split(',');
+    if (!date) return;
+    result[date.trim()] = {
+      spd:  Number(spd),
+      dir:  Number(dir),
+      gusts: Number(gusts),
+      u:    Number(u),
+      v:    Number(v),
+    };
+  });
+  return result;
+}
+
+export const WIND_DAILY = parseWind(rawWind);
+
+export function getLatestWind() {
+  const dates = Object.keys(WIND_DAILY).sort();
+  return dates.length ? WIND_DAILY[dates[dates.length - 1]] : null;
+}
