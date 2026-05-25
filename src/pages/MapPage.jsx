@@ -1,12 +1,65 @@
 import { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
 import { MapContainer, TileLayer, CircleMarker, Popup, ZoomControl, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
+import { WIND_DAILY } from '../data/taranto_wind';
 import { getSensorAQI, getPollLevel } from '../utils/aqi';
 
 const TARANTO_CENTER = [40.4760, 17.2270];
+
+function getLatestWind() {
+  const dates = Object.keys(WIND_DAILY).sort();
+  return dates.length ? WIND_DAILY[dates[dates.length - 1]] : null;
+}
+
+function createWindIcon(u, v, spd, dir) {
+  const scale = 44;
+  const dx = +(u * scale).toFixed(1);
+  const dy = +(-v * scale).toFixed(1); // screen y is inverted
+  const angle = Math.atan2(dy, dx);
+  const arrowLen = 13;
+  const ah1x = +(dx + Math.cos(angle + 2.5) * arrowLen).toFixed(1);
+  const ah1y = +(dy + Math.sin(angle + 2.5) * arrowLen).toFixed(1);
+  const ah2x = +(dx + Math.cos(angle - 2.5) * arrowLen).toFixed(1);
+  const ah2y = +(dy + Math.sin(angle - 2.5) * arrowLen).toFixed(1);
+
+  const labelX = dx > 0 ? 7 : -(88 + 7);
+  const labelY = +((dy - 20) / 2).toFixed(1);
+
+  const html = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" style="overflow:visible;pointer-events:none">
+      <circle cx="0" cy="0" r="5" fill="#B7410E" opacity="0.9"/>
+      <line x1="0" y1="0" x2="${dx}" y2="${dy}" stroke="#B7410E" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="${dx}" y1="${dy}" x2="${ah1x}" y2="${ah1y}" stroke="#B7410E" stroke-width="2" stroke-linecap="round"/>
+      <line x1="${dx}" y1="${dy}" x2="${ah2x}" y2="${ah2y}" stroke="#B7410E" stroke-width="2" stroke-linecap="round"/>
+      <rect x="${labelX}" y="${labelY}" width="88" height="18" fill="white" rx="2" opacity="0.92"/>
+      <text x="${labelX + 5}" y="${labelY + 13}" font-family="Epilogue,sans-serif" font-size="11" font-weight="700" fill="#B7410E">
+        ${spd.toFixed(1)} m/s · ${Math.round(dir)}°
+      </text>
+    </svg>`;
+
+  return L.divIcon({ html, iconSize: [0, 0], iconAnchor: [0, 0], className: '' });
+}
+
+function WindMarker() {
+  const map = useMap();
+  const wind = getLatestWind();
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    if (!wind) return;
+    const icon = createWindIcon(wind.u, wind.v, wind.spd, wind.dir);
+    const marker = L.marker(TARANTO_CENTER, { icon, interactive: false, zIndexOffset: 500 });
+    marker.addTo(map);
+    markerRef.current = marker;
+    return () => { marker.remove(); };
+  }, [map, wind]);
+
+  return null;
+}
 
 function FlyTo({ sensor }) {
   const map = useMap();
@@ -19,7 +72,8 @@ function FlyTo({ sensor }) {
 export default function MapPage({ lang, setPage, setSelectedSensor }) {
   const [selected, setSelected] = useState(null);
   const markerRefs = useRef({});
-  const L = lang === 'it';
+  const L_lang = lang === 'it';
+  const wind = getLatestWind();
 
   const selectedSensor = selected != null ? SENSORS.find(s => s.id === selected) : null;
 
@@ -33,23 +87,66 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
     });
   }, [selected]);
 
+  const windDirLabel = (dir) => {
+    const labels = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    return labels[Math.round(dir / 45) % 8];
+  };
+
   return (
     <div className="map-page">
       {/* SIDEBAR */}
       <div className="map-sidebar">
-        {/* Header */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '24px 28px', borderBottom: '1px solid var(--gray)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span className="map-sidebar-title" style={{ fontWeight: 400, color: 'var(--black)' }}>
-              {L ? 'MAPPA SENSORI' : 'SENSOR MAP'}
+              {L_lang ? 'MAPPA SENSORI' : 'SENSOR MAP'}
             </span>
           </div>
           <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.65, color: 'var(--black)', margin: 0 }}>
-            {L
-              ? 'Questa mappa mostra la rete di sensori costruita attraverso laboratori partecipativi con cittadine e cittadini. La piattaforma offre accesso libero e trasparente ai dati raccolti, per favorire consapevolezza, ricerca e azione collettiva sul tema della qualità dell\'aria. L\'iniziativa è realizzata da Jonix Group Taranto.'
-              : 'This map shows the sensor network built through participatory workshops with citizens. The platform provides free and transparent access to the collected data, to foster awareness, research and collective action on air quality. The initiative is by Jonix Group Taranto.'}
+            {L_lang
+              ? 'Rete di sensori costruita attraverso laboratori partecipativi con cittadine e cittadini di Taranto. Accesso libero ai dati raccolti.'
+              : 'Sensor network built through participatory workshops with Taranto citizens. Free and transparent access to collected data.'}
           </p>
+
+          {/* Wind info strip */}
+          {wind && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '8px 12px',
+              background: 'var(--primary)', color: 'var(--white)',
+            }}>
+              <svg width="28" height="28" viewBox="-14 -14 28 28" style={{ flexShrink: 0, overflow: 'visible' }}>
+                {(() => {
+                  const scale = 11;
+                  const dx = +(wind.u * scale).toFixed(1);
+                  const dy = +(-wind.v * scale).toFixed(1);
+                  const angle = Math.atan2(dy, dx);
+                  const ah1x = +(dx + Math.cos(angle + 2.5) * 5).toFixed(1);
+                  const ah1y = +(dy + Math.sin(angle + 2.5) * 5).toFixed(1);
+                  const ah2x = +(dx + Math.cos(angle - 2.5) * 5).toFixed(1);
+                  const ah2y = +(dy + Math.sin(angle - 2.5) * 5).toFixed(1);
+                  return (
+                    <>
+                      <circle cx="0" cy="0" r="3" fill="white" opacity="0.7" />
+                      <line x1="0" y1="0" x2={dx} y2={dy} stroke="white" strokeWidth="2" strokeLinecap="round" />
+                      <line x1={dx} y1={dy} x2={ah1x} y2={ah1y} stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                      <line x1={dx} y1={dy} x2={ah2x} y2={ah2y} stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                    </>
+                  );
+                })()}
+              </svg>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.7 }}>
+                  {L_lang ? 'Vento' : 'Wind'}
+                </div>
+                <div style={{ fontFamily: 'var(--font-title)', fontSize: 13, fontWeight: 700 }}>
+                  {wind.spd.toFixed(1)} m/s · {windDirLabel(wind.dir)} ({Math.round(wind.dir)}°)
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
         {/* Sensor list */}
         <div className="map-sensor-list">
           {SENSORS.map((s) => {
@@ -68,29 +165,31 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
                     <div className="map-sensor-sub">{s.location}</div>
                   </div>
                   <div className="map-sensor-aqi" style={{ color: isSel ? '#fff' : lv.color }}>
-                    {L ? lv.it : lv.en}
+                    {L_lang ? lv.it : lv.en}
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+
         {/* Legend */}
         <div style={{ borderTop: '1px solid var(--gray)', padding: '12px 16px' }}>
-          <div style={{ fontFamily: 'Epilogue', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9790', marginBottom: 8 }}>
-            {L ? 'Legenda' : 'Legend'}
+          <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gray2)', marginBottom: 8 }}>
+            {L_lang ? 'Legenda' : 'Legend'}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {LEVELS.map((l) => (
               <div key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: l.color, flexShrink: 0 }} />
-                <span style={{ fontFamily: 'Epilogue', fontSize: 10, fontWeight: 600 }}>{L ? l.it : l.en}</span>
+                <span style={{ fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 600 }}>{L_lang ? l.it : l.en}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
-      {/* OSM MAP */}
+
+      {/* MAP */}
       <div className="map-area">
         <MapContainer
           center={TARANTO_CENTER}
@@ -104,6 +203,7 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
           />
           <ZoomControl position="bottomright" />
           <FlyTo sensor={selectedSensor} />
+          <WindMarker />
           {SENSORS.map((s) => {
             const ai = getSensorAQI(s);
             const lv = LEVELS[ai];
@@ -111,9 +211,7 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
             return (
               <CircleMarker
                 key={s.id}
-                ref={(el) => {
-                  if (el) markerRefs.current[s.id] = el;
-                }}
+                ref={(el) => { if (el) markerRefs.current[s.id] = el; }}
                 center={[s.lat, s.lon]}
                 radius={isSel ? 14 : 9}
                 pathOptions={{
@@ -124,7 +222,11 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
                 }}
                 eventHandlers={{ click: () => handleSelect(s) }}
               >
-                <Popup closeButton={false} className="map-popup" eventHandlers={{ remove: () => setSelected((prev) => (prev === s.id ? null : prev)) }}>
+                <Popup
+                  closeButton={false}
+                  className="map-popup"
+                  eventHandlers={{ remove: () => setSelected((prev) => (prev === s.id ? null : prev)) }}
+                >
                   <div className="map-popup-inner">
                     <div className="map-popup-name">{s.name}</div>
                     <div className="map-popup-loc">{s.location}</div>
@@ -157,7 +259,7 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
                         cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase',
                       }}
                     >
-                      {L ? 'Apri record →' : 'Open record →'}
+                      {L_lang ? 'Apri record →' : 'Open record →'}
                     </button>
                   </div>
                 </Popup>
