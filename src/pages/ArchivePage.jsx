@@ -4,19 +4,60 @@ import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
 import { HOURLY_DATA } from '../data/timeseries';
 import { getPollLevel } from '../utils/aqi';
+import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import MultiLineChart from '../components/charts/MultiLineChart';
 import HourlyBarChart from '../components/charts/HourlyBarChart';
 import DailyHeatmap from '../components/charts/DailyHeatmap';
 
 const PAGE_SIZE = 50;
 
+function toISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+const SEL_STYLE = {
+  border: '1.5px solid rgba(0,0,0,0.22)',
+  background: 'transparent',
+  color: 'var(--black)',
+  fontFamily: 'Epilogue', fontSize: 11, fontWeight: 400,
+  letterSpacing: '0.05em', padding: '5px 8px', cursor: 'pointer',
+};
+
+function SensorMiniMap({ sensor, color }) {
+  if (!sensor?.lat) return null;
+  return (
+    <div style={{ width: '100%', height: '100%' }}>
+      <MapContainer
+        key={sensor.id}
+        center={[sensor.lat, sensor.lon]}
+        zoom={13}
+        style={{ width: '100%', height: '100%' }}
+        zoomControl={false}
+        dragging={false}
+        scrollWheelZoom={false}
+        doubleClickZoom={false}
+        touchZoom={false}
+        attributionControl={false}
+      >
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+        <CircleMarker
+          center={[sensor.lat, sensor.lon]}
+          radius={9}
+          pathOptions={{ fillColor: color, fillOpacity: 0.9, color: '#111', weight: 1.5 }}
+        />
+      </MapContainer>
+    </div>
+  );
+}
+
 function pillStyle(active, color) {
   return {
     padding: '5px 14px',
-    border: '1.5px solid ' + (active ? color || 'var(--primary)' : 'var(--gray2)'),
+    border: '1.5px solid ' + (active ? color || 'var(--primary)' : 'rgba(0,0,0,0.22)'),
     background: active ? (color || 'var(--primary)') : 'transparent',
     color: active ? '#fff' : 'var(--black)',
-    fontFamily: 'Epilogue', fontSize: 11, fontWeight: 400,
+    fontFamily: 'Epilogue', fontSize: 11, fontWeight: active ? 700 : 400,
     letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
   };
 }
@@ -32,17 +73,25 @@ function toggleSet(set, setFn, val, allVal) {
 export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
   const L = lang === 'it';
 
+  const availableDates = useMemo(() =>
+    [...new Set(HOURLY_DATA.map(r => toISO(r.dateObj)))].sort()
+  , []);
+  const latestDate = availableDates[availableDates.length - 1] ?? '';
+  const firstDate  = availableDates[0] ?? '';
+
   const [filtersOpen, setFiltersOpen] = useState(true);
-  const [fSensors, setFSensors]   = useState(new Set(['all']));
-  const [fDistricts, setFDistricts] = useState(new Set(['all']));
-  const [fAqi, setFAqi]           = useState(new Set([0, 1, 2, 3, 4, 5]));
-  const [fDateFrom, setFDateFrom] = useState('2026-01-01');
-  const [fDateTo, setFDateTo]     = useState('2026-01-31');
+  const [timeMode, setTimeMode]       = useState('single');
+  const [fSensors, setFSensors]       = useState(new Set(['all']));
+  const [fDistricts, setFDistricts]   = useState(new Set(['all']));
+  const [fAqi, setFAqi]               = useState(new Set([0, 1, 2, 3, 4, 5]));
+  const [fDateFrom, setFDateFrom]     = useState(latestDate);
+  const [fDateTo, setFDateTo]         = useState(latestDate);
   const [chartPolls, setChartPolls] = useState(new Set(['pm25', 'pm10', 'no2', 'co']));
   const [chartType, setChartType] = useState('line');
   const [currentPage, setCurrentPage] = useState(1);
   const [filterKey, setFilterKey] = useState(0);
   const [hoveredRow, setHoveredRow] = useState(null);
+  const leaveTimer = useRef(null);
 
   const districts = [...new Set(SENSORS.map((s) => s.district))];
 
@@ -126,12 +175,48 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
               {/* DATE */}
               <div style={{ flexShrink: 0 }}>
                 <div style={{ fontFamily: 'Epilogue', fontSize: 10, fontWeight: 400, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gray2)', marginBottom: 10 }}>{L ? 'Periodo' : 'Period'}</div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <input type="date" value={fDateFrom} onChange={(e) => setFDateFrom(e.target.value)}
-                    style={{ border: '1.5px solid var(--gray2)', fontFamily: 'Source Serif 4', fontSize: 12, padding: '4px 8px', background: 'var(--white)' }} />
-                  <span style={{ fontSize: 10, color: 'var(--gray2)' }}>→</span>
-                  <input type="date" value={fDateTo} onChange={(e) => setFDateTo(e.target.value)}
-                    style={{ border: '1.5px solid var(--gray2)', fontFamily: 'Source Serif 4', fontSize: 12, padding: '4px 8px', background: 'var(--white)' }} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    {['single', 'range'].map(m => (
+                      <span key={m} style={pillStyle(timeMode === m)}
+                        onClick={() => {
+                          setTimeMode(m);
+                          if (m === 'single') { setFDateFrom(latestDate); setFDateTo(latestDate); }
+                          else { setFDateFrom(firstDate); setFDateTo(latestDate); }
+                        }}>
+                        {m === 'single' ? (L ? 'Giorno' : 'Day') : (L ? 'Intervallo' : 'Range')}
+                      </span>
+                    ))}
+                  </div>
+                  {timeMode === 'single' ? (
+                    <select value={fDateFrom}
+                      onChange={e => { setFDateFrom(e.target.value); setFDateTo(e.target.value); }}
+                      style={SEL_STYLE}>
+                      {availableDates.map(d => (
+                        <option key={d} value={d}>
+                          {new Date(d + 'T12:00:00').toLocaleDateString(L ? 'it-IT' : 'en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <select value={fDateFrom} onChange={e => setFDateFrom(e.target.value)} style={SEL_STYLE}>
+                        {availableDates.filter(d => d <= fDateTo).map(d => (
+                          <option key={d} value={d}>
+                            {new Date(d + 'T12:00:00').toLocaleDateString(L ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
+                          </option>
+                        ))}
+                      </select>
+                      <span style={{ fontSize: 10, color: 'var(--gray2)' }}>→</span>
+                      <select value={fDateTo} onChange={e => setFDateTo(e.target.value)} style={SEL_STYLE}>
+                        {availableDates.filter(d => d >= fDateFrom).map(d => (
+                          <option key={d} value={d}>
+                            {new Date(d + 'T12:00:00').toLocaleDateString(L ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* SENSORS */}
@@ -150,7 +235,8 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                   <span style={pillStyle(fDistricts.has('all'))} onClick={() => setFDistricts(new Set(['all']))}>{L ? 'Tutti' : 'All'}</span>
                   {districts.map((d) => (
-                    <span key={d} style={pillStyle(fDistricts.has(d))} onClick={() => toggleSet(fDistricts, setFDistricts, d, 'all')}>{d}</span>
+                    <span key={d} style={pillStyle(fDistricts.has(d))}
+                      onClick={() => setFDistricts(fDistricts.has(d) ? new Set(['all']) : new Set([d]))}>{d}</span>
                   ))}
                 </div>
               </div>
@@ -262,16 +348,17 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
             {pagedData.map((r, i) => {
               const lv = LEVELS[r.aqi];
               const isDark = r.aqi <= 1;
-              const rowKey = `${r.sensorId}-${r.dateStr}`;
+              const rowKey = `${r.sensorId}-${r.dateStr}-${r.hourStr}`;
               const isHovered = hoveredRow === rowKey;
-              const expandBg = 'color-mix(in srgb, var(--primary) 6%, var(--white))';
+              const onEnter = () => { clearTimeout(leaveTimer.current); setHoveredRow(rowKey); };
+              const onLeave = () => { leaveTimer.current = setTimeout(() => setHoveredRow(null), 60); };
               return (
                 <Fragment key={`${filterKey}-${r.sensorId}-${r.dateObj}`}>
                   <tr
                     className="archive-row-animate"
-                    style={{ animationDelay: `${i * 18}ms`, background: isHovered ? expandBg : '' }}
-                    onMouseEnter={() => setHoveredRow(rowKey)}
-                    onMouseLeave={() => setHoveredRow(null)}
+                    style={{ animationDelay: `${i * 18}ms`, background: isHovered ? 'var(--gray)' : '' }}
+                    onMouseEnter={onEnter}
+                    onMouseLeave={onLeave}
                     onClick={() => { setSelectedSensor(SENSORS.find((s) => s.id === r.sensorId)); setPage('record'); }}
                   >
                     <td style={{ color: '#9B9790', fontSize: 11 }}>{(currentPage - 1) * PAGE_SIZE + i + 1}</td>
@@ -288,21 +375,34 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
                     <td style={{ fontFamily: 'Epilogue' }}>{r.hum}%</td>
                   </tr>
                   {isHovered && (
-                    <tr
-                      onMouseEnter={() => setHoveredRow(rowKey)}
-                      onMouseLeave={() => setHoveredRow(null)}
-                    >
-                      <td colSpan={12} style={{ padding: '0 24px 14px', background: expandBg, borderBottom: '2px solid var(--primary)' }}>
-                        <div style={{ fontFamily: 'Epilogue', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9790', marginBottom: 6 }}>
-                          {r.sensorName} — {r.dateStr}
+                    <tr onMouseEnter={onEnter} onMouseLeave={onLeave}>
+                      <td colSpan={12} style={{ padding: '8px 16px 10px 24px', background: 'var(--gray)', borderBottom: '1px solid var(--gray2)' }}>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                          <div style={{ width: 280, flexShrink: 0 }}>
+                            <MultiLineChart
+                              data={HOURLY_DATA.filter(d => d.sensorId === r.sensorId && d.dateStr === r.dateStr)}
+                              pollutants={[...chartPolls]}
+                              mode="pollutant"
+                              width={280}
+                              height={90}
+                              compact
+                            />
+                          </div>
+                          <div style={{ width: 120, height: 90, flexShrink: 0 }}>
+                            <SensorMiniMap
+                              sensor={SENSORS.find(s => s.id === r.sensorId)}
+                              color={LEVELS[r.aqi].color}
+                            />
+                          </div>
+                          <div style={{ fontFamily: 'Epilogue', fontSize: 10, color: 'var(--gray2)', letterSpacing: '0.06em', textTransform: 'uppercase', lineHeight: 1.6 }}>
+                            <div style={{ fontWeight: 700, color: 'var(--black)', marginBottom: 4 }}>{r.sensorName}</div>
+                            <div>{r.dateStr}</div>
+                            <div>{r.hourStr}</div>
+                            <div style={{ marginTop: 6 }}>
+                              <span className={`aqi-pill${r.aqi <= 1 ? ' dark' : ''}`} style={{ background: lv.color }}>{L ? lv.it : lv.en}</span>
+                            </div>
+                          </div>
                         </div>
-                        <HourlyBarChart
-                          data={HOURLY_DATA.filter(d => d.sensorId === r.sensorId && d.dateStr === r.dateStr)}
-                          pollutants={['pm25', 'pm10', 'no2', 'co']}
-                          lang={lang}
-                          width={860}
-                          height={120}
-                        />
                       </td>
                     </tr>
                   )}

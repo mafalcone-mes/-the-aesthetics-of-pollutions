@@ -9,12 +9,15 @@ const POLL_COLORS = {
 
 const SENSOR_COLORS = ['#E05A2B', '#3A7B9B', '#4CAF6F', '#F0A500', '#B5213D', '#9B6B3A', '#C8D43A', '#6B1540'];
 
-const PAD = { top: 16, right: 16, bottom: 44, left: 44 };
+const PAD_FULL    = { top: 16, right: 16, bottom: 44, left: 44 };
+const PAD_COMPACT = { top:  8, right:  8, bottom: 18, left: 28 };
 
 // mode='pollutant': data = Row[] for a single sensor, draws one line per pollutant
 // mode='sensor':    data = { sensorId, sensorName, rows: Row[] }[], draws one line
 //                   per sensor where Y = max getPollLevel across selected pollutants
-export default function MultiLineChart({ data, pollutants, mode = 'pollutant', width = 800, height = 220, pollutantColors = {} }) {
+// compact: smaller padding, no legend, 1px dots
+export default function MultiLineChart({ data, pollutants, mode = 'pollutant', width = 800, height = 220, pollutantColors = {}, compact = false }) {
+  const PAD = compact ? PAD_COMPACT : PAD_FULL;
   const [tooltip, setTooltip] = useState(null);
 
   const W = width - PAD.left - PAD.right;
@@ -170,8 +173,8 @@ export default function MultiLineChart({ data, pollutants, mode = 'pollutant', w
           const cy = yScale(p, r[p]);
           const seriesColor = pollutantColors[p] || POLL_COLORS[p] || '#111';
           return (
-            <circle key={`${p}-${i}`} cx={cx} cy={cy} r={3}
-              fill={seriesColor} stroke="var(--white)" strokeWidth="1"
+            <circle key={`${p}-${i}`} cx={cx} cy={cy} r={compact ? 1 : 3}
+              fill={seriesColor} stroke="var(--white)" strokeWidth={compact ? 0 : 1}
               style={{ cursor: 'pointer' }}
               onMouseEnter={() => setTooltip({ cx, cy, pollutant: p, value: r[p], dateStr: r.dateStr, hourStr: r.hourStr })}
               onMouseLeave={() => setTooltip(null)}
@@ -196,7 +199,7 @@ export default function MultiLineChart({ data, pollutants, mode = 'pollutant', w
         );
       })()}
 
-      {pollutants.map((p, i) => (
+      {!compact && pollutants.map((p, i) => (
         <g key={p} transform={`translate(${PAD.left + i * 90}, ${height - 10})`}>
           <rect width="12" height="3" y="-2" fill={pollutantColors[p] || POLL_COLORS[p] || '#111'} />
           <text x="15" fontSize="7" fontFamily="Epilogue" fill="#9B9790">
