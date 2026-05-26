@@ -28,6 +28,30 @@ function formatTime(date) {
   );
 }
 
+const SUB_LABEL = {
+  fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 400,
+  letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--black)',
+};
+
+const INPUT_STYLE = {
+  width: '100%', boxSizing: 'border-box',
+  border: '1.5px solid rgba(0,0,0,0.22)',
+  background: 'transparent', color: 'var(--black)',
+  fontFamily: 'var(--font-body)', fontSize: 14,
+  padding: '7px 10px', outline: 'none',
+};
+
+function pillStyle(active) {
+  return {
+    padding: '5px 14px',
+    border: '1.5px solid ' + (active ? 'var(--primary)' : 'rgba(0,0,0,0.22)'),
+    background: active ? 'var(--primary)' : 'transparent',
+    color: active ? '#fff' : 'var(--black)',
+    fontFamily: 'Epilogue', fontSize: 11, fontWeight: active ? 700 : 400,
+    letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
+  };
+}
+
 export default function ReportPage({ lang }) {
   const L = lang === 'it';
   const [form, setForm] = useState(EMPTY_FORM);
@@ -62,38 +86,14 @@ export default function ReportPage({ lang }) {
 
   const valid = form.name.trim() && form.district && form.symptoms.size > 0;
 
-  const SUB_LABEL = {
-    fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 400,
-    letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--black)',
-  };
-
   return (
     <div className="report-page">
 
-      {/* TOP BAR */}
-      <div style={{ padding: '24px 28px 0 28px' }}>
+      {/* TITLE */}
+      <div style={{ padding: '24px 24px 16px 24px', borderBottom: '1px solid var(--gray)' }}>
         <span style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
           {L ? 'Segnala un Sintomo' : 'Report a Symptom'}
         </span>
-      </div>
-
-      {/* STATUS BAR */}
-      <div style={{ borderBottom: '1px solid var(--gray)', marginTop: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 28px', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.6, color: 'var(--black)', maxWidth: 560, fontSize: 18 }}>
-            {L
-              ? <>Hai avvertito disturbi legati alla qualità dell'aria? <br /> Segnalacelo — ogni voce contribuisce alla mappa collettiva.</>
-              : <>Have you experienced discomfort linked to air quality? <br /> Let us know — every report builds the collective map.</>}
-          </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
-            {submitted && (
-              <span style={{ fontFamily: 'var(--font-title)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: lvl.color }}>
-                ✓ {L ? 'Segnalazione inviata. Grazie.' : 'Report submitted. Thank you.'}
-              </span>
-            )}
-            
-          </div>
-        </div>
       </div>
 
       {/* BODY: form + history */}
@@ -101,52 +101,48 @@ export default function ReportPage({ lang }) {
 
         {/* FORM */}
         <form className="report-form" onSubmit={handleSubmit} noValidate>
-          <div style={{ ...SUB_LABEL, padding: '12px 28px', borderBottom: '1px solid var(--gray)', background: 'var(--primary)', color: 'var(--white)', fontSize: 14 }}>
-            {L ? 'Compila il modulo' : 'Fill in the form'}
-          </div>
 
+          {/* Name */}
           <div className="report-form-row">
-            <label className="report-label" htmlFor="r-name">
-              {L ? 'Nome o pseudonimo' : 'Name or pseudonym'}
-            </label>
+            <div style={SUB_LABEL}>{L ? 'Nome o pseudonimo' : 'Name or pseudonym'}</div>
             <input
               id="r-name"
-              className="report-input"
               type="text"
               placeholder={L ? 'Es. Mario R.' : 'E.g. Mario R.'}
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               maxLength={60}
+              style={INPUT_STYLE}
             />
           </div>
 
+          {/* District */}
           <div className="report-form-row">
-            <label className="report-label" htmlFor="r-district">
-              {L ? 'Quartiere' : 'Neighbourhood'}
-            </label>
+            <div style={SUB_LABEL}>{L ? 'Quartiere' : 'Neighbourhood'}</div>
             <select
               id="r-district"
-              className="report-select"
               value={form.district}
               onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))}
+              style={INPUT_STYLE}
             >
               <option value="">{L ? '— Seleziona —' : '— Select —'}</option>
               {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
 
+          {/* Symptoms */}
           <div className="report-form-row">
-            <div className="report-label">{L ? 'Sintomi avvertiti' : 'Symptoms experienced'}</div>
-            <div className="report-symptoms-grid">
+            <div style={SUB_LABEL}>{L ? 'Sintomi avvertiti' : 'Symptoms experienced'}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {SYMPTOM_OPTIONS.map((s) => {
                 const active = form.symptoms.has(s.key);
                 return (
                   <button
                     key={s.key}
                     type="button"
-                    className={`report-symptom-chip${active ? ' active' : ''}`}
                     onClick={() => toggleSymptom(s.key)}
                     aria-pressed={active}
+                    style={pillStyle(active)}
                   >
                     {L ? s.it : s.en}
                   </button>
@@ -155,68 +151,90 @@ export default function ReportPage({ lang }) {
             </div>
           </div>
 
+          {/* Note */}
           <div className="report-form-row">
-            <label className="report-label" htmlFor="r-note">
-              {L ? 'Note aggiuntive (facoltativo)' : 'Additional notes (optional)'}
-            </label>
+            <div style={SUB_LABEL}>{L ? 'Note aggiuntive (facoltativo)' : 'Additional notes (optional)'}</div>
             <textarea
               id="r-note"
-              className="report-textarea"
               rows={4}
               placeholder={L ? 'Descrivi quando e come hai avvertito i disturbi...' : 'Describe when and how you experienced the discomfort...'}
               value={form.note}
               onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
               maxLength={500}
+              style={{ ...INPUT_STYLE, resize: 'vertical', minHeight: 96 }}
             />
           </div>
 
-          <div className="report-form-footer">
-            <button type="submit" className="report-btn" disabled={!valid}
-              style={{ opacity: valid ? 1 : 0.35, cursor: valid ? 'pointer' : 'not-allowed' }}>
+          {/* Submit */}
+          <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <button
+              type="submit"
+              disabled={!valid}
+              style={{
+                padding: '8px 24px',
+                background: valid ? 'var(--black)' : 'transparent',
+                color: valid ? 'var(--white)' : 'var(--black)',
+                border: '1.5px solid ' + (valid ? 'var(--black)' : 'rgba(0,0,0,0.22)'),
+                fontFamily: 'Epilogue', fontSize: 11, fontWeight: 700,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+                cursor: valid ? 'pointer' : 'not-allowed',
+              }}
+            >
               {L ? 'INVIA SEGNALAZIONE →' : 'SUBMIT REPORT →'}
             </button>
+            {submitted && (
+              <span style={{ ...SUB_LABEL, color: lvl.color }}>
+                ✓ {L ? 'Segnalazione inviata. Grazie.' : 'Report submitted. Thank you.'}
+              </span>
+            )}
           </div>
         </form>
 
         {/* HISTORY */}
         <div className="report-history">
-          <div style={{ ...SUB_LABEL, padding: '12px 28px', borderBottom: '1px solid var(--gray)', background: 'var(--primary)', color: 'var(--white)', fontSize: 14 }}>
-            {L ? 'Segnalazioni recenti' : 'Recent reports'}
+          <div style={{ ...SUB_LABEL, padding: '14px 24px', borderBottom: '1px solid var(--gray)' }}>
+            {reports.length === 0
+              ? (L ? 'Segnalazioni recenti' : 'Recent reports')
+              : (L ? `Ultime ${reports.length} segnalazioni` : `Last ${reports.length} reports`)}
           </div>
+
           {reports.length === 0 ? (
-            <div className="report-history-empty">
-              <div className="report-history-empty-text">
-                {L
-                  ? 'Le segnalazioni inviate in questa sessione appariranno qui.'
-                  : 'Reports submitted in this session will appear here.'}
-              </div>
+            <div style={{ padding: '32px 24px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--gray2)', lineHeight: 1.6 }}>
+              {L
+                ? 'Le segnalazioni inviate in questa sessione appariranno qui.'
+                : 'Reports submitted in this session will appear here.'}
             </div>
           ) : (
-            <>
-              <div className="report-history-header">
-                {L ? `ULTIME ${reports.length} SEGNALAZIONI` : `LAST ${reports.length} REPORTS`}
-              </div>
-              <div className="report-history-list">
-                {reports.map((r) => (
-                  <div key={r.id} className="report-history-item">
-                    <div className="report-history-meta">
-                      <span className="report-history-name">{r.name}</span>
-                      <span className="report-history-district">{r.district}</span>
-                      <span className="report-history-time">{formatTime(r.time)}</span>
-                    </div>
-                    <div className="report-history-symptoms">
-                      {r.symptoms.map((k) => {
-                        const opt = SYMPTOM_OPTIONS.find((o) => o.key === k);
-                        return opt
-                          ? <span key={k} className="report-history-chip">{L ? opt.it : opt.en}</span>
-                          : null;
-                      })}
-                    </div>
-                    {r.note && <div className="report-history-note">{r.note}</div>}
+            <div className="report-history-list">
+              {reports.map((r) => (
+                <div key={r.id} style={{ padding: '16px 24px', borderBottom: '1px solid var(--gray)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: 'var(--font-title)', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{r.name}</span>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontStyle: 'italic', color: 'var(--gray2)' }}>{r.district}</span>
+                    <span style={{ fontFamily: 'Epilogue', fontSize: 10, color: 'var(--gray2)', marginLeft: 'auto', letterSpacing: '0.04em' }}>{formatTime(r.time)}</span>
                   </div>
-                ))}
-              </div>
-            </>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {r.symptoms.map((k) => {
+                      const opt = SYMPTOM_OPTIONS.find((o) => o.key === k);
+                      return opt ? (
+                        <span key={k} style={{
+                          padding: '3px 10px',
+                          border: '1.5px solid rgba(0,0,0,0.22)',
+                          fontFamily: 'Epilogue', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase',
+                        }}>
+                          {L ? opt.it : opt.en}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                  {r.note && (
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.55, color: 'var(--black)', fontStyle: 'italic' }}>
+                      {r.note}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

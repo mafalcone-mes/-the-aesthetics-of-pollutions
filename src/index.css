@@ -1295,7 +1295,7 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   .symptoms-hero-right { padding: 28px 24px 36px; }
 }
 
-/* BODY CALLOUT — photo + left-side line indicators */
+/* BODY CALLOUT */
 .body-callout-wrap {
   position: relative;
   width: 100%;
@@ -1303,28 +1303,11 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   flex: 1;
   min-height: 0;
   overflow: hidden;
-}
-.body-photo-real {
-  position: absolute;
-  inset: 0;
-  width: 120%;
-  height: 120%;
-  object-fit: cover;
-  object-position: 38% 250%;
-  display: block;
-  user-select: none;
-  -webkit-user-drag: none;
-  transform: scale(1.65);
-  transform-origin: 38% 48%;
-}
-/* Left-side gradient so dots/lines are readable over the photo */
-.body-callout-wrap::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to right, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.18) 38%, transparent 62%);
-  z-index: 4;
-  pointer-events: none;
+  background-color: var(--white);
+  background-image:
+    linear-gradient(var(--gray) 1px, transparent 1px),
+    linear-gradient(90deg, var(--gray) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 .body-callout-row {
   position: absolute;
