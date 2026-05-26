@@ -17,9 +17,9 @@ const SUB_LABEL = {
 
 const SEL_STYLE = {
   width: '100%',
-  border: '1.5px solid rgba(255,255,255,0.45)',
+  border: '1.5px solid rgba(0,0,0,0.22)',
   background: 'transparent',
-  color: '#fff',
+  color: 'var(--black)',
   fontFamily: 'Epilogue', fontSize: 11, fontWeight: 400,
   letterSpacing: '0.05em', padding: '5px 8px', cursor: 'pointer',
 };
@@ -27,12 +27,11 @@ const SEL_STYLE = {
 function pillStyleWhite(active) {
   return {
     padding: '5px 14px',
-    border: '1.5px solid ' + (active ? '#fff' : 'rgba(255,255,255,0.4)'),
-    background: active ? '#fff' : 'transparent',
-    color: active ? 'var(--primary)' : 'rgba(255,255,255,0.9)',
+    border: '1.5px solid ' + (active ? 'var(--primary)' : 'rgba(0,0,0,0.22)'),
+    background: active ? 'var(--primary)' : 'transparent',
+    color: active ? '#fff' : 'var(--black)',
     fontFamily: 'Epilogue', fontSize: 11, fontWeight: active ? 700 : 400,
     letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
-    display: 'block',
   };
 }
 
@@ -253,91 +252,194 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
 
   const fmtHour = h => `${String(h).padStart(2, '0')}:00`;
 
+  const timelineH = 58;
+  const panelW = 'calc(100vw / 6 * 1.5)';
+  const BOX = { background: 'var(--white)', padding: '12px 14px', pointerEvents: 'auto' };
+
   return (
     <div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0, padding: '24px 24px 0 24px' }}>
+      <div style={{ padding: '24px 24px 0 24px' }}>
         <span style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
           {L_lang ? 'Mappa Sensori' : 'Sensor Map'}
         </span>
       </div>
-      <div style={{ height: 'calc(100vh - 160px)', display: 'flex' }}>
 
-        {/* LEFT PANEL */}
-        <div style={{ width: 'calc(100vw / 6 * 1.5)', flexShrink: 0, background: 'var(--primary)', padding: '14px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      {/* MAP — full width, floating boxes inside */}
+      <div style={{ height: 'calc(100vh - 160px)', position: 'relative' }}>
 
-          {/* Date / time section */}
-          <div style={{ marginBottom: 20 }}>
+        {/* MAP CANVAS */}
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <MapContainer
+            center={TARANTO_CENTER}
+            zoom={13}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={false}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            />
+            <ZoomControl position="bottomright" />
+            <FlyTo sensor={selectedSensor} />
+            <WindSpreadOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
+            {displaySensors.map((s) => {
+              const dotLv = getDotLevel(s);
+              const dotColor = LEVELS[dotLv].color;
+              const popupLv = LEVELS[getSensorAQI(s)];
+              const isSel = selected === s.id;
+              return (
+                <CircleMarker
+                  key={s.id}
+                  ref={(el) => { if (el) markerRefs.current[s.id] = el; }}
+                  center={[s.lat, s.lon]}
+                  radius={isSel ? 14 : 9}
+                  pathOptions={{
+                    fillColor: dotColor,
+                    fillOpacity: 0.85,
+                    color: '#111010',
+                    weight: isSel ? 2.5 : 1.5,
+                  }}
+                  eventHandlers={{ click: () => setSelected(prev => prev === s.id ? null : s.id) }}
+                >
+                  <Popup
+                    closeButton={false}
+                    className="map-popup"
+                    eventHandlers={{ remove: () => setSelected((prev) => (prev === s.id ? null : prev)) }}
+                  >
+                    <div style={{ minWidth: 210 }}>
+                      <div style={{ background: popupLv.color, padding: '12px 14px' }}>
+                        <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 6 }}>
+                          {L_lang ? popupLv.it : popupLv.en}
+                        </div>
+                        <div style={{ fontFamily: 'Epilogue', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1, marginBottom: 4 }}>
+                          {s.name}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>
+                          {displayDate} — {fmtHour(displayHour)}
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+                        {Object.keys(POLLUTANTS).map((k, idx) => {
+                          const li = getPollLevel(k, s[k] || 0);
+                          const isOdd = idx % 2 === 0;
+                          const isBottomRow = idx >= Object.keys(POLLUTANTS).length - 2;
+                          return (
+                            <div key={k} style={{
+                              padding: '8px 10px',
+                              borderRight: isOdd ? '1px solid var(--gray)' : 'none',
+                              borderBottom: isBottomRow ? 'none' : '1px solid var(--gray)',
+                            }}>
+                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gray2)' }}>
+                                {POLLUTANTS[k].name}
+                              </div>
+                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 800, color: LEVELS[li].color, lineHeight: 1.2 }}>
+                                {s[k] ?? '—'} <span style={{ fontSize: 9, fontWeight: 400, color: 'var(--gray2)' }}>{POLLUTANTS[k].unit}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button
+                        onClick={() => { setSelectedSensor(s); setPage('record'); }}
+                        style={{
+                          width: '100%', padding: '8px', background: popupLv.color, color: '#fff',
+                          border: 'none', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 10,
+                          cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase',
+                        }}
+                      >
+                        {L_lang ? 'Apri record →' : 'Open record →'}
+                      </button>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
+          </MapContainer>
+        </div>
+
+        {/* LEFT COLUMN — stacked floating boxes */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, bottom: 0, zIndex: 1000,
+          width: panelW, display: 'flex', flexDirection: 'column',
+          gap: 8, padding: 12, overflowY: 'auto', pointerEvents: 'none',
+        }}>
+
+          {/* BOX 1 — Time controls */}
+          <div style={BOX}>
+            <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
+              {L_lang ? 'Tempo' : 'Time'}
+            </div>
             <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
               {['single', 'range'].map(m => (
-                <span key={m} style={{ ...pillStyleWhite(timeMode === m), display: 'inline-block', flex: 1, textAlign: 'center' }}
+                <span key={m}
+                  style={{ ...pillStyleWhite(timeMode === m), flex: 1, textAlign: 'center', display: 'block' }}
                   onClick={() => { setTimeMode(m); setIsPlaying(false); }}>
                   {m === 'single' ? (L_lang ? 'Giorno' : 'Day') : (L_lang ? 'Intervallo' : 'Range')}
                 </span>
               ))}
             </div>
-
             {timeMode === 'single' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <select value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={SEL_STYLE}>
                   {availableDates.map(d => (
-                    <option key={d} value={d} style={{ background: '#B7410E' }}>
+                    <option key={d} value={d}>
                       {new Date(d + 'T12:00:00').toLocaleDateString(L_lang ? 'it-IT' : 'en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
                     </option>
                   ))}
                 </select>
-                <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.7)', marginBottom: 2 }}>
-                  {fmtHour(selectedHour)}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L_lang ? 'Ora' : 'Hour'}</div>
+                  <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{fmtHour(selectedHour)}</div>
                 </div>
                 <input type="range" min={0} max={23} value={selectedHour}
                   onChange={e => setSelectedHour(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: '#fff' }} />
+                  style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Epilogue', fontSize: 9 }}>00:00</span>
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Epilogue', fontSize: 9 }}>23:00</span>
+                  <span style={{ color: 'rgba(0,0,0,0.35)', fontFamily: 'Epilogue', fontSize: 9 }}>00:00</span>
+                  <span style={{ color: 'rgba(0,0,0,0.35)', fontFamily: 'Epilogue', fontSize: 9 }}>23:00</span>
                 </div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>{L_lang ? 'Da' : 'From'}</div>
+                    <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>{L_lang ? 'Da' : 'From'}</div>
                     <select value={rangeDateStart} onChange={e => setRangeDateStart(e.target.value)} style={SEL_STYLE}>
                       {availableDates.filter(d => d <= rangeDateEnd).map(d => (
-                        <option key={d} value={d} style={{ background: '#B7410E' }}>
+                        <option key={d} value={d}>
                           {new Date(d + 'T12:00:00').toLocaleDateString(L_lang ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>{L_lang ? 'A' : 'To'}</div>
+                    <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>{L_lang ? 'A' : 'To'}</div>
                     <select value={rangeDateEnd} onChange={e => setRangeDateEnd(e.target.value)} style={SEL_STYLE}>
                       {availableDates.filter(d => d >= rangeDateStart).map(d => (
-                        <option key={d} value={d} style={{ background: '#B7410E' }}>
+                        <option key={d} value={d}>
                           {new Date(d + 'T12:00:00').toLocaleDateString(L_lang ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
                         </option>
                       ))}
                     </select>
                   </div>
                 </div>
-                <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.7)', marginBottom: 2 }}>
-                  {L_lang ? 'Ora fissa' : 'Fixed hour'} — {fmtHour(selectedHour)}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L_lang ? 'Ora fissa' : 'Fixed hour'}</div>
+                  <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{fmtHour(selectedHour)}</div>
                 </div>
                 <input type="range" min={0} max={23} value={selectedHour}
                   onChange={e => setSelectedHour(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: '#fff' }} />
+                  style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
               </div>
             )}
           </div>
 
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', marginBottom: 20 }} />
-
-          {/* Pollutant selector */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.7)', marginBottom: 10 }}>
+          {/* BOX 2 — Pollutant */}
+          <div style={BOX}>
+            <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
               {L_lang ? 'Inquinante' : 'Pollutant'}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               <span style={pillStyleWhite(activePollutant === null)} onClick={() => setActivePollutant(null)}>AQI</span>
               {Object.keys(POLLUTANTS).map(k => (
                 <span key={k} style={pillStyleWhite(activePollutant === k)}
@@ -348,14 +450,12 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
             </div>
           </div>
 
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', marginBottom: 20 }} />
-
-          {/* Sensor selector */}
-          <div>
-            <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.7)', marginBottom: 10 }}>
+          {/* BOX 3 — Sensors */}
+          <div style={BOX}>
+            <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
               {L_lang ? 'Sensori' : 'Sensors'}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {SENSORS.map(s => (
                 <span key={s.id} style={pillStyleWhite(selected === s.id)}
                   onClick={() => setSelected(prev => prev === s.id ? null : s.id)}>
@@ -364,203 +464,89 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
               ))}
             </div>
           </div>
+
         </div>
 
-        {/* MAP */}
-        <div style={{ flex: 1, position: 'relative' }}>
-          <div style={{ position: 'absolute', inset: 0 }}>
-            <MapContainer
-              center={TARANTO_CENTER}
-              zoom={13}
-              style={{ height: '100%', width: '100%' }}
-              zoomControl={false}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-              />
-              <ZoomControl position="bottomright" />
-              <FlyTo sensor={selectedSensor} />
-              <WindSpreadOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
-              {displaySensors.map((s) => {
-                const dotLv = getDotLevel(s);
-                const dotColor = LEVELS[dotLv].color;
-                const popupLv = LEVELS[getSensorAQI(s)];
-                const isSel = selected === s.id;
-                return (
-                  <CircleMarker
-                    key={s.id}
-                    ref={(el) => { if (el) markerRefs.current[s.id] = el; }}
-                    center={[s.lat, s.lon]}
-                    radius={isSel ? 14 : 9}
-                    pathOptions={{
-                      fillColor: dotColor,
-                      fillOpacity: 0.85,
-                      color: '#111010',
-                      weight: isSel ? 2.5 : 1.5,
-                    }}
-                    eventHandlers={{ click: () => setSelected(prev => prev === s.id ? null : s.id) }}
-                  >
-                    <Popup
-                      closeButton={false}
-                      className="map-popup"
-                      eventHandlers={{ remove: () => setSelected((prev) => (prev === s.id ? null : prev)) }}
-                    >
-                      <div style={{ minWidth: 210 }}>
-                        <div style={{ background: popupLv.color, padding: '12px 14px' }}>
-                          <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 6 }}>
-                            {L_lang ? popupLv.it : popupLv.en}
-                          </div>
-                          <div style={{ fontFamily: 'Epilogue', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1, marginBottom: 4 }}>
-                            {s.name}
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>
-                            {displayDate} — {fmtHour(displayHour)}
-                          </div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-                          {Object.keys(POLLUTANTS).map((k, idx) => {
-                            const li = getPollLevel(k, s[k] || 0);
-                            const isOdd = idx % 2 === 0;
-                            const isBottomRow = idx >= Object.keys(POLLUTANTS).length - 2;
-                            return (
-                              <div key={k} style={{
-                                padding: '8px 10px',
-                                borderRight: isOdd ? '1px solid var(--gray)' : 'none',
-                                borderBottom: isBottomRow ? 'none' : '1px solid var(--gray)',
-                              }}>
-                                <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gray2)' }}>
-                                  {POLLUTANTS[k].name}
-                                </div>
-                                <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 800, color: LEVELS[li].color, lineHeight: 1.2 }}>
-                                  {s[k] ?? '—'} <span style={{ fontSize: 9, fontWeight: 400, color: 'var(--gray2)' }}>{POLLUTANTS[k].unit}</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <button
-                          onClick={() => { setSelectedSensor(s); setPage('record'); }}
-                          style={{
-                            width: '100%', padding: '8px', background: popupLv.color, color: '#fff',
-                            border: 'none', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 10,
-                            cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase',
-                          }}
-                        >
-                          {L_lang ? 'Apri record →' : 'Open record →'}
-                        </button>
-                      </div>
-                    </Popup>
-                  </CircleMarker>
-                );
-              })}
-            </MapContainer>
-          </div>
-
-          {/* WIND BOX */}
-          {wind && (() => {
-            const mathAngle = Math.atan2(-wind.v, wind.u) * 180 / Math.PI;
-            const arrowRot = 90 - mathAngle; // CSS rotation: 0° = up (north)
-            const pts = ['N','NE','E','SE','S','SW','W','NW'];
-            const toDir = (wind.dir + 180) % 360;
-            const compassPt = pts[Math.round(toDir / 45) % 8];
-            return (
-              <div style={{
-                position: 'absolute', top: 12, right: 12, zIndex: 1000,
-                background: 'var(--primary)',
-                padding: '10px 14px',
-                display: 'flex', alignItems: 'center', gap: 12,
-                pointerEvents: 'none',
-              }}>
-                {/* Arrow */}
-                <svg width="32" height="32" viewBox="-16 -16 32 32" style={{ flexShrink: 0 }}>
-                  <circle r="14" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
-                  <g transform={`rotate(${arrowRot})`}>
-                    <line x1="0" y1="10" x2="0" y2="-8" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                    <polygon points="0,-13 -4,-5 4,-5" fill="white" />
-                  </g>
-                </svg>
-                {/* Labels */}
-                <div>
-                  <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
-                    {L_lang ? 'Vento' : 'Wind'}
-                  </div>
-                  <div style={{ fontFamily: 'Epilogue', fontSize: 18, fontWeight: 700, color: '#fff', lineHeight: 1 }}>
-                    {wind.spd.toFixed(1)} <span style={{ fontSize: 10, fontWeight: 400 }}>m/s</span>
-                  </div>
-                  <div style={{ fontFamily: 'Epilogue', fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>
-                    {compassPt} · {Math.round(wind.dir)}°
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* TIMELINE — only in range mode */}
-          {timeMode === 'range' && (
+        {/* FLOATING BOX — Wind (top-right) */}
+        {wind && (() => {
+          const mathAngle = Math.atan2(-wind.v, wind.u) * 180 / Math.PI;
+          const arrowRot = 90 - mathAngle;
+          const pts = ['N','NE','E','SE','S','SW','W','NW'];
+          const compassPt = pts[Math.round(((wind.dir + 180) % 360) / 45) % 8];
+          return (
             <div style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000,
-              background: 'rgba(17,16,16,0.82)', backdropFilter: 'blur(4px)',
-              padding: '10px 16px 12px',
+              position: 'absolute', top: 12, right: 12, zIndex: 1000,
+              background: 'var(--white)', padding: '10px 14px',
+              display: 'flex', alignItems: 'center', gap: 12, pointerEvents: 'none',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {/* Play/pause */}
-                <button
-                  onClick={() => setIsPlaying(p => !p)}
-                  style={{
-                    background: 'none', border: '1.5px solid rgba(255,255,255,0.5)',
-                    color: '#fff', width: 28, height: 28, cursor: 'pointer',
-                    fontFamily: 'Epilogue', fontSize: 12, flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  {isPlaying ? '⏸' : '▶'}
-                </button>
-
-                {/* From label */}
-                <span style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
-                  {rangeDateStart}
-                </span>
-
-                {/* Scrubber */}
-                <div style={{ flex: 1, position: 'relative' }}>
-                  <input
-                    type="range"
-                    min={0} max={Math.max(0, rangeDates.length - 1)} value={playhead}
-                    onChange={e => { setIsPlaying(false); setPlayhead(Number(e.target.value)); }}
-                    style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }}
-                  />
-                  {/* Day ticks */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, pointerEvents: 'none' }}>
-                    {rangeDates.map((d, i) => (
-                      <div key={d} style={{
-                        width: 1, height: i === playhead ? 8 : 4,
-                        background: i === playhead ? '#fff' : 'rgba(255,255,255,0.3)',
-                        flexShrink: 0,
-                      }} />
-                    ))}
-                  </div>
+              <svg width="32" height="32" viewBox="-16 -16 32 32" style={{ flexShrink: 0 }}>
+                <circle r="14" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+                <g transform={`rotate(${arrowRot})`}>
+                  <line x1="0" y1="10" x2="0" y2="-8" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+                  <polygon points="0,-13 -4,-5 4,-5" fill="var(--primary)" />
+                </g>
+              </svg>
+              <div>
+                <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>
+                  {L_lang ? 'Vento' : 'Wind'}
                 </div>
-
-                {/* To label */}
-                <span style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
-                  {rangeDateEnd}
-                </span>
-
-                {/* Current day badge */}
-                <div style={{
-                  background: 'var(--primary)', color: '#fff',
-                  fontFamily: 'Epilogue', fontSize: 11, fontWeight: 700,
-                  padding: '3px 10px', flexShrink: 0, letterSpacing: '0.05em',
-                  border: '1px solid rgba(255,255,255,0.4)',
-                }}>
-                  {displayDate}
+                <div style={{ fontFamily: 'Epilogue', fontSize: 18, fontWeight: 700, color: 'var(--black)', lineHeight: 1 }}>
+                  {wind.spd.toFixed(1)} <span style={{ fontSize: 10, fontWeight: 400 }}>m/s</span>
+                </div>
+                <div style={{ fontFamily: 'Epilogue', fontSize: 11, color: 'var(--gray2)', marginTop: 2 }}>
+                  {compassPt} · {Math.round(wind.dir)}°
                 </div>
               </div>
             </div>
-          )}
+          );
+        })()}
 
-        </div>
+        {/* TIMELINE — range mode only (bottom full-width) */}
+        {timeMode === 'range' && (
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000,
+            height: timelineH, background: 'rgba(17,16,16,0.88)', backdropFilter: 'blur(4px)',
+            padding: '10px 16px 12px', boxSizing: 'border-box',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: '100%' }}>
+              <button onClick={() => setIsPlaying(p => !p)} style={{
+                background: 'none', border: '1.5px solid rgba(255,255,255,0.5)',
+                color: '#fff', width: 28, height: 28, cursor: 'pointer',
+                fontFamily: 'Epilogue', fontSize: 12, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {isPlaying ? '⏸' : '▶'}
+              </button>
+              <span style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
+                {rangeDateStart}
+              </span>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <input type="range" min={0} max={Math.max(0, rangeDates.length - 1)} value={playhead}
+                  onChange={e => { setIsPlaying(false); setPlayhead(Number(e.target.value)); }}
+                  style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, pointerEvents: 'none' }}>
+                  {rangeDates.map((d, i) => (
+                    <div key={d} style={{
+                      width: 1, height: i === playhead ? 8 : 4,
+                      background: i === playhead ? '#fff' : 'rgba(255,255,255,0.3)', flexShrink: 0,
+                    }} />
+                  ))}
+                </div>
+              </div>
+              <span style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
+                {rangeDateEnd}
+              </span>
+              <div style={{
+                background: 'var(--primary)', color: '#fff', fontFamily: 'Epilogue',
+                fontSize: 11, fontWeight: 700, padding: '3px 10px', flexShrink: 0,
+                letterSpacing: '0.05em', border: '1px solid rgba(255,255,255,0.4)',
+              }}>
+                {displayDate}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
