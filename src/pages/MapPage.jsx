@@ -40,7 +40,7 @@ function toISO(d) {
 }
 
 
-function WindSpreadOverlay({ wind, activePollutant, sensors }) {
+function BlobOverlay({ wind, activePollutant, sensors }) {
   const map = useMap();
   const svgRef = useRef(null);
 
@@ -63,7 +63,6 @@ function WindSpreadOverlay({ wind, activePollutant, sensors }) {
 
       const defs = document.createElementNS(ns, 'defs');
 
-      // Pre-compute per-sensor data
       const sensorData = sensors.map(s => {
         const lvIdx = activePollutant
           ? getPollLevel(activePollutant, s[activePollutant] || 0)
@@ -75,8 +74,6 @@ function WindSpreadOverlay({ wind, activePollutant, sensors }) {
 
       const maxLvl = sensorData.reduce((m, d) => Math.max(m, d.lvIdx), 0);
 
-      // Group all ellipses by blobLvl so same-level blobs share one blur filter
-      // and composite/merge before blurring — this makes nearby sensors merge.
       for (let blobLvl = 0; blobLvl <= maxLvl; blobLvl++) {
         const blobColor = LEVELS[blobLvl].color;
         const blurStd = 16 + (maxLvl - blobLvl) * 6;
@@ -102,45 +99,20 @@ function WindSpreadOverlay({ wind, activePollutant, sensors }) {
           const rx = (30 + lvIdx * 16 + layerOuter * 22) * windStretch;
           const ry = 20 + lvIdx * 10 + layerOuter * 14;
           const offsetDist = rx * 0.3;
+          // arrow screen vector is (cos(angleRad), -sin(angleRad)) — match offset and axis to it
           const ecx = pt.x + Math.cos(angleRad) * offsetDist;
-          const ecy = pt.y + Math.sin(angleRad) * offsetDist;
+          const ecy = pt.y - Math.sin(angleRad) * offsetDist;
 
           const ellipse = document.createElementNS(ns, 'ellipse');
           ellipse.setAttribute('cx', ecx); ellipse.setAttribute('cy', ecy);
           ellipse.setAttribute('rx', rx); ellipse.setAttribute('ry', ry);
-          ellipse.setAttribute('transform', `rotate(${angleDeg}, ${ecx}, ${ecy})`);
+          ellipse.setAttribute('transform', `rotate(${-angleDeg}, ${ecx}, ${ecy})`);
           ellipse.setAttribute('fill', blobColor);
           grp.appendChild(ellipse);
         });
 
         svg.appendChild(grp);
       }
-
-      // Dust dots — rendered per-sensor on top, no blur
-      sensorData.forEach(({ s, lvIdx, pt }) => {
-        const innerRx = 42 * windStretch;
-        const innerRy = 28;
-        const innerOffsetDist = innerRx * 0.3;
-        const icx = pt.x + Math.cos(angleRad) * innerOffsetDist;
-        const icy = pt.y + Math.sin(angleRad) * innerOffsetDist;
-        const innerColor = LEVELS[lvIdx].color;
-        const seed = s.id * 137;
-        const numDots = 7 + lvIdx * 3;
-        for (let i = 0; i < numDots; i++) {
-          const t = ((seed * (i + 1) * 0.618) % 1) * Math.PI * 2;
-          const r2 = 0.18 + ((seed * (i + 1) * 0.314) % 1) * 0.82;
-          const localX = Math.cos(t) * r2 * innerRx * 1.3;
-          const localY = Math.sin(t) * r2 * innerRy * 1.3;
-          const dotX = icx + localX * Math.cos(angleRad) - localY * Math.sin(angleRad);
-          const dotY = icy + localX * Math.sin(angleRad) + localY * Math.cos(angleRad);
-          const dot = document.createElementNS(ns, 'circle');
-          dot.setAttribute('cx', dotX.toFixed(1)); dot.setAttribute('cy', dotY.toFixed(1));
-          dot.setAttribute('r', (1.5 + r2 * Math.max(1, lvIdx) * 0.5).toFixed(1));
-          dot.setAttribute('fill', innerColor);
-          dot.setAttribute('opacity', (0.28 + r2 * 0.42).toFixed(2));
-          svg.appendChild(dot);
-        }
-      });
 
       svg.insertBefore(defs, svg.firstChild);
       map.getPanes().overlayPane.appendChild(svg);
@@ -154,6 +126,109 @@ function WindSpreadOverlay({ wind, activePollutant, sensors }) {
       if (svgRef.current) { svgRef.current.remove(); svgRef.current = null; }
     };
   }, [map, wind, activePollutant, sensors]);
+
+  return null;
+}
+
+function WindParticleOverlay({ wind, sensors, activePollutant }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!wind || !sensors.length) return;
+
+    const sensorData = sensors.map(s => {
+      const lvl = activePollutant
+        ? getPollLevel(activePollutant, s[activePollutant] || 0)
+        : getSensorAQI(s);
+      const c = LEVELS[lvl].color;
+      return {
+        lat: s.lat, lon: s.lon, lvl,
+        rgb: [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)],
+      };
+    });
+
+    const windAngle = Math.atan2(-wind.v, wind.u);
+    const baseSpeed = 0.07 + wind.spd * 0.055;
+    const LIFETIME = Math.round(320 - wind.spd * 6);
+
+    const particles = sensorData.flatMap((s, si) => {
+      const N = 4 + s.lvl * 7; // level 0 → 4 dots, level 5 → 39 dots
+      const pt = map.latLngToLayerPoint([s.lat, s.lon]);
+      return Array.from({ length: N }, (_, k) => ({
+        x: pt.x + (Math.random() - 0.5) * 12,
+        y: pt.y + (Math.random() - 0.5) * 12,
+        age: (k / N) * LIFETIME,
+        maxAge: LIFETIME * (0.8 + Math.random() * 0.4),
+        speedMult: 0.6 + Math.random() * 0.8,
+        size: 1.2 + Math.random() * 1.8,
+        si,
+      }));
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;pointer-events:none;';
+    map.getPanes().overlayPane.appendChild(canvas);
+
+    let tlX = 0, tlY = 0;
+    const resize = () => {
+      const size = map.getSize();
+      const tl = map.containerPointToLayerPoint([0, 0]);
+      tlX = tl.x; tlY = tl.y;
+      canvas.width = size.x;
+      canvas.height = size.y;
+      canvas.style.left = tlX + 'px';
+      canvas.style.top  = tlY + 'px';
+    };
+    resize();
+
+    const ctx = canvas.getContext('2d');
+    let rafId;
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (const p of particles) {
+        p.age++;
+        if (p.age >= p.maxAge) {
+          const s = sensorData[p.si];
+          const pt = map.latLngToLayerPoint([s.lat, s.lon]);
+          p.x = pt.x + (Math.random() - 0.5) * 12;
+          p.y = pt.y + (Math.random() - 0.5) * 12;
+          p.age = 0;
+          p.maxAge = LIFETIME * (0.8 + Math.random() * 0.4);
+          p.speedMult = 0.6 + Math.random() * 0.8;
+        }
+
+        const jitter = 0.3 + wind.spd * 0.08;
+        p.x += Math.cos(windAngle) * baseSpeed * p.speedMult + (Math.random() - 0.5) * jitter;
+        p.y -= Math.sin(windAngle) * baseSpeed * p.speedMult + (Math.random() - 0.5) * jitter;
+
+        const t = p.age / p.maxAge;
+        let alpha = t < 0.08 ? t / 0.08 : t > 0.65 ? 1 - (t - 0.65) / 0.35 : 1;
+        alpha *= 0.15 + sensorData[p.si].lvl * 0.14;
+
+        const cx = p.x - tlX;
+        const cy = p.y - tlY;
+        if (cx < -20 || cy < -20 || cx > canvas.width + 20 || cy > canvas.height + 20) continue;
+
+        const [r, g, b] = sensorData[p.si].rgb;
+        ctx.beginPath();
+        ctx.arc(cx, cy, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+        ctx.fill();
+      }
+
+      rafId = requestAnimationFrame(animate);
+    };
+
+    animate();
+    map.on('moveend zoomend viewreset', resize);
+    return () => {
+      cancelAnimationFrame(rafId);
+      map.off('moveend zoomend viewreset', resize);
+      canvas.remove();
+    };
+  }, [map, wind, sensors, activePollutant]);
 
   return null;
 }
@@ -281,7 +356,8 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
             />
             <ZoomControl position="bottomright" />
             <FlyTo sensor={selectedSensor} />
-            <WindSpreadOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
+            <BlobOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
+            <WindParticleOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
             {displaySensors.map((s) => {
               const dotLv = getDotLevel(s);
               const dotColor = LEVELS[dotLv].color;
@@ -505,19 +581,19 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
         {timeMode === 'range' && (
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000,
-            height: timelineH, background: 'rgba(17,16,16,0.88)', backdropFilter: 'blur(4px)',
+            height: timelineH, background: 'var(--white)',
             padding: '10px 16px 12px', boxSizing: 'border-box',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: '100%' }}>
               <button onClick={() => setIsPlaying(p => !p)} style={{
-                background: 'none', border: '1.5px solid rgba(255,255,255,0.5)',
-                color: '#fff', width: 28, height: 28, cursor: 'pointer',
+                background: 'none', border: '1.5px solid rgba(0,0,0,0.3)',
+                color: 'var(--black)', width: 28, height: 28, cursor: 'pointer',
                 fontFamily: 'Epilogue', fontSize: 12, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 {isPlaying ? '⏸' : '▶'}
               </button>
-              <span style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
+              <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
                 {rangeDateStart}
               </span>
               <div style={{ flex: 1, position: 'relative' }}>
@@ -528,18 +604,18 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
                   {rangeDates.map((d, i) => (
                     <div key={d} style={{
                       width: 1, height: i === playhead ? 8 : 4,
-                      background: i === playhead ? '#fff' : 'rgba(255,255,255,0.3)', flexShrink: 0,
+                      background: i === playhead ? 'var(--black)' : 'rgba(0,0,0,0.2)', flexShrink: 0,
                     }} />
                   ))}
                 </div>
               </div>
-              <span style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
+              <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
                 {rangeDateEnd}
               </span>
               <div style={{
                 background: 'var(--primary)', color: '#fff', fontFamily: 'Epilogue',
                 fontSize: 11, fontWeight: 700, padding: '3px 10px', flexShrink: 0,
-                letterSpacing: '0.05em', border: '1px solid rgba(255,255,255,0.4)',
+                letterSpacing: '0.05em',
               }}>
                 {displayDate}
               </div>
