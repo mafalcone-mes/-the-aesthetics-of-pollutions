@@ -88,16 +88,16 @@ export default function RecordPage({ lang, sensor }) {
           { catKey: 'systemic',     label: L ? 'Sistemici · CO/NH₃/C₆H₆' : 'Systemic · CO/NH₃/C₆H₆' },
         ].map(({ catKey, label }) => {
           const sym = SYMPTOMS[catKey][lv.key];
-          if (!sym) return null;
+          if (!sym || (!sym.gen && !sym.sen)) return null;
           const catLevel = Math.max(...Object.keys(POLLUTANTS).filter(k => POLLUTANTS[k].category === catKey).map(k => getPollLevel(k, sensor[k] || 0)));
           const catLv = LEVELS[catLevel];
           return (
             <div key={catKey} style={{ flex: '1 1 140px', background: catLv.color, padding: '12px 14px' }}>
               <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 6 }}>{label}</div>
               {[
-                { who: L ? 'Generale' : 'General', text: sym.gen },
-                { who: L ? 'Sensibile' : 'Sensitive', text: sym.sen },
-              ].map((s, i) => (
+                { who: L ? 'Generale' : 'General', text: L ? sym.gen?.it : sym.gen?.en },
+                { who: L ? 'Sensibile' : 'Sensitive', text: L ? sym.sen?.it : sym.sen?.en },
+              ].filter(s => s.text).map((s, i) => (
                 <div key={i} style={{ marginBottom: i === 0 ? 6 : 0 }}>
                   <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
                   <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>

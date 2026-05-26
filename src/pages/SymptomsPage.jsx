@@ -417,7 +417,7 @@ export default function SymptomsPage({ lang }) {
               </span>
               {SENSORS.map(s => (
                 <span key={s.id} style={pillStyleWhite(activeSensor === String(s.id))} onClick={() => setActiveSensor(String(s.id))}>
-                  {s.name}
+                  {s.name.replace('Taranto - ', '')}
                 </span>
               ))}
             </div>
@@ -453,7 +453,7 @@ export default function SymptomsPage({ lang }) {
             const levelIndex = categoryLevels[catKey];
             const lv = LEVELS[levelIndex];
             const sym = SYMPTOMS[catKey][lv.key];
-            const noSym = !sym || (sym.gen === 'No symptoms' && sym.sen === 'No symptoms');
+            const noSym = !sym || (!sym.gen && !sym.sen);
             return (
               <div style={{ background: lv.color, padding: '12px 14px', pointerEvents: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -471,9 +471,9 @@ export default function SymptomsPage({ lang }) {
                   </div>
                 ) : (
                   [
-                    { who: L ? 'Popolazione generale' : 'General population', text: sym.gen },
-                    { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: sym.sen },
-                  ].filter(s => s.text && s.text !== 'No symptoms').map((s, i) => (
+                    { who: L ? 'Popolazione generale' : 'General population', text: L ? sym.gen?.it : sym.gen?.en },
+                    { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: L ? sym.sen?.it : sym.sen?.en },
+                  ].filter(s => s.text).map((s, i) => (
                     <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
                       <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
                       <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
@@ -563,7 +563,7 @@ export default function SymptomsPage({ lang }) {
                 {LEVELS.map((lv) => {
                   const sym = SYMPTOMS[cat.key][lv.key];
                   const isCurrent = categoryLevels[cat.key] === lv.index;
-                  const noSym = !sym || (sym.gen === 'No symptoms' && sym.sen === 'No symptoms');
+                  const noSym = !sym || (!sym.gen && !sym.sen);
                   return (
                     <div key={lv.key} className={`symptoms-matrix-cell${isCurrent ? ' current' : ''}`} style={{ borderTop: `3px solid ${lv.color}` }}>
                       <div className="symptoms-matrix-level-badge" style={{ background: lv.color }}>
@@ -574,16 +574,16 @@ export default function SymptomsPage({ lang }) {
                         <div className="symptoms-matrix-none">—</div>
                       ) : (
                         <>
-                          {sym.gen !== 'No symptoms' && (
+                          {sym.gen && (
                             <div className="symptoms-matrix-row">
                               <span className="symptoms-matrix-who">{L ? 'Gen.' : 'Gen.'}</span>
-                              <span className="symptoms-matrix-text">{sym.gen}</span>
+                              <span className="symptoms-matrix-text">{L ? sym.gen.it : sym.gen.en}</span>
                             </div>
                           )}
-                          {sym.sen !== 'No symptoms' && (
+                          {sym.sen && (
                             <div className="symptoms-matrix-row">
                               <span className="symptoms-matrix-who">{L ? 'Sen.' : 'Sen.'}</span>
-                              <span className="symptoms-matrix-text">{sym.sen}</span>
+                              <span className="symptoms-matrix-text">{L ? sym.sen.it : sym.sen.en}</span>
                             </div>
                           )}
                         </>
@@ -599,59 +599,62 @@ export default function SymptomsPage({ lang }) {
 
       {/* REPORT SECTION */}
       <div id="report-section" style={{ borderTop: '1px solid var(--gray)' }}>
-        <div style={{ padding: '24px 24px 16px 24px', borderBottom: '1px solid var(--gray)' }}>
+
+        <div style={{ padding: '24px 28px 16px', borderBottom: '1px solid var(--gray)' }}>
           <span style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
             {L ? 'Segnala un Sintomo' : 'Report a Symptom'}
           </span>
         </div>
 
-        <div className="report-page-body">
-          <form className="report-form" onSubmit={handleSubmit} noValidate>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'start' }}>
 
-            <div className="report-form-row">
-              <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{L ? 'Nome o pseudonimo' : 'Name or pseudonym'}</div>
+          {/* FORM */}
+          <form onSubmit={handleSubmit} noValidate style={{ borderRight: '1px solid var(--gray)' }}>
+
+            <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--gray)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={SUB_LABEL}>{L ? 'Nome o pseudonimo' : 'Name or pseudonym'}</div>
               <input type="text" placeholder={L ? 'Es. Mario R.' : 'E.g. Mario R.'} value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                maxLength={60} style={INPUT_STYLE} />
+                maxLength={60} style={{ ...SEL_STYLE, fontFamily: 'var(--font-body)', fontSize: 13, padding: '7px 10px' }} />
             </div>
 
-            <div className="report-form-row">
-              <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{L ? 'Quartiere' : 'Neighbourhood'}</div>
-              <select value={form.district} onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))} style={INPUT_STYLE}>
-                <option value="">{L ? '— Seleziona —' : '— Select —'}</option>
-                {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-
-            <div className="report-form-row">
-              <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{L ? 'Sintomi avvertiti' : 'Symptoms experienced'}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {SYMPTOM_OPTIONS.map((s) => (
-                  <button key={s.key} type="button" onClick={() => toggleSymptom(s.key)}
-                    aria-pressed={form.symptoms.has(s.key)} style={reportPill(form.symptoms.has(s.key))}>
-                    {L ? s.it : s.en}
+            <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--gray)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={SUB_LABEL}>{L ? 'Zona / Sensore' : 'Zone / Sensor'}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {SENSORS.map((s) => (
+                  <button key={s.id} type="button"
+                    onClick={() => setForm((f) => ({ ...f, district: s.name }))}
+                    style={pillStyleWhite(form.district === s.name)}>
+                    {s.name.replace('Taranto - ', '')}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="report-form-row">
-              <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{L ? 'Note aggiuntive (facoltativo)' : 'Additional notes (optional)'}</div>
-              <textarea rows={4} placeholder={L ? 'Descrivi quando e come hai avvertito i disturbi...' : 'Describe when and how you experienced the discomfort...'}
-                value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-                maxLength={500} style={{ ...INPUT_STYLE, resize: 'vertical', minHeight: 96 }} />
+            <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--gray)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={SUB_LABEL}>{L ? 'Sintomi avvertiti' : 'Symptoms experienced'}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {SYMPTOM_OPTIONS.map((s) => (
+                  <button key={s.key} type="button" onClick={() => toggleSymptom(s.key)}
+                    aria-pressed={form.symptoms.has(s.key)} style={pillStyleWhite(form.symptoms.has(s.key))}>
+                    {s.it}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <button type="submit" disabled={!validForm} style={{
-                padding: '8px 24px',
-                background: validForm ? 'var(--black)' : 'transparent',
-                color: validForm ? 'var(--white)' : 'var(--black)',
-                border: '1.5px solid ' + (validForm ? 'var(--black)' : 'rgba(0,0,0,0.22)'),
-                fontFamily: 'Epilogue', fontSize: 11, fontWeight: 700,
-                letterSpacing: '0.08em', textTransform: 'uppercase',
-                cursor: validForm ? 'pointer' : 'not-allowed',
-              }}>
+            <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--gray)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={SUB_LABEL}>{L ? 'Note aggiuntive (facoltativo)' : 'Additional notes (optional)'}</div>
+              <textarea rows={4}
+                placeholder={L ? 'Descrivi quando e come hai avvertito i disturbi...' : 'Describe when and how you experienced the discomfort...'}
+                value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                maxLength={500}
+                style={{ ...SEL_STYLE, resize: 'vertical', minHeight: 96, fontFamily: 'var(--font-body)', fontSize: 13, padding: '7px 10px' }} />
+            </div>
+
+            <div style={{ padding: '20px 28px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button type="submit" disabled={!validForm}
+                style={{ ...pillStyleWhite(validForm), opacity: validForm ? 1 : 0.4, cursor: validForm ? 'pointer' : 'not-allowed' }}>
                 {L ? 'INVIA SEGNALAZIONE →' : 'SUBMIT REPORT →'}
               </button>
               {submitted && (
@@ -662,43 +665,37 @@ export default function SymptomsPage({ lang }) {
             </div>
           </form>
 
-          <div className="report-history">
-            <div style={{ ...SUB_LABEL, color: 'var(--black)', padding: '14px 24px', borderBottom: '1px solid var(--gray)' }}>
+          {/* HISTORY */}
+          <div>
+            <div style={{ ...SUB_LABEL, padding: '14px 28px', borderBottom: '1px solid var(--gray)' }}>
               {reports.length === 0
                 ? (L ? 'Segnalazioni recenti' : 'Recent reports')
                 : (L ? `Ultime ${reports.length} segnalazioni` : `Last ${reports.length} reports`)}
             </div>
             {reports.length === 0 ? (
-              <div style={{ padding: '32px 24px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--gray2)', lineHeight: 1.6 }}>
+              <div style={{ padding: '32px 28px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--gray2)', lineHeight: 1.6 }}>
                 {L ? 'Le segnalazioni inviate in questa sessione appariranno qui.' : 'Reports submitted in this session will appear here.'}
               </div>
             ) : (
-              <div className="report-history-list">
-                {reports.map((r) => (
-                  <div key={r.id} style={{ padding: '16px 24px', borderBottom: '1px solid var(--gray)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'var(--font-title)', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{r.name}</span>
-                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontStyle: 'italic', color: 'var(--gray2)' }}>{r.district}</span>
-                      <span style={{ fontFamily: 'Epilogue', fontSize: 10, color: 'var(--gray2)', marginLeft: 'auto', letterSpacing: '0.04em' }}>{formatReportTime(r.time)}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                      {r.symptoms.map((k) => {
-                        const opt = SYMPTOM_OPTIONS.find((o) => o.key === k);
-                        return opt ? (
-                          <span key={k} style={{ padding: '3px 10px', border: '1.5px solid rgba(0,0,0,0.22)', fontFamily: 'Epilogue', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                            {L ? opt.it : opt.en}
-                          </span>
-                        ) : null;
-                      })}
-                    </div>
-                    {r.note && (
-                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.55, color: 'var(--black)', fontStyle: 'italic' }}>{r.note}</div>
-                    )}
+              reports.map((r) => (
+                <div key={r.id} style={{ padding: '16px 28px', borderBottom: '1px solid var(--gray)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: 'var(--font-title)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{r.name}</span>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontStyle: 'italic', color: 'var(--gray2)' }}>{r.district}</span>
+                    <span style={{ ...SUB_LABEL, color: 'var(--gray2)', marginLeft: 'auto' }}>{formatReportTime(r.time)}</span>
                   </div>
-                ))}
-              </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {r.symptoms.map((k) => {
+                      const opt = SYMPTOM_OPTIONS.find((o) => o.key === k);
+                      return opt ? <span key={k} style={pillStyleWhite(false)}>{opt.it}</span> : null;
+                    })}
+                  </div>
+                  {r.note && <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.55, fontStyle: 'italic' }}>{r.note}</div>}
+                </div>
+              ))
             )}
           </div>
+
         </div>
       </div>
     </div>
