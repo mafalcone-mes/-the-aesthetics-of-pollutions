@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
@@ -42,6 +42,7 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
   const [chartType, setChartType] = useState('line');
   const [currentPage, setCurrentPage] = useState(1);
   const [filterKey, setFilterKey] = useState(0);
+  const [hoveredRow, setHoveredRow] = useState(null);
 
   const districts = [...new Set(SENSORS.map((s) => s.district))];
 
@@ -261,26 +262,51 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
             {pagedData.map((r, i) => {
               const lv = LEVELS[r.aqi];
               const isDark = r.aqi <= 1;
+              const rowKey = `${r.sensorId}-${r.dateStr}`;
+              const isHovered = hoveredRow === rowKey;
+              const expandBg = 'color-mix(in srgb, var(--primary) 6%, var(--white))';
               return (
-                <tr
-                  key={`${filterKey}-${r.sensorId}-${r.dateObj}`}
-                  className="archive-row-animate"
-                  style={{ animationDelay: `${i * 18}ms` }}
-                  onClick={() => { setSelectedSensor(SENSORS.find((s) => s.id === r.sensorId)); setPage('record'); }}
-                >
-                  <td style={{ color: '#9B9790', fontSize: 11 }}>{(currentPage - 1) * PAGE_SIZE + i + 1}</td>
-                  <td><span style={{ fontFamily: 'Epilogue', fontWeight: 700 }}>{r.sensorName}</span></td>
-                  <td><span style={{  }}>{r.district}</span></td>
-                  <td>{r.dateStr}</td>
-                  <td style={{ fontFamily: 'Epilogue', fontWeight: 600 }}>{r.hourStr}</td>
-                  <td><span className={`aqi-pill${isDark ? ' dark' : ''}`} style={{ background: lv.color }}>{L ? lv.it : lv.en}</span></td>
-                  <td style={{ color: LEVELS[getPollLevel('pm25', r.pm25)].color, fontFamily: 'Epilogue', fontWeight: 700 }}>{r.pm25}</td>
-                  <td style={{ color: LEVELS[getPollLevel('pm10', r.pm10)].color, fontFamily: 'Epilogue', fontWeight: 700 }}>{r.pm10}</td>
-                  <td style={{ color: LEVELS[getPollLevel('no2',  r.no2)].color,  fontFamily: 'Epilogue', fontWeight: 700 }}>{r.no2}</td>
-                  <td style={{ color: LEVELS[getPollLevel('co',   r.co)].color,   fontFamily: 'Epilogue', fontWeight: 700 }}>{r.co}</td>
-                  <td style={{ fontFamily: 'Epilogue' }}>{r.temp}°</td>
-                  <td style={{ fontFamily: 'Epilogue' }}>{r.hum}%</td>
-                </tr>
+                <Fragment key={`${filterKey}-${r.sensorId}-${r.dateObj}`}>
+                  <tr
+                    className="archive-row-animate"
+                    style={{ animationDelay: `${i * 18}ms`, background: isHovered ? expandBg : '' }}
+                    onMouseEnter={() => setHoveredRow(rowKey)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    onClick={() => { setSelectedSensor(SENSORS.find((s) => s.id === r.sensorId)); setPage('record'); }}
+                  >
+                    <td style={{ color: '#9B9790', fontSize: 11 }}>{(currentPage - 1) * PAGE_SIZE + i + 1}</td>
+                    <td><span style={{ fontFamily: 'Epilogue', fontWeight: 700 }}>{r.sensorName}</span></td>
+                    <td><span>{r.district}</span></td>
+                    <td>{r.dateStr}</td>
+                    <td style={{ fontFamily: 'Epilogue', fontWeight: 600 }}>{r.hourStr}</td>
+                    <td><span className={`aqi-pill${isDark ? ' dark' : ''}`} style={{ background: lv.color }}>{L ? lv.it : lv.en}</span></td>
+                    <td style={{ color: LEVELS[getPollLevel('pm25', r.pm25)].color, fontFamily: 'Epilogue', fontWeight: 700 }}>{r.pm25}</td>
+                    <td style={{ color: LEVELS[getPollLevel('pm10', r.pm10)].color, fontFamily: 'Epilogue', fontWeight: 700 }}>{r.pm10}</td>
+                    <td style={{ color: LEVELS[getPollLevel('no2',  r.no2)].color,  fontFamily: 'Epilogue', fontWeight: 700 }}>{r.no2}</td>
+                    <td style={{ color: LEVELS[getPollLevel('co',   r.co)].color,   fontFamily: 'Epilogue', fontWeight: 700 }}>{r.co}</td>
+                    <td style={{ fontFamily: 'Epilogue' }}>{r.temp}°</td>
+                    <td style={{ fontFamily: 'Epilogue' }}>{r.hum}%</td>
+                  </tr>
+                  {isHovered && (
+                    <tr
+                      onMouseEnter={() => setHoveredRow(rowKey)}
+                      onMouseLeave={() => setHoveredRow(null)}
+                    >
+                      <td colSpan={12} style={{ padding: '0 24px 14px', background: expandBg, borderBottom: '2px solid var(--primary)' }}>
+                        <div style={{ fontFamily: 'Epilogue', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9B9790', marginBottom: 6 }}>
+                          {r.sensorName} — {r.dateStr}
+                        </div>
+                        <HourlyBarChart
+                          data={HOURLY_DATA.filter(d => d.sensorId === r.sensorId && d.dateStr === r.dateStr)}
+                          pollutants={['pm25', 'pm10', 'no2', 'co']}
+                          lang={lang}
+                          width={860}
+                          height={120}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               );
             })}
           </tbody>

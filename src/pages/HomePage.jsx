@@ -36,11 +36,13 @@ function svgState(p, { aS, aE, dS, dE }) {
   return { scale: 1, opacity: 0 };
 }
 
-const SVG_POSITIONS = [
-  { left: '2%',  top: '5%',  width: '34%', height: '85%' },
-  { left: '33%', top: '5%',  width: '34%', height: '85%' },
-  { left: '65%', top: '5%',  width: '34%', height: '85%' },
-];
+function randomSvgPos() {
+  return {
+    left:  `${4  + Math.random() * 56}%`,
+    top:   `${4  + Math.random() * 58}%`,
+    width: `${18 + Math.random() * 28}%`,
+  };
+}
 
 const INFO_ITEMS = [
   {
@@ -60,15 +62,31 @@ const INFO_ITEMS = [
   },
 ];
 
-export default function HomePage({ lang, setPage, setSelectedSensor, hoveredNav }) {
+export default function HomePage({ lang, setPage, setSelectedSensor, hoveredNav, onHeroVisible }) {
   const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
   const lvl = LEVELS[globalAQI];
   const L = lang === 'it';
+
+  const heroRef = useRef(null);
+
+  useEffect(() => {
+    if (!onHeroVisible) return;
+    onHeroVisible(true);
+    const handleScroll = () => {
+      if (!heroRef.current) return;
+      onHeroVisible(heroRef.current.getBoundingClientRect().bottom > 0);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [onHeroVisible]);
 
   const [progress, setProgress] = useState(0);
   const [cycleIndex, setCycleIndex] = useState(0);
   const totalTimeRef = useRef(0);
   const prevCycleRef = useRef(0);
+
+  const [svgPositions, setSvgPositions] = useState(() => [0, 1, 2].map(randomSvgPos));
+  useEffect(() => { setSvgPositions([0, 1, 2].map(randomSvgPos)); }, [cycleIndex]);
 
   const [svgPool] = useState(() => {
     const pool = [];
@@ -102,7 +120,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, hoveredNav 
   return (
     <div>
       {/* HERO */}
-      <div style={{
+      <div ref={heroRef} style={{
         position: 'relative',
         height: '95vh',
         overflow: 'hidden',
@@ -114,7 +132,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, hoveredNav 
         {/* SVG particle animations */}
         {items.map((item, i) => {
           const { scale, opacity } = svgState(progress, STAGES[i]);
-          const pos = SVG_POSITIONS[i];
+          const pos = svgPositions[i];
           return (
             <div key={`${cycleIndex}-${i}`} style={{
               position: 'absolute',
@@ -141,7 +159,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, hoveredNav 
                 alt=""
                 style={{
                   width: '100%',
-                  height: '100%',
+                  height: 'auto',
                   objectFit: 'contain',
                   filter: `url(#assemble-${i})`,
                   opacity,
@@ -215,6 +233,38 @@ export default function HomePage({ lang, setPage, setSelectedSensor, hoveredNav 
               </div>
             </div>
           )}
+        </div>
+
+        {/* Hero nav buttons */}
+        <div style={{
+          position: 'absolute',
+          bottom: '8%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 20,
+          display: 'flex',
+          gap: 8,
+        }}>
+          {[
+            { id: 'map',      it: 'Mappa',    en: 'Map' },
+            { id: 'archive',  it: 'Archivio', en: 'Archive' },
+            { id: 'symptoms', it: 'Sintomi',  en: 'Symptoms' },
+          ].map((n) => (
+            <button key={n.id} onClick={() => setPage(n.id)} style={{
+              padding: '10px 24px',
+              border: '1.5px solid rgba(255,255,255,0.75)',
+              background: 'transparent',
+              color: 'rgba(255,255,255,0.9)',
+              fontFamily: 'var(--font-title)',
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+            }}>
+              {L ? n.it : n.en}
+            </button>
+          ))}
         </div>
       </div>
 

@@ -25,7 +25,12 @@ export default function App() {
   const [selectedSensor, setSelectedSensor] = useState(SENSORS[1]);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
+  const [heroVisible, setHeroVisible] = useState(true);
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  useEffect(() => {
+    setHeroVisible(page === 'home');
+  }, [page]);
 
   useEffect(() => {
     if (tweaks.darkMode) {
@@ -47,9 +52,9 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <TopBar page={page} setPage={setPage} lang={lang} setLang={setLang} onNavHover={setHoveredNav} />
+      {!(page === 'home' && heroVisible) && <TopBar page={page} setPage={setPage} lang={lang} setLang={setLang} onNavHover={setHoveredNav} />}
       <main className="main-content">
-        {page === 'home'     && <HomePage     lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} hoveredNav={hoveredNav} />}
+        {page === 'home'     && <HomePage     lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} hoveredNav={hoveredNav} onHeroVisible={setHeroVisible} />}
         {page === 'map'      && <MapPage      lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
         {page === 'archive'  && <ArchivePage  lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
         {page === 'record'   && <RecordPage   lang={lang} sensor={selectedSensor} />}
