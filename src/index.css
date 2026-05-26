@@ -312,7 +312,7 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   font-family: var(--font-title); font-size: 10px; font-weight: 700;
   letter-spacing: 0.1em; text-transform: uppercase;
   border-bottom: var(--border); border-right: 1px solid var(--gray);
-  background: var(--white); position: sticky; top: 48px;
+  background: var(--white); position: sticky; top: 48px; z-index: 1;
 }
 .archive-table td {
   padding: 12px 16px; font-family: var(--font-body); font-size: 13px;
@@ -345,7 +345,6 @@ body { font-family: var(--font-body); overflow-x: hidden; }
 .record-left {
   flex: 1;
   min-width: 0;
-  border-right: var(--border);
   background: var(--white);
 }
 .record-header { padding: 24px 28px; border-bottom: var(--border); }
@@ -390,6 +389,7 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   flex-shrink: 0;
   overflow-y: auto;
   background: var(--white);
+  border-right: var(--border);
 }
 .record-right-inner {
   padding: 16px;

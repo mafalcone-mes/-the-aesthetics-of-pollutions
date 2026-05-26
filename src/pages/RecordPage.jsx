@@ -15,8 +15,18 @@ const SUB_LABEL = {
   letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--black)',
 };
 
+const pill = (active, color) => ({
+  padding: '5px 14px',
+  border: '1.5px solid ' + (active ? color : 'rgba(0,0,0,0.22)'),
+  background: active ? color : 'transparent',
+  color: active ? '#fff' : 'var(--black)',
+  fontFamily: 'Epilogue', fontSize: 11, fontWeight: active ? 700 : 400,
+  letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
+});
+
 export default function RecordPage({ lang, sensor }) {
   const [activePollutant, setActivePollutant] = useState('pm25');
+  const [chartView, setChartView] = useState('line');
 
   if (!sensor) {
     return <div style={{ padding: 40, fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--gray2)' }}>Nessun sensore selezionato.</div>;
@@ -33,156 +43,151 @@ export default function RecordPage({ lang, sensor }) {
   const sensorRows = HOURLY_DATA.filter(r => r.sensorId === sensor.id);
   const histRows = sensorRows.slice(-24);
 
-  const latestRow = sensorRows[sensorRows.length - 1];
-  const now = latestRow ? latestRow.dateObj : new Date();
+  const chartViews = [
+    { key: 'line',  label: L ? 'Andamento' : 'Trend' },
+    { key: 'heat',  label: 'Heatmap' },
+    { key: 'multi', label: L ? 'Confronto' : 'Compare' },
+  ];
 
   return (
     <div className="record-page">
 
-      {/* TOP BAR — archive style */}
-      <div style={{ padding: '24px 28px 0 28px' }}>
+      {/* TITLE */}
+      <div style={{ padding: '24px 24px 16px 24px', borderBottom: '1px solid var(--gray)' }}>
         <span style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
           {sensor.name}
         </span>
       </div>
 
-      {/* STATUS BAR — archive filter bar style */}
-      <div style={{ borderBottom: '1px solid var(--gray)', marginTop: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 28px', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--black)' }}>
-            {sensor.location}
-            {' — '}
-            <span style={{ color: 'var(--black)' }}>
-              {now.toLocaleDateString(L ? 'it-IT' : 'en-GB', { weekday: 'long', day: '2-digit', month: 'short' })}
-            </span>
+      {/* AQI BOXES — horizontal row */}
+      <div style={{ display: 'flex', gap: 2, padding: 2, background: 'var(--white)', borderBottom: '1px solid var(--gray)', flexWrap: 'wrap' }}>
+
+        {/* AQI quality + recommendations */}
+        <div style={{ flex: '1 1 180px', background: lv.color, padding: '12px 14px' }}>
+          <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 4 }}>
+            {L ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'}
           </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <span className="live-badge"><span className="live-dot" />LIVE</span>
-            <span style={{ padding: '7px 14px', background: lv.color, color: '#fff', fontFamily: 'Epilogue', fontSize: 11, fontWeight: 400, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              {L ? lv.it : lv.en}
-            </span>
+          <div style={{ fontFamily: 'Epilogue', fontSize: 32, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 10 }}>
+            {L ? lv.it : lv.en}
           </div>
+          {[
+            { who: L ? 'Popolazione generale' : 'General population', text: SUGGESTIONS[lv.key]?.gen },
+            { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: SUGGESTIONS[lv.key]?.sen },
+          ].map((s, i) => (
+            <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
+              <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Category symptom boxes */}
+        {[
+          { catKey: 'particulates', label: L ? 'Particolato · PM2.5/PM10' : 'Particulates · PM2.5/PM10' },
+          { catKey: 'gaseous',      label: L ? 'Gas irritanti · NO₂/SO₂/O₃' : 'Gaseous · NO₂/SO₂/O₃' },
+          { catKey: 'systemic',     label: L ? 'Sistemici · CO/NH₃/C₆H₆' : 'Systemic · CO/NH₃/C₆H₆' },
+        ].map(({ catKey, label }) => {
+          const sym = SYMPTOMS[catKey][lv.key];
+          if (!sym) return null;
+          const catLevel = Math.max(...Object.keys(POLLUTANTS).filter(k => POLLUTANTS[k].category === catKey).map(k => getPollLevel(k, sensor[k] || 0)));
+          const catLv = LEVELS[catLevel];
+          return (
+            <div key={catKey} style={{ flex: '1 1 140px', background: catLv.color, padding: '12px 14px' }}>
+              <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 6 }}>{label}</div>
+              {[
+                { who: L ? 'Generale' : 'General', text: sym.gen },
+                { who: L ? 'Sensibile' : 'Sensitive', text: sym.sen },
+              ].map((s, i) => (
+                <div key={i} style={{ marginBottom: i === 0 ? 6 : 0 }}>
+                  <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+
+        {/* AQI Scale */}
+        <div style={{ flex: '1 1 120px', background: 'var(--white)', padding: '12px 14px' }}>
+          <div style={{ ...SUB_LABEL, marginBottom: 10 }}>{L ? 'Scala AQI' : 'AQI Scale'}</div>
+          <div style={{ display: 'flex', gap: 2, marginBottom: 6 }}>
+            {LEVELS.map((l) => (
+              <div key={l.key} style={{ flex: 1, height: 8, background: l.color, opacity: l.key === lv.key ? 1 : 0.4, outline: l.key === lv.key ? `2px solid ${l.color}` : 'none', outlineOffset: 2 }} title={L ? l.it : l.en} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', ...SUB_LABEL }}>
+            <span>1 — {L ? 'Buono' : 'Good'}</span>
+            <span>6 — {L ? 'Estremo' : 'Extreme'}</span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* MAP */}
+      <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--gray)' }}>
+        <div style={{ height: 280, width: '100%' }}>
+          <MapContainer
+            key={sensor.id}
+            center={[sensor.lat, sensor.lon]}
+            zoom={15}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={false}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            />
+            <ZoomControl position="bottomright" />
+            {SENSORS.map((s) => {
+              const sai = getSensorAQI(s);
+              const slv = LEVELS[sai];
+              const isCurrent = s.id === sensor.id;
+              return (
+                <CircleMarker
+                  key={s.id}
+                  center={[s.lat, s.lon]}
+                  radius={isCurrent ? 14 : 7}
+                  pathOptions={{
+                    fillColor: slv.color,
+                    fillOpacity: isCurrent ? 0.9 : 0.45,
+                    color: '#111010',
+                    weight: isCurrent ? 2.5 : 1,
+                  }}
+                />
+              );
+            })}
+          </MapContainer>
         </div>
       </div>
 
-      {/* ── COLUMNS ── */}
-      <div className="record-columns">
-
-        {/* ── LEFT PANEL ── */}
-        <div className="record-left">
-
-          {/* POLLUTANT TABLE */}
-          <div style={{ borderBottom: '1px solid var(--gray)', overflowX: 'auto' }}>
-            <table className="archive-table record-table">
-              <thead>
-                <tr>
-                  <th>{L ? 'Inquinante' : 'Pollutant'}</th>
-                  <th style={{ textAlign: 'right' }}>{L ? 'Valore' : 'Value'}</th>
-                  <th style={{ textAlign: 'right' }}>{L ? 'Unità' : 'Unit'}</th>
-                  <th>{L ? 'Livello' : 'Level'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(POLLUTANTS).map(([key, p]) => {
-                  const val = sensor[key] || 0;
-                  const li = getPollLevel(key, val);
-                  const lvc = LEVELS[li];
-                  const isActive = key === activePollutant;
-                  return (
-                    <tr
-                      key={key}
-                      onClick={() => setActivePollutant(key)}
-                      style={{ background: isActive ? lvc.color : undefined, cursor: 'pointer' }}
-                    >
-                      <td style={{ fontFamily: 'var(--font-title)', fontSize: 11, fontWeight: 400, letterSpacing: '0.06em', textTransform: 'uppercase', color: isActive ? '#fff' : 'var(--black)' }}>
-                        {p.name}
-                      </td>
-                      <td style={{ textAlign: 'right', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 13, color: isActive ? '#fff' : lvc.color }}>
-                        {val}
-                      </td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--font-body)', fontSize: 11, color: isActive ? 'rgba(255,255,255,0.65)' : 'var(--black)' }}>
-                        {p.unit}
-                      </td>
-                      <td>
-                        <span className={`aqi-pill${lvc.index <= 1 ? ' dark' : ''}`} style={{ background: isActive ? 'rgba(255,255,255,0.25)' : lvc.color }}>
-                          {L ? lvc.it : lvc.en}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      {/* CHART */}
+      <div className="chart-area">
+        {/* Pollutant pills + chart view switcher */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 16, borderBottom: '1px solid var(--gray)', paddingBottom: 16 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {Object.entries(POLLUTANTS).map(([key, p]) => {
+              const val = sensor[key] || 0;
+              const li = getPollLevel(key, val);
+              const lvc = LEVELS[li];
+              const isActive = key === activePollutant;
+              return (
+                <button key={key} onClick={() => setActivePollutant(key)} style={pill(isActive, lvc.color)}>
+                  {p.name}
+                </button>
+              );
+            })}
           </div>
-
-          {/* MAP */}
-          <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--gray)' }}>
-            <div style={{ height: 280, width: '100%' }}>
-            <MapContainer
-              key={sensor.id}
-              center={[sensor.lat, sensor.lon]}
-              zoom={15}
-              style={{ height: '100%', width: '100%' }}
-              zoomControl={false}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-              />
-              <ZoomControl position="bottomright" />
-              {SENSORS.map((s) => {
-                const ai = getSensorAQI(s);
-                const lv = LEVELS[ai];
-                const isCurrent = s.id === sensor.id;
-                return (
-                  <CircleMarker
-                    key={s.id}
-                    center={[s.lat, s.lon]}
-                    radius={isCurrent ? 14 : 7}
-                    pathOptions={{
-                      fillColor: lv.color,
-                      fillOpacity: isCurrent ? 0.9 : 0.45,
-                      color: '#111010',
-                      weight: isCurrent ? 2.5 : 1,
-                    }}
-                  />
-                );
-              })}
-            </MapContainer>
-            </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {chartViews.map(({ key, label }) => (
+              <button key={key} onClick={() => setChartView(key)} style={pill(chartView === key, 'var(--black)')}>
+                {label}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* CHART */}
-          <div className="chart-area">
-            {/* POLLUTANTS */}
-            <div style={{ marginBottom: 16, borderBottom: '1px solid var(--gray)', paddingBottom: 16 }}>
-              <div style={{ ...SUB_LABEL, marginBottom: 10 }}>{L ? 'Inquinanti · Seleziona per esplorare' : 'Pollutants · Select to explore'}</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {Object.entries(POLLUTANTS).map(([key, p]) => {
-                  const val = sensor[key] || 0;
-                  const li = getPollLevel(key, val);
-                  const lvc = LEVELS[li];
-                  const isActive = key === activePollutant;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setActivePollutant(key)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActivePollutant(key); } }}
-                      style={{
-                        padding: '5px 14px',
-                        border: '1.5px solid ' + (isActive ? lvc.color : 'var(--black)'),
-                        background: isActive ? lvc.color : 'transparent',
-                        color: isActive ? '#fff' : 'var(--black)',
-                        fontFamily: 'Epilogue', fontSize: 11, fontWeight: 400,
-                        letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
-                      }}
-                    >
-                      {p.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+        {chartView === 'line' && (
+          <>
             <div className="chart-title">{poll.name} {poll.unit} — {L ? 'ultime 24 ore' : 'last 24 hours'}</div>
             <MultiLineChart
               data={histRows}
@@ -192,97 +197,72 @@ export default function RecordPage({ lang, sensor }) {
               height={220}
               pollutantColors={{ [activePollutant]: activeLv.color }}
             />
-          </div>
-
-          {/* HEATMAP */}
-          <div className="chart-area">
+          </>
+        )}
+        {chartView === 'heat' && (
+          <>
             <div className="chart-title">{L ? `Heatmap ${poll.name} — ultima settimana` : `${poll.name} Heatmap — last week`}</div>
             <HeatMap readings={sensorRows} lang={lang} pollutantKey={activePollutant} showLegend={false} dailyView={true} />
-          </div>
-
-        </div>
-
-        {/* ── RIGHT PANEL ── */}
-        <div className="record-right">
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-
-            {/* Raccomandazioni */}
-            <div style={{ ...SUB_LABEL, fontSize: 14, padding: '14px 20px', borderBottom: '1px solid var(--gray)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--primary)', color: 'var(--white)' }}>
-              {L ? 'Raccomandazioni' : 'Recommendations'}
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: lv.color, display: 'inline-block' }} />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--gray)' }}>
-              {[
-                { who: L ? 'Popolazione generale' : 'General population', text: SUGGESTIONS[lv.key]?.gen },
-                { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: SUGGESTIONS[lv.key]?.sen },
-              ].map((s, i) => (
-                <div key={i} style={{ padding: '14px 20px', borderBottom: i === 0 ? '1px solid var(--gray)' : 'none' }}>
-                  <div style={{ ...SUB_LABEL, marginBottom: 6 }}>{s.who}</div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: 'var(--black)' }}>{s.text}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Sintomi associati */}
-            <div style={{ ...SUB_LABEL, fontSize: 14, padding: '14px 20px', borderBottom: '1px solid var(--gray)', background: 'var(--primary)', color: 'var(--white)' }}>
-              {L ? 'Sintomi associati' : 'Associated symptoms'}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--gray)' }}>
-              {[
-                { catKey: 'particulates', label: L ? 'Particolato (PM2.5/PM10)' : 'Particulates' },
-                { catKey: 'gaseous', label: L ? 'Gas irritanti (NO₂/SO₂/O₃)' : 'Gaseous irritants' },
-                { catKey: 'systemic', label: L ? 'Sistemici (CO/NH₃/C₆H₆)' : 'Systemic' },
-              ].map(({ catKey, label }, i, arr) => {
-                const s = SYMPTOMS[catKey][lv.key];
-                if (!s) return null;
-                return (
-                  <div key={catKey} style={{ padding: '14px 20px', borderBottom: i < arr.length - 1 ? '1px solid var(--gray)' : 'none' }}>
-                    <div style={{ ...SUB_LABEL, marginBottom: 8 }}>{label}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--black)', lineHeight: 1.5 }}>
-                        <span style={{ ...SUB_LABEL, fontSize: 9, marginRight: 6 }}>Gen</span>{s.gen}
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--black)', lineHeight: 1.5 }}>
-                        <span style={{ ...SUB_LABEL, fontSize: 9, marginRight: 6 }}>Sen</span>{s.sen}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Scala AQI */}
-            <div style={{ ...SUB_LABEL, fontSize: 14, padding: '14px 20px', borderBottom: '1px solid var(--gray)', background: 'var(--primary)', color: 'var(--white)' }}>
-              {L ? 'Scala AQI' : 'AQI Scale'}
-            </div>
-
-            <div style={{ padding: '16px 20px' }}>
-              <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-                {LEVELS.map((l) => (
-                  <div
-                    key={l.key}
-                    style={{
-                      flex: 1, height: 8,
-                      background: l.color,
-                      opacity: l.key === lv.key ? 1 : 0.35,
-                      outline: l.key === lv.key ? `2px solid ${l.color}` : 'none',
-                      outlineOffset: 2,
-                    }}
-                    title={L ? l.it : l.en}
-                  />
-                ))}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', ...SUB_LABEL }}>
-                <span>1 — {L ? 'Buono' : 'Good'}</span>
-                <span>6 — {L ? 'Estremo' : 'Extreme'}</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
+          </>
+        )}
+        {chartView === 'multi' && (
+          <>
+            <div className="chart-title">{L ? 'Confronto inquinanti — ultime 24 ore' : 'Pollutant comparison — last 24 hours'}</div>
+            <MultiLineChart
+              data={histRows}
+              pollutants={Object.keys(POLLUTANTS)}
+              mode="pollutant"
+              width={900}
+              height={220}
+            />
+          </>
+        )}
       </div>
+
+      {/* POLLUTANT TABLE */}
+      <div style={{ borderBottom: '1px solid var(--gray)', overflowX: 'auto' }}>
+        <table className="archive-table record-table">
+          <thead>
+            <tr>
+              <th>{L ? 'Inquinante' : 'Pollutant'}</th>
+              <th style={{ textAlign: 'right' }}>{L ? 'Valore' : 'Value'}</th>
+              <th style={{ textAlign: 'right' }}>{L ? 'Unità' : 'Unit'}</th>
+              <th>{L ? 'Livello' : 'Level'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(POLLUTANTS).map(([key, p]) => {
+              const val = sensor[key] || 0;
+              const li = getPollLevel(key, val);
+              const lvc = LEVELS[li];
+              const isActive = key === activePollutant;
+              return (
+                <tr
+                  key={key}
+                  onClick={() => setActivePollutant(key)}
+                  style={{ background: isActive ? lvc.color : undefined, cursor: 'pointer' }}
+                >
+                  <td style={{ fontFamily: 'var(--font-title)', fontSize: 11, fontWeight: 400, letterSpacing: '0.06em', textTransform: 'uppercase', color: isActive ? '#fff' : 'var(--black)' }}>
+                    {p.name}
+                  </td>
+                  <td style={{ textAlign: 'right', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 13, color: isActive ? '#fff' : lvc.color }}>
+                    {val}
+                  </td>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--font-body)', fontSize: 11, color: isActive ? 'rgba(255,255,255,0.65)' : 'var(--black)' }}>
+                    {p.unit}
+                  </td>
+                  <td>
+                    <span className={`aqi-pill${lvc.index <= 1 ? ' dark' : ''}`} style={{ background: isActive ? 'rgba(255,255,255,0.25)' : lvc.color }}>
+                      {L ? lvc.it : lvc.en}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
     </div>
   );
 }
