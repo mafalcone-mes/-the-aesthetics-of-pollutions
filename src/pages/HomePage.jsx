@@ -1,11 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { LEVELS } from '../data/levels';
 import { SENSORS } from '../data/sensors';
-import { SUGGESTIONS } from '../data/symptoms';
 import { getSensorAQI } from '../utils/aqi';
+import { SUGGESTIONS } from '../data/symptoms';
+import HeroDots from '../components/HeroDots';
 import MapPage from './MapPage';
 import SymptomsPage from './SymptomsPage';
 import ArchivePage from './ArchivePage';
+
+const SAGOME = Object.keys(import.meta.glob('/public/assets/sagome/*.png')).map(
+  p => p.replace('/public', '')
+);
 
 const INFO_ITEMS = [
   {
@@ -25,26 +30,46 @@ const INFO_ITEMS = [
   },
 ];
 
-const NAV_BUTTONS = [
-  { id: 'map',      it: 'Mappa',    en: 'Map' },
-  { id: 'symptoms', it: 'Sintomi',  en: 'Symptoms' },
-  { id: 'archive',  it: 'Archivio', en: 'Archive' },
+const NAV_STRIPS = [
+  {
+    id: 'map',
+    it: 'Mappa', en: 'Map',
+    desc_it: 'Sensori in tempo reale sulla città',
+    desc_en: 'Real-time sensors across the city',
+  },
+  {
+    id: 'symptoms',
+    it: 'Sintomi', en: 'Symptoms',
+    desc_it: 'Effetti sulla salute per zona e inquinante',
+    desc_en: 'Health effects by zone and pollutant',
+  },
+  {
+    id: 'archive',
+    it: 'Archivio', en: 'Archive',
+    desc_it: 'Serie storiche e dati scaricabili',
+    desc_en: 'Historical series and downloadable data',
+  },
 ];
-
-const SUB_LABEL = {
-  fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700,
-  letterSpacing: '0.1em', textTransform: 'uppercase',
-};
 
 export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisible }) {
   const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
-  const lvl = LEVELS[globalAQI];
-  const L = lang === 'it';
+  const L         = lang === 'it';
+  const heroImg   = useMemo(() => SAGOME[Math.floor(Math.random() * SAGOME.length)], []);
 
-  const heroRef = useRef(null);
+  const heroRef    = useRef(null);
   const previewRef = useRef(null);
-  const [hoveredButton, setHoveredButton] = useState(null);
-  const [previewScale, setPreviewScale] = useState(0.25);
+  const [hoveredStrip, setHoveredStrip] = useState(null);
+  const [previewScale, setPreviewScale] = useState(0.4);
+
+  useEffect(() => {
+    const update = () => {
+      if (previewRef.current)
+        setPreviewScale(previewRef.current.offsetWidth / window.innerWidth);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   useEffect(() => {
     if (!onHeroVisible) return;
@@ -57,135 +82,217 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
     return () => window.removeEventListener('scroll', handleScroll);
   }, [onHeroVisible]);
 
-  useEffect(() => {
-    const update = () => {
-      if (previewRef.current) {
-        setPreviewScale(previewRef.current.offsetWidth / window.innerWidth);
-      }
-    };
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-
   return (
     <div>
       {/* HERO */}
-      <div ref={heroRef} style={{ background: 'var(--primary)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div
+        ref={heroRef}
+        style={{
+          backgroundImage: "url('/assets/cielo.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+        }}
+      >
+        <HeroDots level={globalAQI} />
 
-        {/* TOP: title + subtitle + buttons */}
-        <div style={{ padding: '48px 40px 0' }}>
+        {/* Page preview — appears on right half when hovering a strip */}
+        {hoveredStrip && (
+          <div
+            ref={previewRef}
+            style={{
+              position: 'absolute',
+              top: '65%', left: '72%',
+              transform: 'translate(-50%, -50%)',
+              width: '38%', height: '55vh',
+              overflow: 'hidden', zIndex: 3, pointerEvents: 'none',
+            }}
+          >
+            <div style={{
+              position: 'absolute', top: 0, left: 0,
+              width: '100vw',
+              transformOrigin: 'top left',
+              transform: `scale(${previewScale})`,
+              pointerEvents: 'none', userSelect: 'none',
+              background: 'var(--white)',
+            }}>
+              {hoveredStrip === 'map'      && <MapPage      lang={lang} setPage={() => {}} setSelectedSensor={() => {}} />}
+              {hoveredStrip === 'symptoms' && <SymptomsPage lang={lang} setPage={() => {}} />}
+              {hoveredStrip === 'archive'  && <ArchivePage  lang={lang} setPage={() => {}} setSelectedSensor={() => {}} />}
+            </div>
+          </div>
+        )}
+
+        {/* Hero photo */}
+        <img
+          src={heroImg}
+          alt=""
+          style={{
+            position: 'absolute',
+            top: '2%', right: 0, bottom: '2%',
+            height: '96%',
+            width: 'auto',
+            objectFit: 'cover',
+            zIndex: 3,
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Content */}
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', flex: 1, padding: '48px 40px 40px' }}>
+
+          {/* Title */}
           <div style={{
-            fontFamily: 'var(--font-title)',
-            fontSize: 'clamp(64px, 8vw, 120px)',
-            fontWeight: 400, textTransform: 'uppercase',
-            lineHeight: 0.9, letterSpacing: '-0.02em',
-            color: 'var(--white)', marginBottom: 20,
+            fontFamily: 'var(--font-display)',
+            fontSize: '13vw',
+            fontWeight: 400,
+            textTransform: 'uppercase',
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
+            color: 'var(--white)',
           }}>
-            ARIA BENE<br />COMUNE
-          </div>
-          <div style={{
-            fontFamily: 'var(--font-body)', fontSize: 16,
-            lineHeight: 1.55, color: 'rgba(255,255,255,0.7)',
-            maxWidth: 520, marginBottom: 40,
-          }}>
-            {L
-              ? "Monitoraggio civico della qualità dell'aria a Taranto. Dati in tempo reale dai sensori installati dai cittadini."
-              : 'Civic air quality monitoring in Taranto. Real-time data from citizen-installed sensors.'}
+            <div>ARIA BENE</div>
+            <div>COMUNE</div>
           </div>
 
-          {/* Buttons: left · center · right */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 32 }}>
-            {NAV_BUTTONS.map(n => (
-              <button
-                key={n.id}
-                onClick={() => setPage(n.id)}
-                onMouseEnter={() => setHoveredButton(n.id)}
-                onMouseLeave={() => setHoveredButton(null)}
-                style={{
-                  padding: '10px 32px',
-                  border: '1.5px solid rgba(255,255,255,0.75)',
-                  background: hoveredButton === n.id ? 'rgba(255,255,255,0.15)' : 'transparent',
-                  color: 'rgba(255,255,255,0.9)',
-                  fontFamily: 'var(--font-title)', fontSize: 11, fontWeight: 700,
-                  letterSpacing: '0.12em', textTransform: 'uppercase',
-                  cursor: 'pointer', transition: 'background 0.15s',
-                }}
-              >
-                {L ? n.it : n.en}
-              </button>
-            ))}
+          {/* subtitle */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 'clamp(14px, 1.4vw, 20px)',
+              color: 'rgba(255,255,255,0.7)',
+              lineHeight: 1.5,
+            }}>
+              {L
+                ? "Monitoraggio civico della qualità dell'aria a Taranto. Dati in tempo reale dai sensori installati dai cittadini."
+                : 'Civic air quality monitoring in Taranto. Real-time data from citizen-installed sensors.'}
+            </div>
           </div>
-        </div>
 
-        {/* CENTER: health rec or live page preview */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 40px 48px' }}>
-          <div ref={previewRef} style={{ width: 400 }}>
-            {hoveredButton ? (
-              <div style={{ position: 'relative', width: '100%', height: 260, overflow: 'hidden', background: 'var(--white)' }}>
+          {/* Nav strips + health rec */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', marginTop: 32, alignItems: 'stretch' }}>
+
+            {/* Strips */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch' }}>
+            {NAV_STRIPS.map((n, i) => {
+              const isHov = hoveredStrip === n.id;
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => setPage(n.id)}
+                  onMouseEnter={() => setHoveredStrip(n.id)}
+                  onMouseLeave={() => setHoveredStrip(null)}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0 24px 0 96px',
+                    background: isHov ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    border: 'none',
+                    borderTop: '1px solid rgba(255,255,255,0.22)',
+                    borderBottom: i === NAV_STRIPS.length - 1 ? '1px solid rgba(255,255,255,0.22)' : 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.15s',
+                    width: '28%',
+                  }}
+                >
+                  <div>
+                    <div style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 'clamp(28px, 4vw, 60px)',
+                      fontWeight: 400,
+                      textTransform: 'uppercase',
+                      letterSpacing: '-0.01em',
+                      color: 'var(--white)',
+                      lineHeight: 1,
+                      marginBottom: 5,
+                    }}>
+                      {L ? n.it : n.en}
+                    </div>
+                    <div style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: 14,
+                      color: 'rgba(255,255,255,0.55)',
+                      lineHeight: 1,
+                    }}>
+                      {L ? n.desc_it : n.desc_en}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+            </div>
+
+            {/* Health recommendation */}
+            {(() => {
+              const lv = LEVELS[globalAQI];
+              const sug = SUGGESTIONS[lv.key];
+              return (
                 <div style={{
-                  position: 'absolute', top: 0, left: 0,
-                  width: '100vw',
-                  transformOrigin: 'top left',
-                  transform: `scale(${previewScale})`,
-                  pointerEvents: 'none', userSelect: 'none',
-                  background: 'var(--white)',
+                  width: 340, flexShrink: 0, alignSelf: 'flex-start',
+                  marginLeft: '10%',
+                  background: lv.color, padding: '16px 18px',
+                  display: 'flex', flexDirection: 'column', gap: 12,
+                  textAlign: 'center', alignItems: 'center',
                 }}>
-                  {hoveredButton === 'map'      && <MapPage      lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
-                  {hoveredButton === 'symptoms' && <SymptomsPage lang={lang} setPage={setPage} />}
-                  {hoveredButton === 'archive'  && <ArchivePage  lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
-                </div>
-              </div>
-            ) : (
-              <div style={{ background: lvl.color, padding: '24px 28px', textAlign: 'center' }}>
-                <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 10 }}>
-                  {L ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'} — {L ? lvl.it : lvl.en}
-                </div>
-                <div style={{
-                  fontFamily: 'Epilogue', fontSize: 48, fontWeight: 400,
-                  textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 20,
-                }}>
-                  {L ? lvl.it : lvl.en}
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 5 }}>
-                    {L ? 'Popolazione generale' : 'General population'}
+                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)' }}>
+                    {L ? "Qualità dell'aria" : 'Air Quality'}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.5, color: '#fff' }}>
-                    {SUGGESTIONS[lvl.key]?.gen}
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1 }}>
+                    {L ? lv.it : lv.en}
                   </div>
+                  {[
+                    { who: L ? 'Popolazione generale' : 'General population', text: sug?.gen },
+                    { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: sug?.sen },
+                  ].map((s, i) => s.text && (
+                    <div key={i}>
+                      <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)', marginBottom: 3 }}>{s.who}</div>
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 5 }}>
-                    {L ? 'Popolazione sensibile' : 'Sensitive population'}
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.5, color: '#fff' }}>
-                    {SUGGESTIONS[lvl.key]?.sen}
-                  </div>
-                </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
+
         </div>
       </div>
 
-      {/* INFO ITEMS */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+      {/* INFO ITEMS — editorial */}
+      <div style={{ background: 'var(--primary)', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
         {INFO_ITEMS.map((item, i) => (
-          <div key={i} style={{
-            padding: '24px 28px',
-            borderRight: i < 2 ? '1px solid rgba(255,255,255,0.15)' : 'none',
-            borderTop: '1px solid rgba(255,255,255,0.15)',
-            background: 'var(--primary)',
-          }}>
+          <div
+            key={i}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 2fr',
+              gap: '0 80px',
+              alignItems: 'start',
+              padding: '52px 40px',
+              borderBottom: i < INFO_ITEMS.length - 1 ? '1px solid rgba(255,255,255,0.12)' : 'none',
+            }}
+          >
             <div style={{
-              fontFamily: 'var(--font-title)', fontSize: 16, fontWeight: 400,
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              marginBottom: 10, color: 'var(--white)',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(28px, 3vw, 52px)',
+              fontWeight: 400,
+              textTransform: 'uppercase',
+              letterSpacing: '-0.01em',
+              lineHeight: 1.05,
+              color: 'var(--white)',
             }}>
               {L ? item.title_it : item.title_en}
             </div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.65, color: 'rgba(255,255,255,0.75)' }}>
+            <div style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 'clamp(16px, 1.4vw, 22px)',
+              lineHeight: 1.65,
+              color: 'rgba(255,255,255,0.72)',
+            }}>
               {L ? item.body_it : item.body_en}
             </div>
           </div>

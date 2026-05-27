@@ -297,36 +297,38 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
 
   const panelW = 'calc(100vw / 6 * 1.5)';
   const CARD = { background: 'var(--white)', padding: '12px 14px' };
-  const SECTION = { display: 'flex', gap: 8, padding: 8, background: 'var(--gray)' };
+  const SECTION = { display: 'flex', borderBottom: '1px solid var(--gray)' };
+  const PANEL = { ...CARD, width: panelW, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, borderRight: '1px solid var(--gray)' };
+  const CHART_AREA = { ...CARD, flex: 1, minWidth: 0, padding: '20px 24px' };
 
   return (
     <div>
 
       {/* TITLE */}
       <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--gray)' }}>
-        <span style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
           {L ? 'Archivio Dati' : 'Data Archive'}
         </span>
       </div>
 
       {/* ── RADAR ─────────────────────────────────────────────────────────────── */}
       <div style={SECTION}>
-        <div style={{ ...CARD, width: panelW, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={PANEL}>
           <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0 }}>Radar</div>
           <PeriodPicker L={L} mode={radar.mode} setMode={radar.setMode}
             from={radar.from} setFrom={radar.setFrom} to={radar.to} setTo={radar.setTo} />
           <SensorPills L={L} sensors={radar.sensors} setSensors={radar.setSensors} />
           <DistrictPills L={L} districts={radar.districts} setDistricts={radar.setDistricts} />
         </div>
-        <div style={{ ...CARD, flex: 1, minWidth: 0, padding: '16px 20px' }}>
+        <div style={CHART_AREA}>
           <div style={CHART_LABEL}>{L ? 'Radar inquinanti — picco nel periodo' : 'Pollutant radar — peak over period'}</div>
-          <RadarChart sensors={radarSensors} pollutants={Object.keys(POLLUTANTS)} lang={lang} width={900} height={360} />
+          <RadarChart sensors={radarSensors} pollutants={Object.keys(POLLUTANTS)} lang={lang} width={900} height={420} />
         </div>
       </div>
 
       {/* ── LINE CHART ────────────────────────────────────────────────────────── */}
       <div style={SECTION}>
-        <div style={{ ...CARD, width: panelW, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={PANEL}>
           <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0 }}>{L ? 'Andamento' : 'Trend'}</div>
           <PeriodPicker L={L} mode={line.mode} setMode={line.setMode}
             from={line.from} setFrom={line.setFrom} to={line.to} setTo={line.setTo} />
@@ -346,7 +348,7 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
           </div>
           <PollutantPills L={L} polls={linePollutants} setPolls={setLinePollutants} />
         </div>
-        <div style={{ ...CARD, flex: 1, minWidth: 0, padding: '16px 20px' }}>
+        <div style={CHART_AREA}>
           <div style={CHART_LABEL}>
             {lineSensorMeta?.name?.replace('Taranto - ', '') || '—'}
             <span style={{ fontWeight: 400, marginLeft: 8, color: '#BDBAB4' }}>
@@ -354,48 +356,48 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
             </span>
           </div>
           <MultiLineChart data={lineSensorRows} pollutants={[...linePollutants]}
-            mode="pollutant" width={900} height={220} />
+            mode="pollutant" width={900} height={300} />
         </div>
       </div>
 
       {/* ── HOURLY BAR ────────────────────────────────────────────────────────── */}
       <div style={SECTION}>
-        <div style={{ ...CARD, width: panelW, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={PANEL}>
           <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0 }}>{L ? 'Media oraria' : 'Hourly avg'}</div>
           <PeriodPicker L={L} mode={bar.mode} setMode={bar.setMode}
             from={bar.from} setFrom={bar.setFrom} to={bar.to} setTo={bar.setTo} />
           <SensorPills L={L} sensors={bar.sensors} setSensors={bar.setSensors} />
           <PollutantPills L={L} polls={barPolls} setPolls={setBarPolls} />
         </div>
-        <div style={{ ...CARD, flex: 1, minWidth: 0, padding: '16px 20px' }}>
+        <div style={CHART_AREA}>
           <div style={CHART_LABEL}>
             {L ? 'Media per ora del giorno — ' : 'Mean by hour of day — '}
             {bar.from}{bar.from !== bar.to ? ` → ${bar.to}` : ''}
           </div>
-          <HourlyBarChart data={bar.filtered} pollutants={[...barPolls]} lang={lang} width={900} height={220} />
+          <HourlyBarChart data={bar.filtered} pollutants={[...barPolls]} lang={lang} width={900} height={300} />
         </div>
       </div>
 
       {/* ── DAILY HEATMAP ─────────────────────────────────────────────────────── */}
       <div style={SECTION}>
-        <div style={{ ...CARD, width: panelW, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={PANEL}>
           <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0 }}>Heatmap</div>
           <PeriodPicker L={L} mode={heat.mode} setMode={heat.setMode}
             from={heat.from} setFrom={heat.setFrom} to={heat.to} setTo={heat.setTo} />
           <SensorPills L={L} sensors={heat.sensors} setSensors={heat.setSensors} />
         </div>
-        <div style={{ ...CARD, flex: 1, minWidth: 0, padding: '16px 20px' }}>
+        <div style={CHART_AREA}>
           <div style={CHART_LABEL}>
             {L ? 'AQI massimo giornaliero — ' : 'Daily max AQI — '}
             {heat.from}{heat.from !== heat.to ? ` → ${heat.to}` : ''}
           </div>
-          <DailyHeatmap data={heat.filtered} lang={lang} width={900} height={220} />
+          <DailyHeatmap data={heat.filtered} lang={lang} width={900} height={300} />
         </div>
       </div>
 
       {/* ── TABLE ─────────────────────────────────────────────────────────────── */}
       <div style={SECTION}>
-        <div style={{ ...CARD, width: panelW, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={PANEL}>
           <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0 }}>{L ? 'Tabella' : 'Table'}</div>
           <PeriodPicker L={L} mode={tbl.mode} setMode={tbl.setMode}
             from={tbl.from} setFrom={tbl.setFrom} to={tbl.to} setTo={tbl.setTo} />
@@ -406,7 +408,7 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor }) {
             ↓ CSV
           </button>
         </div>
-        <div style={{ ...CARD, flex: 1, minWidth: 0, padding: 0 }}>
+        <div style={{ background: 'var(--white)', flex: 1, minWidth: 0, padding: 0 }}>
           <div style={{ overflowX: 'auto' }}>
             <table className="archive-table">
               <thead>

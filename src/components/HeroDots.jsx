@@ -1,7 +1,5 @@
 import { useEffect, useRef } from 'react';
 
-const PRIMARY = '#b53c17';
-
 export default function HeroDots({ level = 0 }) {
   const canvasRef = useRef(null);
 
@@ -9,9 +7,10 @@ export default function HeroDots({ level = 0 }) {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    const count = 6 + level * 8;          // 6 (good) → 46 (extreme)
-    const baseSpeed = 0.35; // slow → fast
-    const baseSize  = 3  + level * 0.8;   // small → larger
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+    const count = 30 + level * 30;   // 30 (good) → 180 (extreme)
+    const speed = 0.3;
+    const r     = 7;
 
     let width, height, dots, animId;
 
@@ -22,21 +21,20 @@ export default function HeroDots({ level = 0 }) {
       canvas.height = height;
 
       dots = Array.from({ length: count }, () => {
-        const speed = baseSpeed * (0.6 + Math.random() * 0.8);
         const angle = Math.random() * Math.PI * 2;
         return {
           x:  Math.random() * width,
           y:  Math.random() * height,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
-          r:  baseSize * (0.5 + Math.random() * 0.5),
+          r,
         };
       });
     }
 
     function draw() {
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = PRIMARY;
+      ctx.fillStyle = color;
 
       for (const d of dots) {
         d.x += d.vx;
@@ -78,8 +76,10 @@ export default function HeroDots({ level = 0 }) {
         inset: 0,
         width: '100%',
         height: '100%',
-        opacity: 0.4,
+        opacity: 0.7,
+        filter: 'blur(3px)',
         pointerEvents: 'none',
+        zIndex: 0,
       }}
     />
   );

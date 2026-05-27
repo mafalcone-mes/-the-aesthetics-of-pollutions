@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { SENSORS } from './data/sensors';
+import { getSensorAQI } from './utils/aqi';
 import TopBar from './components/TopBar';
 import MobileNav from './components/MobileNav';
 import { TweaksPanel, TweakSection, TweakToggle, TweakSlider, TweakRadio } from './components/tweaks/TweaksPanel';
@@ -10,6 +11,7 @@ import ArchivePage from './pages/ArchivePage';
 import RecordPage from './pages/RecordPage';
 import SymptomsPage from './pages/SymptomsPage';
 import AboutPanel from './components/AboutPanel';
+import PageTransition from './components/PageTransition';
 
 const TWEAK_DEFAULTS = {
   darkMode: false,
@@ -22,6 +24,12 @@ export default function App() {
   const [page, setPage] = useState('home');
   const [lang, setLang] = useState('it');
   const [selectedSensor, setSelectedSensor] = useState(SENSORS[1]);
+  const transitionRef = useRef(null);
+
+  const navigate = useCallback((newPage, sensor = null) => {
+    if (sensor) setSelectedSensor(sensor);
+    transitionRef.current?.trigger(() => setPage(newPage));
+  }, []);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
   const [heroVisible, setHeroVisible] = useState(true);
@@ -49,21 +57,34 @@ export default function App() {
     document.documentElement.style.fontSize = `${tweaks.fontScale * 16}px`;
   }, [tweaks.fontScale]);
 
+  useEffect(() => {
+    const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
+    const el = document.documentElement;
+    if (globalAQI >= 1) {
+      el.style.setProperty('--font-display', "'Ronzino Variable', sans-serif");
+      el.style.setProperty('--font-blend', String(globalAQI * 200));
+    } else {
+      el.style.setProperty('--font-display', "'Epilogue', sans-serif");
+      el.style.setProperty('--font-blend', '0');
+    }
+  }, []);
+
   return (
     <div className="app-shell">
-      {!(page === 'home' && heroVisible) && <TopBar page={page} setPage={setPage} lang={lang} setLang={setLang} onNavHover={setHoveredNav} />}
+      {!(page === 'home' && heroVisible) && <TopBar page={page} setPage={navigate} lang={lang} setLang={setLang} onNavHover={setHoveredNav} />}
       <main className="main-content">
-        {page === 'home'     && <HomePage     lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} hoveredNav={hoveredNav} onHeroVisible={setHeroVisible} />}
-        {page === 'map'      && <MapPage      lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
-        {page === 'archive'  && <ArchivePage  lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} />}
+        {page === 'home'     && <HomePage     lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} hoveredNav={hoveredNav} onHeroVisible={setHeroVisible} />}
+        {page === 'map'      && <MapPage      lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} />}
+        {page === 'archive'  && <ArchivePage  lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} />}
         {page === 'record'   && <RecordPage   lang={lang} sensor={selectedSensor} />}
-        {page === 'symptoms' && <SymptomsPage lang={lang} setPage={setPage} />}
+        {page === 'symptoms' && <SymptomsPage lang={lang} setPage={navigate} />}
       </main>
       <footer className="footer">
         <span className="footer-text">Aria Bene Comune — Linux Group Taranto — 2026</span>
         <span className="footer-text">{lang === 'it' ? 'Dati simulati a scopo dimostrativo' : 'Simulated data for demonstration'}</span>
       </footer>
-      <MobileNav page={page} setPage={setPage} lang={lang} />
+      <MobileNav page={page} setPage={navigate} lang={lang} />
+      <PageTransition ref={transitionRef} />
       <button
         className={`about-tab${aboutOpen ? ' open' : ''}`}
         onClick={() => setAboutOpen(prev => !prev)}

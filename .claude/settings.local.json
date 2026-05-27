@@ -10,7 +10,8 @@
       "Bash(cp \"C:\\\\Users\\\\mafal\\\\Desktop\\\\universita\\\\master\\\\Tesi_Materializzazione\\\\dati_arpa\\\\stations_taranto.csv\" \"C:\\\\Users\\\\mafal\\\\Desktop\\\\universita\\\\master\\\\ID2\\\\-the-aesthetics-of-pollutions\\\\src\\\\data\\\\stations_taranto.csv\")",
       "Bash(git add *)",
       "Read(//c/Users/mafal/Desktop/universita/master/Tesi_Materializzazione/-the-aesthetics-of-pollutions-Trial-activist/**)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "WebFetch(domain:generacity.art)"
     ]
   }
 }

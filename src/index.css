@@ -1,3 +1,10 @@
+@font-face {
+  font-family: 'Ronzino Variable';
+  src: url('/assets/ruined Ronzino (1)-ruined Ronzino-blend-variable.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -15,9 +22,13 @@
   --border: 2px solid #11101000;
   --primary: #B7410E;
 
-  --font-body:  'Source Serif 4', Georgia, serif;
-  --font-title: 'Epilogue', sans-serif;
+  --font-body:    'Source Serif 4', Georgia, serif;
+  --font-title:   'Epilogue', sans-serif;
+  --font-display: 'Epilogue', sans-serif;
+  --font-blend: 0;
 }
+
+* { font-variation-settings: "BLND" var(--font-blend); }
 
 html, body { height: 100%; background: var(--white); color: var(--black); }
 body { font-family: var(--font-body); overflow-x: hidden; }
@@ -1320,8 +1331,8 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   z-index: 5;
 }
 .body-callout-dot {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 3px solid;
   flex-shrink: 0;

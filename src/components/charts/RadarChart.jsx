@@ -4,7 +4,7 @@ import { LEVELS } from '../../data/levels';
 
 // sensors: [{ id, name, pollutantLevels: { pm25: 2, ... }, overallAqi: 3 }]
 // Renders on a dark (var(--primary)) background with screen-blended glowing blobs.
-export default function RadarChart({ sensors, pollutants, lang, width = 900, height = 420 }) {
+export default function RadarChart({ sensors, pollutants, lang, width = 900, height = 420, decorative = false }) {
   const L = lang === 'it';
   const [hovered, setHovered] = useState(null);
   const n = pollutants.length;
@@ -19,8 +19,12 @@ export default function RadarChart({ sensors, pollutants, lang, width = 900, hei
 
   const cx = width / 2;
   const cy = height / 2;
-  const r = Math.min(cx, cy) * 0.62;
+  const r = Math.min(cx, cy) * (decorative ? 0.72 : 0.62);
   const labelPad = 32;
+
+  const blob = decorative
+    ? { haloR: 90, midR: 48, coreR: 18, haloBlur: 45, midBlur: 18, coreBlur: 6, haloOp: 0.55, midOp: 0.65, polyHaloOp: 0.5, polyMidOp: 0.55 }
+    : { haloR: 20, midR: 6,  coreR: 6,  haloBlur: 18, midBlur: 7,  coreBlur: 2.5, haloOp: 0.35, midOp: 0.9, polyHaloOp: 0.3, polyMidOp: 0.45 };
 
   const axisAngle = (i) => (Math.PI * 2 * i / n) - Math.PI / 2;
   const axisPoint = (i, level) => {
@@ -34,19 +38,20 @@ export default function RadarChart({ sensors, pollutants, lang, width = 900, hei
   return (
     <svg
         width="100%"
+        height={decorative ? '100%' : undefined}
         viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio={decorative ? 'xMidYMid meet' : undefined}
         style={{ display: 'block', overflow: 'visible' }}
       >
         <defs>
-          {/* Three-layer blur filters for the blob effect */}
-          <filter id="rdr-halo" x="-150%" y="-150%" width="400%" height="400%">
-            <feGaussianBlur stdDeviation="18" />
+          <filter id="rdr-halo" x="-200%" y="-200%" width="500%" height="500%">
+            <feGaussianBlur stdDeviation={blob.haloBlur} />
           </filter>
-          <filter id="rdr-mid" x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="7" />
+          <filter id="rdr-mid" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation={blob.midBlur} />
           </filter>
-          <filter id="rdr-core" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="2.5" />
+          <filter id="rdr-core" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation={blob.coreBlur} />
           </filter>
         </defs>
 
@@ -75,13 +80,13 @@ export default function RadarChart({ sensors, pollutants, lang, width = 900, hei
 
             return (
               <g key={sensor.id}
-                style={{ opacity: hovered !== null && !isHov ? 0.15 : 1, transition: 'opacity 0.25s', cursor: 'default' }}
-                onMouseEnter={() => setHovered(sensor.id)}
-                onMouseLeave={() => setHovered(null)}>
+                style={{ opacity: !decorative && hovered !== null && !isHov ? 0.15 : 1, transition: 'opacity 0.25s' }}
+                onMouseEnter={decorative ? undefined : () => setHovered(sensor.id)}
+                onMouseLeave={decorative ? undefined : () => setHovered(null)}>
 
-                {/* Outer halo — very wide blur, low opacity */}
+                {/* Outer halo */}
                 <polygon points={polyPts} fill={overallColor}
-                  fillOpacity={isHov ? 0.45 : 0.3} filter="url(#rdr-halo)" stroke="none" />
+                  fillOpacity={isHov ? 0.55 : blob.polyHaloOp} filter="url(#rdr-halo)" stroke="none" />
 
                 {/* Per-vertex blobs — colored by each pollutant's own AQI level */}
                 {dataPoints.map(([x, y], i) => {
@@ -90,24 +95,26 @@ export default function RadarChart({ sensors, pollutants, lang, width = 900, hei
                   const color = LEVELS[lvl]?.color || '#888';
                   return (
                     <g key={key}>
-                      <circle cx={x} cy={y} r={20} fill={color}
-                        fillOpacity={0.35} filter="url(#rdr-mid)" />
-                      <circle cx={x} cy={y} r={6} fill={color}
-                        fillOpacity={0.9} filter="url(#rdr-core)" />
+                      <circle cx={x} cy={y} r={blob.haloR} fill={color}
+                        fillOpacity={blob.haloOp} filter="url(#rdr-halo)" />
+                      <circle cx={x} cy={y} r={blob.midR} fill={color}
+                        fillOpacity={blob.haloOp} filter="url(#rdr-mid)" />
+                      <circle cx={x} cy={y} r={blob.coreR} fill={color}
+                        fillOpacity={blob.midOp} filter="url(#rdr-core)" />
                     </g>
                   );
                 })}
 
-                {/* Mid polygon — medium blur, fills the shape */}
+                {/* Mid polygon */}
                 <polygon points={polyPts} fill={overallColor}
-                  fillOpacity={0.45} filter="url(#rdr-mid)" stroke="none" />
+                  fillOpacity={blob.polyMidOp} filter="url(#rdr-mid)" stroke="none" />
               </g>
             );
           })}
         </g>
 
         {/* Ring level numbers — top axis */}
-        {rings.map(ring => {
+        {!decorative && rings.map(ring => {
           const [x, y] = axisPoint(0, ring);
           return (
             <text key={ring} x={x + 5} y={y} textAnchor="start" dominantBaseline="central"
@@ -118,7 +125,7 @@ export default function RadarChart({ sensors, pollutants, lang, width = 900, hei
         })}
 
         {/* Axis labels */}
-        {pollutants.map((key, i) => {
+        {!decorative && pollutants.map((key, i) => {
           const a = axisAngle(i);
           const lx = cx + (r + labelPad) * Math.cos(a);
           const ly = cy + (r + labelPad) * Math.sin(a);
@@ -132,7 +139,7 @@ export default function RadarChart({ sensors, pollutants, lang, width = 900, hei
         })}
 
         {/* Hover: sensor name in center */}
-        {hovered !== null && (() => {
+        {!decorative && hovered !== null && (() => {
           const sensor = sensors.find(s => s.id === hovered);
           if (!sensor) return null;
           const color = LEVELS[sensor.overallAqi]?.color || 'white';
@@ -151,7 +158,7 @@ export default function RadarChart({ sensors, pollutants, lang, width = 900, hei
         })()}
 
         {/* Legend — bottom of chart */}
-        {sensors.length > 1 && sensors.map((sensor, si) => {
+        {!decorative && sensors.length > 1 && sensors.map((sensor, si) => {
           const color = LEVELS[sensor.overallAqi]?.color || '#888';
           return (
             <g key={sensor.id} transform={`translate(${16 + si * 115}, ${height - 12})`}>
