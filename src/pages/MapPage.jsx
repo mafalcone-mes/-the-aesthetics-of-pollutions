@@ -76,8 +76,8 @@ function BlobOverlay({ wind, activePollutant, sensors }) {
 
       for (let blobLvl = 0; blobLvl <= maxLvl; blobLvl++) {
         const blobColor = LEVELS[blobLvl].color;
-        const blurStd = 16 + (maxLvl - blobLvl) * 6;
-        const opac = Math.max(0.08, 0.55 - (maxLvl - blobLvl) * 0.10);
+        const blurStd = 18 + (maxLvl - blobLvl) * 7;
+        const opac = Math.max(0.08, 0.55 - (maxLvl - blobLvl) * 0.08);
 
         const filtId = `grp-bf-${blobLvl}`;
         const filt = document.createElementNS(ns, 'filter');
@@ -96,8 +96,8 @@ function BlobOverlay({ wind, activePollutant, sensors }) {
         sensorData.forEach(({ lvIdx, pt }) => {
           if (lvIdx < blobLvl) return;
           const layerOuter = lvIdx - blobLvl;
-          const rx = (30 + lvIdx * 16 + layerOuter * 22) * windStretch;
-          const ry = 20 + lvIdx * 10 + layerOuter * 14;
+          const rx = (50 + lvIdx * 22 + layerOuter * 32) * windStretch;
+          const ry = 36 + lvIdx * 16 + layerOuter * 22;
           const offsetDist = rx * 0.3;
           // arrow screen vector is (cos(angleRad), -sin(angleRad)) — match offset and axis to it
           const ecx = pt.x + Math.cos(angleRad) * offsetDist;

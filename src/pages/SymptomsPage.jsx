@@ -21,11 +21,11 @@ const CATS = [
 ];
 
 const ZONE_Y = {
-  mind:    '8%',
-  eyes:    '15%',
-  throat:  '28%',
-  chest:   '40%',
-  stomach: '58%',
+  mind:    '17%',
+  eyes:    '25%',
+  throat:  '40%',
+  chest:   '53%',
+  stomach: '73%',
 };
 
 const SUB_LABEL = {
@@ -111,11 +111,11 @@ const BOX       = { background: 'var(--white)', padding: '12px 14px', pointerEve
 const timelineH = 58;
 
 const ZONE_POS = {
-  mind:    { x: 50, y: 8 },
-  eyes:    { x: 50, y: 12 },
-  throat:  { x: 50, y: 23 },
-  chest:   { x: 50, y: 40 },
-  stomach: { x: 50, y: 58 },
+  mind:    { x: 38, y: 17 },
+  eyes:    { x: 38, y: 25 },
+  throat:  { x: 38, y: 40 },
+  chest:   { x: 38, y: 53 },
+  stomach: { x: 38, y: 73 },
 };
 
 function BodyBlobOverlay({ categoryLevels }) {
@@ -132,40 +132,40 @@ function BodyBlobOverlay({ categoryLevels }) {
     >
       <defs>
         <filter id="blob-halo" x="-200%" y="-150%" width="500%" height="400%">
-          <feGaussianBlur stdDeviation="14" />
+          <feGaussianBlur stdDeviation="13" />
         </filter>
         <filter id="blob-mid" x="-100%" y="-80%" width="300%" height="260%">
           <feGaussianBlur stdDeviation="5" />
         </filter>
         <filter id="blob-core" x="-60%" y="-40%" width="220%" height="180%">
-          <feGaussianBlur stdDeviation="1.8" />
+          <feGaussianBlur stdDeviation="2" />
         </filter>
       </defs>
 
-      {/* outer diffuse halo */}
+      {/* outer diffuse halo — 2 levels below */}
       <g filter="url(#blob-halo)" opacity="0.28">
         {entries.map(([zoneKey, zone]) => {
           const lvIdx = categoryLevels[zone.primary];
           const pos = ZONE_POS[zoneKey];
-          return <ellipse key={zoneKey} cx={pos.x} cy={pos.y} rx={18} ry={22} fill={LEVELS[lvIdx].color} />;
+          return <ellipse key={zoneKey} cx={pos.x} cy={pos.y} rx={30} ry={38} fill={LEVELS[Math.max(0, lvIdx - 2)].color} />;
         })}
       </g>
 
-      {/* warm mid ring */}
-      <g filter="url(#blob-mid)" opacity="0.55">
+      {/* warm mid ring — 1 level below */}
+      <g filter="url(#blob-mid)" opacity="0.6">
         {entries.map(([zoneKey, zone]) => {
           const lvIdx = categoryLevels[zone.primary];
           const pos = ZONE_POS[zoneKey];
-          return <ellipse key={zoneKey} cx={pos.x} cy={pos.y} rx={10} ry={13} fill={LEVELS[lvIdx].color} />;
+          return <ellipse key={zoneKey} cx={pos.x} cy={pos.y} rx={16} ry={22} fill={LEVELS[Math.max(0, lvIdx - 1)].color} />;
         })}
       </g>
 
-      {/* hot core */}
+      {/* hot core — current level */}
       <g filter="url(#blob-core)" opacity="0.85">
         {entries.map(([zoneKey, zone]) => {
           const lvIdx = categoryLevels[zone.primary];
           const pos = ZONE_POS[zoneKey];
-          return <ellipse key={zoneKey} cx={pos.x} cy={pos.y} rx={4} ry={5} fill={LEVELS[lvIdx].color} />;
+          return <ellipse key={zoneKey} cx={pos.x} cy={pos.y} rx={6} ry={8} fill={LEVELS[lvIdx].color} />;
         })}
       </g>
     </svg>
@@ -181,10 +181,11 @@ function BodyFigure({ activeZone, onSelectZone, zoneColors, categoryLevels, lang
         alt=""
         style={{
           position: 'absolute',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          height: '75%',
-          top: '2%',
+          right: '18%',
+          left: 'auto',
+          transform: 'none',
+          height: '88%',
+          top: '8%',
           width: 'auto',
           zIndex: 1,
           pointerEvents: 'none',
@@ -200,19 +201,40 @@ function BodyFigure({ activeZone, onSelectZone, zoneColors, categoryLevels, lang
         return (
           <button
             key={key}
-            className={`body-callout-dot${isActive ? ' active' : ''}`}
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: ZONE_Y[key],
-              transform: 'translate(-50%, -50%)',
-              borderColor: color,
-              background: isActive ? color : 'transparent',
-              zIndex: 10,
-            }}
             onClick={(e) => { e.stopPropagation(); onSelectZone(key); }}
             aria-label={L ? z.label_it : z.label_en}
-          />
+            style={{
+              position: 'absolute',
+              left: '36vw',
+              right: '42%',
+              top: ZONE_Y[key],
+              transform: 'translateY(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+              background: 'none',
+              border: 'none',
+              padding: '10px 0',
+              cursor: 'pointer',
+              zIndex: 10,
+            }}
+          >
+            <div style={{
+              width: isActive ? 20 : 14,
+              height: isActive ? 20 : 14,
+              borderRadius: '50%',
+              background: color,
+              flexShrink: 0,
+              transition: 'all 0.15s',
+              boxShadow: isActive ? `0 0 0 3px rgba(255,255,255,0.5)` : 'none',
+            }} />
+            <div style={{
+              flex: 1,
+              height: 1.5,
+              background: color,
+              opacity: isActive ? 1 : 0.7,
+              transition: 'opacity 0.15s',
+            }} />
+          </button>
         );
       })}
     </div>
@@ -316,10 +338,10 @@ export default function SymptomsPage({ lang }) {
     <div className="symptoms-page">
 
       {/* BODY FIGURE — full viewport */}
-      <div style={{ position: 'relative', height: '100vh', overflow: 'hidden' }} onClick={() => setActiveZone(null)}>
+      <div style={{ position: 'relative', height: '95vh', overflow: 'hidden', backgroundImage: "url('/assets/cielo.png')", backgroundSize: 'cover', backgroundPosition: 'center' }} onClick={() => setActiveZone(null)}>
 
         {/* Floating title */}
-        <div style={{ position: 'absolute', top: 20, left: 24, zIndex: 21, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: 48, left: 12, zIndex: 21, pointerEvents: 'none' }}>
           <div style={{
             fontFamily: 'var(--font-display)',
             fontSize: 'clamp(28px, 3.5vw, 56px)',
@@ -327,87 +349,31 @@ export default function SymptomsPage({ lang }) {
             textTransform: 'uppercase',
             lineHeight: 0.92,
             letterSpacing: '-0.02em',
-            color: 'var(--black)',
+            color: 'var(--white)',
           }}>
             {L ? 'Mappa Sintomi' : 'Symptoms Map'}
           </div>
         </div>
 
-        <BodyFigure activeZone={activeZone} onSelectZone={handleSelectZone} zoneColors={zoneColors} categoryLevels={categoryLevels} lang={lang} bodyImg={bodyImg} />
-
-        {/* TOP-RIGHT — AQI health recommendation + organ symptoms */}
+        {/* Hint — top right */}
         <div style={{
-          position: 'absolute', top: 12, right: 12, zIndex: 20,
-          width: '260px', display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none',
+          position: 'absolute', top: 48, right: 28, zIndex: 21,
+          fontFamily: 'var(--font-display)', fontSize: 'clamp(22px, 2.5vw, 40px)', fontWeight: 400,
+          letterSpacing: '-0.02em', textTransform: 'uppercase', lineHeight: 1.4,
+          color: 'var(--white)', opacity: 1,
+          textAlign: 'left', pointerEvents: 'none', maxWidth: '18vw',
         }}>
-          <div style={{ background: lvSuggestion.color, padding: '12px 14px', pointerEvents: 'auto' }}>
-            <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
-              {L ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'}
-            </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 10 }}>
-              {L ? lvSuggestion.it : lvSuggestion.en}
-            </div>
-            {[
-              { who: L ? 'Popolazione generale' : 'General population', text: SUGGESTIONS[lvSuggestion.key]?.gen },
-              { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: SUGGESTIONS[lvSuggestion.key]?.sen },
-            ].map((s, i) => (
-              <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
-                <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
-              </div>
-            ))}
-          </div>
-
-          {activeZone && (() => {
-            const zone = ZONE_CATS[activeZone];
-            const catKey = zone.primary;
-            const levelIndex = categoryLevels[catKey];
-            const lv = LEVELS[levelIndex];
-            const sym = SYMPTOMS[catKey][lv.key];
-            const noSym = !sym || (!sym.gen && !sym.sen);
-            return (
-              <div style={{ background: lv.color, padding: '12px 14px', pointerEvents: 'auto' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)' }}>
-                    {L ? 'SINTOMI' : 'SYMPTOMS'} — {L ? lv.it : lv.en}
-                  </div>
-                  <button onClick={() => setActiveZone(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
-                </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 12 }}>
-                  {L ? zone.label_it : zone.label_en}
-                </div>
-                {noSym ? (
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.85)' }}>
-                    {L ? 'Nessun sintomo atteso a questo livello.' : 'No symptoms expected at this level.'}
-                  </div>
-                ) : (
-                  [
-                    { who: L ? 'Popolazione generale' : 'General population', text: L ? sym.gen?.it : sym.gen?.en },
-                    { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: L ? sym.sen?.it : sym.sen?.en },
-                  ].filter(s => s.text).map((s, i) => (
-                    <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
-                      <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
-                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
-                    </div>
-                  ))
-                )}
-                <button
-                  style={{ marginTop: 12, width: '100%', padding: '7px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff', fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}
-                  onClick={() => document.getElementById('report-section')?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  {L ? 'SEGNALA UN SINTOMO →' : 'REPORT A SYMPTOM →'}
-                </button>
-              </div>
-            );
-          })()}
+          {L ? 'Premi su un pallino per scoprire i sintomi' : 'Press a dot to discover the symptoms'}
         </div>
+
+        <BodyFigure activeZone={activeZone} onSelectZone={handleSelectZone} zoneColors={zoneColors} categoryLevels={categoryLevels} lang={lang} bodyImg={bodyImg} />
 
         {/* LEFT COLUMN — stacked floating boxes, MapPage style */}
         <div
           style={{
             position: 'absolute', top: 0, left: 0, bottom: 0, zIndex: 20,
             width: panelW, display: 'flex', flexDirection: 'column',
-            gap: 8, padding: 12, paddingTop: 88, overflowY: 'auto', pointerEvents: 'none',
+            gap: 8, padding: 12, paddingTop: 120, overflowY: 'auto', pointerEvents: 'none',
           }}
           onClick={e => e.stopPropagation()}
         >
@@ -498,6 +464,68 @@ export default function SymptomsPage({ lang }) {
               ))}
             </div>
           </div>
+
+          {/* BOX 3 — Health recommendation */}
+          <div style={{ ...BOX, background: lvSuggestion.color }}>
+            <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
+              {L ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'}
+            </div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 10 }}>
+              {L ? lvSuggestion.it : lvSuggestion.en}
+            </div>
+            {[
+              { who: L ? 'Popolazione generale' : 'General population', text: SUGGESTIONS[lvSuggestion.key]?.gen },
+              { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: SUGGESTIONS[lvSuggestion.key]?.sen },
+            ].map((s, i) => (
+              <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
+                <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+              </div>
+            ))}
+          </div>
+
+          {activeZone && (() => {
+            const zone = ZONE_CATS[activeZone];
+            const catKey = zone.primary;
+            const levelIndex = categoryLevels[catKey];
+            const lv = LEVELS[levelIndex];
+            const sym = SYMPTOMS[catKey][lv.key];
+            const noSym = !sym || (!sym.gen && !sym.sen);
+            return (
+              <div style={{ ...BOX, background: lv.color }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)' }}>
+                    {L ? 'SINTOMI' : 'SYMPTOMS'} — {L ? lv.it : lv.en}
+                  </div>
+                  <button onClick={() => setActiveZone(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 12 }}>
+                  {L ? zone.label_it : zone.label_en}
+                </div>
+                {noSym ? (
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.85)' }}>
+                    {L ? 'Nessun sintomo atteso a questo livello.' : 'No symptoms expected at this level.'}
+                  </div>
+                ) : (
+                  [
+                    { who: L ? 'Popolazione generale' : 'General population', text: L ? sym.gen?.it : sym.gen?.en },
+                    { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: L ? sym.sen?.it : sym.sen?.en },
+                  ].filter(s => s.text).map((s, i) => (
+                    <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
+                      <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+                    </div>
+                  ))
+                )}
+                <button
+                  style={{ marginTop: 12, width: '100%', padding: '7px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff', fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}
+                  onClick={() => document.getElementById('report-section')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  {L ? 'SEGNALA UN SINTOMO →' : 'REPORT A SYMPTOM →'}
+                </button>
+              </div>
+            );
+          })()}
         </div>
 
         {/* BOTTOM TIMELINE — range mode only */}
@@ -547,6 +575,7 @@ export default function SymptomsPage({ lang }) {
         )}
 
       </div>
+
 
       {/* SYMPTOMS MATRIX */}
       <div className="symptoms-matrix-section">

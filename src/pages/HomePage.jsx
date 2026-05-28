@@ -99,16 +99,15 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
       >
         <HeroDots level={globalAQI} />
 
-        {/* Page preview — appears on right half when hovering a strip */}
+        {/* Page preview — replaces hero photo on strip hover */}
         {hoveredStrip && (
           <div
             ref={previewRef}
             style={{
               position: 'absolute',
-              top: '65%', left: '72%',
-              transform: 'translate(-50%, -50%)',
-              width: '38%', height: '55vh',
-              overflow: 'hidden', zIndex: 3, pointerEvents: 'none',
+              right: '-2vw', bottom: '4%',
+              height: '88%', width: '34%',
+              overflow: 'hidden', zIndex: 4, pointerEvents: 'none',
             }}
           >
             <div style={{
@@ -132,39 +131,45 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
           alt=""
           style={{
             position: 'absolute',
-            top: '2%', right: 0, bottom: '2%',
-            height: '96%',
+            top: 'auto', right: '-2vw', bottom: '4%',
+            height: '88%',
             width: 'auto',
             objectFit: 'cover',
             zIndex: 3,
             pointerEvents: 'none',
+            opacity: hoveredStrip ? 0 : 1,
+            transition: 'opacity 0.2s',
           }}
         />
 
         {/* Content */}
-        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', flex: 1, padding: '48px 40px 40px' }}>
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', flex: 1, padding: '48px 40px 48px 48px' }}>
 
           {/* Title */}
           <div style={{
             fontFamily: 'var(--font-display)',
-            fontSize: '13vw',
+            fontSize: '12vw',
             fontWeight: 400,
             textTransform: 'uppercase',
-            lineHeight: 1,
+            lineHeight: 0.88,
             letterSpacing: '-0.02em',
             color: 'var(--white)',
           }}>
-            <div>ARIA BENE</div>
+            <div>ARIA</div>
+            <div>BENE</div>
             <div>COMUNE</div>
           </div>
 
-          {/* subtitle */}
+
+          {/* Subtitle */}
           <div style={{ marginTop: 12 }}>
             <div style={{
-              fontFamily: 'var(--font-body)',
+              fontFamily: 'var(--font-title)',
               fontSize: 'clamp(14px, 1.4vw, 20px)',
+              textTransform: 'uppercase',
               color: 'rgba(255,255,255,0.7)',
               lineHeight: 1.5,
+              maxWidth: '38vw',
             }}>
               {L
                 ? "Monitoraggio civico della qualità dell'aria a Taranto. Dati in tempo reale dai sensori installati dai cittadini."
@@ -172,11 +177,8 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
             </div>
           </div>
 
-          {/* Nav strips + health rec */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', marginTop: 32, alignItems: 'stretch' }}>
-
-            {/* Strips */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch' }}>
+          {/* Nav strips */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
             {NAV_STRIPS.map((n, i) => {
               const isHov = hoveredStrip === n.id;
               return (
@@ -186,84 +188,101 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
                   onMouseEnter={() => setHoveredStrip(n.id)}
                   onMouseLeave={() => setHoveredStrip(null)}
                   style={{
-                    flex: 1,
                     display: 'flex',
-                    alignItems: 'center',
-                    padding: '0 24px 0 96px',
-                    background: isHov ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    alignItems: 'baseline',
+                    gap: '1.5vw',
+                    padding: '14px 0',
+                    background: isHov ? 'rgba(255,255,255,0.06)' : 'transparent',
                     border: 'none',
                     borderTop: '1px solid rgba(255,255,255,0.22)',
                     borderBottom: i === NAV_STRIPS.length - 1 ? '1px solid rgba(255,255,255,0.22)' : 'none',
                     cursor: 'pointer',
                     textAlign: 'left',
                     transition: 'background 0.15s',
-                    width: '28%',
+                    width: '100%',
                   }}
                 >
-                  <div>
-                    <div style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: 'clamp(28px, 4vw, 60px)',
-                      fontWeight: 400,
-                      textTransform: 'uppercase',
-                      letterSpacing: '-0.01em',
-                      color: 'var(--white)',
-                      lineHeight: 1,
-                      marginBottom: 5,
-                    }}>
-                      {L ? n.it : n.en}
-                    </div>
-                    <div style={{
-                      fontFamily: 'var(--font-body)',
-                      fontSize: 14,
-                      color: 'rgba(255,255,255,0.55)',
-                      lineHeight: 1,
-                    }}>
-                      {L ? n.desc_it : n.desc_en}
-                    </div>
+                  <div style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 'clamp(28px, 4vw, 60px)',
+                    fontWeight: 400,
+                    textTransform: 'uppercase',
+                    letterSpacing: '-0.01em',
+                    color: 'var(--white)',
+                    lineHeight: 1,
+                  }}>
+                    {L ? n.it : n.en}
+                  </div>
+                  <div style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 14,
+                    color: 'rgba(255,255,255,0.55)',
+                    lineHeight: 1,
+                  }}>
+                    {L ? n.desc_it : n.desc_en}
                   </div>
                 </button>
               );
             })}
-            </div>
-
-            {/* Health recommendation */}
-            {(() => {
-              const lv = LEVELS[globalAQI];
-              const sug = SUGGESTIONS[lv.key];
-              return (
-                <div style={{
-                  width: 340, flexShrink: 0, alignSelf: 'flex-start',
-                  marginLeft: '10%',
-                  background: lv.color, padding: '16px 18px',
-                  display: 'flex', flexDirection: 'column', gap: 12,
-                  textAlign: 'center', alignItems: 'center',
-                }}>
-                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)' }}>
-                    {L ? "Qualità dell'aria" : 'Air Quality'}
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1 }}>
-                    {L ? lv.it : lv.en}
-                  </div>
-                  {[
-                    { who: L ? 'Popolazione generale' : 'General population', text: sug?.gen },
-                    { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: sug?.sen },
-                  ].map((s, i) => s.text && (
-                    <div key={i}>
-                      <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)', marginBottom: 3 }}>{s.who}</div>
-                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
           </div>
 
         </div>
+
+        {/* Health rec — circle */}
+        {(() => {
+          const lv = LEVELS[globalAQI];
+          const sug = SUGGESTIONS[lv.key];
+          return (
+            <div style={{
+              position: 'absolute',
+              left: '52%',
+              top: '18%',
+              transform: 'translate(-50%, -50%)',
+              width: 270,
+              height: 270,
+              borderRadius: '50%',
+              background: lv.color,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              textAlign: 'center',
+              padding: '24px',
+              boxSizing: 'border-box',
+              zIndex: 4,
+            }}>
+              <div style={{ fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)' }}>
+                {L ? "Qualità dell'aria" : 'Air Quality'}
+              </div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1 }}>
+                {L ? lv.it : lv.en}
+              </div>
+              {sug?.gen && (
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, lineHeight: 1.4, color: 'rgba(255,255,255,0.85)' }}>
+                  {sug.gen}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+      </div>
+
+      {/* VIDEO */}
+      <div style={{ background: 'var(--white)', padding: '48px 40px' }}>
+        <video
+          src="/assets/Video_PreAudio.mov"
+          autoPlay
+          muted
+          loop
+          playsInline
+          style={{ width: '100%', display: 'block' }}
+        />
       </div>
 
       {/* INFO ITEMS — editorial */}
-      <div style={{ background: 'var(--primary)', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+      <div style={{ background: 'var(--white)', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
         {INFO_ITEMS.map((item, i) => (
           <div
             key={i}
@@ -273,7 +292,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
               gap: '0 80px',
               alignItems: 'start',
               padding: '52px 40px',
-              borderBottom: i < INFO_ITEMS.length - 1 ? '1px solid rgba(255,255,255,0.12)' : 'none',
+              borderBottom: i < INFO_ITEMS.length - 1 ? '1px solid rgba(0,0,0,0.08)' : 'none',
             }}
           >
             <div style={{
@@ -283,7 +302,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
               textTransform: 'uppercase',
               letterSpacing: '-0.01em',
               lineHeight: 1.05,
-              color: 'var(--white)',
+              color: 'var(--black)',
             }}>
               {L ? item.title_it : item.title_en}
             </div>
@@ -291,7 +310,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
               fontFamily: 'var(--font-body)',
               fontSize: 'clamp(16px, 1.4vw, 22px)',
               lineHeight: 1.65,
-              color: 'rgba(255,255,255,0.72)',
+              color: 'rgba(0,0,0,0.65)',
             }}>
               {L ? item.body_it : item.body_en}
             </div>

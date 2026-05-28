@@ -21,6 +21,7 @@
   --gray2:  #9B9790;
   --border: 2px solid #11101000;
   --primary: #B7410E;
+  
 
   --font-body:    'Source Serif 4', Georgia, serif;
   --font-title:   'Epilogue', sans-serif;
@@ -440,7 +441,7 @@ body { font-family: var(--font-body); overflow-x: hidden; }
 }
 
 /* SYMPTOMS PAGE */
-.symptoms-page { display: flex; flex-direction: column; }
+.symptoms-page { display: flex; flex-direction: column; position: relative; }
 .symptoms-top-bar {
   display: grid; grid-template-columns: 1fr auto 1fr;
   align-items: center; padding: 16px 32px;
@@ -1314,11 +1315,6 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background-color: var(--white);
-  background-image:
-    linear-gradient(var(--gray) 1px, transparent 1px),
-    linear-gradient(90deg, var(--gray) 1px, transparent 1px);
-  background-size: 40px 40px;
 }
 .body-callout-row {
   position: absolute;
