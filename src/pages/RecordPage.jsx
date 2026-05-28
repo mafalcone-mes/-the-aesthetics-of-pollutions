@@ -36,11 +36,11 @@ const REC_ZONE_CATS = {
 
 const REC_ZONE_Y = { mind: '17%', eyes: '25%', throat: '40%', chest: '53%', stomach: '73%' };
 const REC_ZONE_POS = {
-  mind:    { x: 38, y: 17 },
-  eyes:    { x: 38, y: 25 },
-  throat:  { x: 38, y: 40 },
-  chest:   { x: 38, y: 53 },
-  stomach: { x: 38, y: 73 },
+  mind:    { x: 52, y: 17 },
+  eyes:    { x: 52, y: 25 },
+  throat:  { x: 52, y: 40 },
+  chest:   { x: 52, y: 53 },
+  stomach: { x: 52, y: 73 },
 };
 
 function RecordBlobOverlay({ categoryLevels }) {
@@ -118,7 +118,7 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
     <div className="record-page">
 
       {/* TITLE */}
-      <div style={{ padding: hideAqiRow ? '28px 32px' : '24px 24px 16px 24px', borderBottom: afterTitle ? 'none' : '1px solid var(--gray)', textAlign: 'left' }}>
+      <div style={{ padding: hideAqiRow ? '10px 32px' : '24px 24px 16px 24px', borderBottom: afterTitle ? 'none' : '1px solid var(--gray)', textAlign: 'left' }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: hideAqiRow ? 'clamp(64px, 8vw, 128px)' : 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em', ...titleStyle }}>
           {sensor.name}
         </span>
@@ -229,11 +229,11 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
       {/* BODY FIGURE — Pi mode */}
       {hideAqiRow && (
         <div
-          style={{ position: 'relative', height: '88vh', overflow: 'hidden', background: 'var(--white)', borderBottom: '1px solid var(--gray)' }}
+          style={{ position: 'relative', height: '35vh', overflow: 'hidden', background: 'var(--white)', borderBottom: '1px solid var(--gray)' }}
           onClick={() => setActiveZone(null)}
         >
           <img src={REC_BODY_IMG} alt=""
-            style={{ position: 'absolute', right: '18%', top: '7%', height: '90%', width: 'auto', zIndex: 1, pointerEvents: 'none', objectFit: 'contain' }} />
+            style={{ position: 'absolute', left: '4%', top: '7%', height: '90%', width: 'auto', zIndex: 1, pointerEvents: 'none', objectFit: 'contain' }} />
 
           <RecordBlobOverlay categoryLevels={recCatLevels} />
 
@@ -243,8 +243,8 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
               <div
                 key={key}
                 style={{
-                  position: 'absolute', left: '36vw', right: '42%', top: REC_ZONE_Y[key],
-                  transform: 'translateY(-50%)', display: 'flex', alignItems: 'center',
+                  position: 'absolute', left: '30%', right: '48vw', top: REC_ZONE_Y[key],
+                  transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', flexDirection: 'row-reverse',
                   pointerEvents: 'none', zIndex: 10,
                 }}
               >
@@ -256,7 +256,7 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
 
           {/* Left info panel — all zones always visible */}
           <div
-            style={{ position: 'absolute', top: 0, left: 0, bottom: 0, zIndex: 20, width: 'calc(100vw / 6 * 1.5)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6, padding: 12, overflowY: 'auto' }}
+            style={{ position: 'absolute', top: 0, right: 0, bottom: 0, zIndex: 20, width: 'calc(100vw / 6 * 1.5)', display: 'flex', flexDirection: 'column', justifyContent: 'stretch', gap: 4, padding: 8, overflow: 'hidden' }}
           >
             {Object.entries(REC_ZONE_CATS).map(([key, zone]) => {
               const levelIndex = recCatLevels[zone.primary];
@@ -264,11 +264,11 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
               const sym = SYMPTOMS[zone.primary][lv.key];
               const noSym = !sym || (!sym.gen && !sym.sen);
               return (
-                <div key={key} style={{ background: lv.color, padding: '12px 14px' }}>
+                <div key={key} style={{ flex: 1, minHeight: 0, overflow: 'hidden', background: lv.color, padding: '8px 12px' }}>
                   <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.75)', marginBottom: 6 }}>
                     {L ? 'SINTOMI' : 'SYMPTOMS'} — {L ? lv.it : lv.en}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 12 }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(16px, 2vw, 26px)', fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 8 }}>
                     {L ? zone.label_it : zone.label_en}
                   </div>
                   {noSym ? (
@@ -327,7 +327,7 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
               pollutants={[activePollutant]}
               mode="pollutant"
               width={900}
-              height={280}
+              height={hideAqiRow ? 130 : 280}
               pollutantColors={{ [activePollutant]: activeLv.color }}
             />
           </>
@@ -346,7 +346,7 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
               pollutants={Object.keys(POLLUTANTS)}
               mode="pollutant"
               width={900}
-              height={280}
+              height={hideAqiRow ? 130 : 280}
             />
           </>
         )}

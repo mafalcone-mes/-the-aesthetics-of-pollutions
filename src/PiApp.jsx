@@ -14,8 +14,8 @@ const SENSOR_META = {
   installed: '28.05.2026',
 };
 
-const IMG_W = 320;
-const IMG_H = 460;
+const IMG_W = 180;
+const IMG_H = 120;
 
 function SensorCard({ sensor, lang }) {
   const L = lang === 'it';
@@ -30,7 +30,7 @@ function SensorCard({ sensor, lang }) {
     color: 'rgba(0,0,0,0.4)', marginBottom: 3,
   };
   const VALUE = {
-    fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400,
+    fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 400,
     textTransform: 'uppercase', lineHeight: 1.05, letterSpacing: '-0.01em',
     color: 'var(--black)',
   };
@@ -38,14 +38,14 @@ function SensorCard({ sensor, lang }) {
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--gray)' }}>
 
-      {/* 1 — Piazza Fontana */}
-      <div style={{ width: IMG_W, height: IMG_H, flexShrink: 0, overflow: 'hidden', borderRight: '1px solid var(--gray)' }}>
+      {/* Col 1 — Image */}
+      <div style={{ flex: 1, overflow: 'hidden', borderRight: '1px solid var(--gray)' }}>
         <img src="/assets/Piazza-Fontana-1.jpg" alt="Piazza Fontana"
           style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%', display: 'block' }} />
       </div>
 
-      {/* 2 — Map */}
-      <div style={{ width: IMG_W, height: IMG_H, flexShrink: 0, borderRight: '1px solid var(--gray)' }}>
+      {/* Col 2 — Map */}
+      <div style={{ flex: 1, borderRight: '1px solid var(--gray)' }}>
         <MapContainer
           center={[40.4760, 17.2270]}
           zoom={13}
@@ -64,70 +64,68 @@ function SensorCard({ sensor, lang }) {
         </MapContainer>
       </div>
 
-      {/* 3 — Sensor metadata + AQI scale */}
-      <div style={{
-        flex: 1, padding: '28px 32px', borderRight: '1px solid var(--gray)',
-        display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 24,
-      }}>
-        <div>
-          <div style={LABEL}>{L ? 'Sensore' : 'Sensor'}</div>
-          <div style={VALUE}>{sensor?.name ?? '—'}</div>
-        </div>
-        <div>
-          <div style={LABEL}>{L ? 'Strada' : 'Street'}</div>
-          <div style={VALUE}>{SENSOR_META.street}</div>
-        </div>
-        <div>
-          <div style={LABEL}>{L ? 'Proprietario' : 'Owner'}</div>
-          <div style={VALUE}>{SENSOR_META.owner}</div>
-        </div>
-        <div>
-          <div style={LABEL}>{L ? 'Installazione' : 'Installed'}</div>
-          <div style={VALUE}>{SENSOR_META.installed}</div>
-        </div>
+      {/* Col 3 — Labels on top, health rec below */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
 
-        <div style={{ marginTop: 'auto' }}>
-          <div style={{ ...LABEL, marginBottom: 8 }}>{L ? 'Scala AQI' : 'AQI Scale'}</div>
-          <div style={{ display: 'flex', gap: 3, marginBottom: 6 }}>
-            {LEVELS.map(l => (
-              <div key={l.key} style={{
-                flex: 1, height: 10, background: l.color,
-                outline: l.key === lv.key ? `2px solid ${l.color}` : 'none',
-                outlineOffset: 2,
-                opacity: l.key === lv.key ? 1 : 0.45,
-              }} />
+        {/* Labels + AQI scale */}
+        <div style={{
+          flex: 1, padding: '14px 18px', borderBottom: '1px solid var(--gray)',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { label: L ? 'Sensore' : 'Sensor', value: sensor?.name ?? '—' },
+              { label: L ? 'Strada' : 'Street', value: SENSOR_META.street },
+              { label: L ? 'Proprietario' : 'Owner', value: SENSOR_META.owner },
+              { label: L ? 'Installazione' : 'Installed', value: SENSOR_META.installed },
+            ].map((item, i) => (
+              <div key={i}>
+                <div style={LABEL}>{item.label}</div>
+                <div style={VALUE}>{item.value}</div>
+              </div>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.35)' }}>
-            <span>1 — {L ? 'Buono' : 'Good'}</span>
-            <span>6 — {L ? 'Estremo' : 'Extreme'}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4 — Health recommendation */}
-      <div style={{
-        flex: 1, background: lv.color, padding: '28px 32px',
-        display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 16,
-      }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 6 }}>
-            {L ? "Qualità dell'aria" : 'Air Quality'}
-          </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 42, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 0.95, letterSpacing: '-0.02em' }}>
-            {L ? lv.it : lv.en}
+          <div style={{ marginTop: 10 }}>
+            <div style={{ ...LABEL, marginBottom: 5 }}>{L ? 'Scala AQI' : 'AQI Scale'}</div>
+            <div style={{ display: 'flex', gap: 3, marginBottom: 4 }}>
+              {LEVELS.map(l => (
+                <div key={l.key} style={{
+                  flex: 1, height: 8, background: l.color,
+                  outline: l.key === lv.key ? `2px solid ${l.color}` : 'none',
+                  outlineOffset: 2, opacity: l.key === lv.key ? 1 : 0.45,
+                }} />
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.35)' }}>
+              <span>1 — {L ? 'Buono' : 'Good'}</span>
+              <span>6 — {L ? 'Estremo' : 'Extreme'}</span>
+            </div>
           </div>
         </div>
 
-        {[
-          { who: L ? 'Popolazione generale' : 'General population', text: suggestions?.gen },
-          { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: suggestions?.sen },
-        ].map((s, i) => s.text && (
-          <div key={i}>
-            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 3 }}>{s.who}</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.55, color: '#fff' }}>{s.text}</div>
+        {/* Health rec — general pop top, sensitive pop bottom */}
+        <div style={{ flex: 1, background: lv.color, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, padding: '10px 18px', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>
+              {L ? "Qualità dell'aria" : 'Air Quality'} — {L ? lv.it : lv.en}
+            </div>
+            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 3 }}>
+              {L ? 'Popolazione generale' : 'General population'}
+            </div>
+            {suggestions?.gen && (
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.5, color: '#fff' }}>{suggestions.gen}</div>
+            )}
           </div>
-        ))}
+          <div style={{ flex: 1, padding: '10px 18px' }}>
+            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 3 }}>
+              {L ? 'Popolazione sensibile' : 'Sensitive population'}
+            </div>
+            {suggestions?.sen && (
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.5, color: '#fff' }}>{suggestions.sen}</div>
+            )}
+          </div>
+        </div>
+
       </div>
 
     </div>
