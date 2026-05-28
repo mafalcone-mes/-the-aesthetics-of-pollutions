@@ -241,7 +241,7 @@ function BodyFigure({ activeZone, onSelectZone, zoneColors, categoryLevels, lang
   );
 }
 
-export default function SymptomsPage({ lang }) {
+export default function SymptomsPage({ lang, liveRows }) {
   const [activeZone, setActiveZone] = useState(null);
   const [activeSensor, setActiveSensor] = useState('all');
   const L = lang === 'it';
@@ -278,11 +278,14 @@ export default function SymptomsPage({ lang }) {
     return () => clearInterval(id);
   }, [isPlaying, timeMode, rangeDates.length]);
 
-  const hourRows = HOURLY_DATA.filter(r => toISO(r.dateObj) === displayDate && r.hour === displayHour);
-  const scopedRows = activeSensor === 'all'
-    ? hourRows
-    : hourRows.filter(r => r.sensorId === Number(activeSensor));
-  const rowsForCalc = scopedRows.length ? scopedRows : hourRows;
+  const rowsForCalc = useMemo(() => {
+    if (liveRows && liveRows.length > 0) return liveRows;
+    const hourRows = HOURLY_DATA.filter(r => toISO(r.dateObj) === displayDate && r.hour === displayHour);
+    const scopedRows = activeSensor === 'all'
+      ? hourRows
+      : hourRows.filter(r => r.sensorId === Number(activeSensor));
+    return scopedRows.length ? scopedRows : hourRows;
+  }, [liveRows, displayDate, displayHour, activeSensor]);
 
   const getCategoryLevel = (catKey) => {
     const keys = Object.keys(POLLUTANTS).filter(k => POLLUTANTS[k].category === catKey);
@@ -377,8 +380,21 @@ export default function SymptomsPage({ lang }) {
           }}
           onClick={e => e.stopPropagation()}
         >
-          {/* BOX 1 — Time controls */}
-          <div style={BOX}>
+          {/* BOX 1 — Live indicator (Pi mode) or time controls */}
+          {liveRows && (
+            <div style={BOX}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                <span style={{ ...SUB_LABEL, color: '#22c55e' }}>
+                  {L ? 'DATI IN TEMPO REALE' : 'LIVE DATA'}
+                </span>
+              </div>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--gray2)', lineHeight: 1.5 }}>
+                {L ? 'Sensore Raspberry Pi · aggiornamento ogni 30 s' : 'Raspberry Pi sensor · updates every 30 s'}
+              </div>
+            </div>
+          )}
+          {!liveRows && <div style={BOX}>
             <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
               {L ? 'Tempo' : 'Time'}
             </div>
@@ -445,10 +461,10 @@ export default function SymptomsPage({ lang }) {
                   style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
               </div>
             )}
-          </div>
+          </div>}
 
-          {/* BOX 2 — Sensor */}
-          <div style={BOX}>
+          {/* BOX 2 — Sensor (hidden in live mode) */}
+          {!liveRows && <div style={BOX}>
             <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
               {L ? 'Sensore' : 'Sensor'}
             </div>
@@ -463,7 +479,7 @@ export default function SymptomsPage({ lang }) {
                 </span>
               ))}
             </div>
-          </div>
+          </div>}
 
           {/* BOX 3 — Health recommendation */}
           <div style={{ ...BOX, background: lvSuggestion.color }}>
@@ -528,8 +544,8 @@ export default function SymptomsPage({ lang }) {
           })()}
         </div>
 
-        {/* BOTTOM TIMELINE — range mode only */}
-        {timeMode === 'range' && (
+        {/* BOTTOM TIMELINE — range mode only, hidden in live mode */}
+        {!liveRows && timeMode === 'range' && (
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
             height: timelineH, background: 'var(--white)',

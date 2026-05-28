@@ -1,0 +1,15 @@
+[Unit]
+Description=Aria Bene Comune Pi Dashboard
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=__INSTALL_DIR__
+ExecStart=/usr/bin/python3 __INSTALL_DIR__/server.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

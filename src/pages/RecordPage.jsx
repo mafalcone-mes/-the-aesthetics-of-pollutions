@@ -24,9 +24,62 @@ const pill = (active, color) => ({
   letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
 });
 
-export default function RecordPage({ lang, sensor }) {
+const REC_BODY_IMG = '/assets/sagome/DSC01848.png';
+
+const REC_ZONE_CATS = {
+  mind:    { primary: 'systemic',     label_it: 'Testa / Mente', label_en: 'Head / Mind' },
+  eyes:    { primary: 'gaseous',      label_it: 'Occhi',          label_en: 'Eyes' },
+  throat:  { primary: 'gaseous',      label_it: 'Gola',           label_en: 'Throat' },
+  chest:   { primary: 'particulates', label_it: 'Torace',         label_en: 'Chest' },
+  stomach: { primary: 'systemic',     label_it: 'Stomaco',        label_en: 'Stomach' },
+};
+
+const REC_ZONE_Y = { mind: '17%', eyes: '25%', throat: '40%', chest: '53%', stomach: '73%' };
+const REC_ZONE_POS = {
+  mind:    { x: 38, y: 17 },
+  eyes:    { x: 38, y: 25 },
+  throat:  { x: 38, y: 40 },
+  chest:   { x: 38, y: 53 },
+  stomach: { x: 38, y: 73 },
+};
+
+function RecordBlobOverlay({ categoryLevels }) {
+  return (
+    <svg
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'hidden', mixBlendMode: 'multiply', zIndex: 5 }}
+      viewBox="0 0 100 100" preserveAspectRatio="none"
+    >
+      <defs>
+        <filter id="rec-halo" x="-200%" y="-150%" width="500%" height="400%"><feGaussianBlur stdDeviation="13" /></filter>
+        <filter id="rec-mid"  x="-100%" y="-80%"  width="300%" height="260%"><feGaussianBlur stdDeviation="5"  /></filter>
+        <filter id="rec-core" x="-60%"  y="-40%"  width="220%" height="180%"><feGaussianBlur stdDeviation="2"  /></filter>
+      </defs>
+      <g filter="url(#rec-halo)" opacity="0.28">
+        {Object.entries(REC_ZONE_CATS).map(([key, zone]) => {
+          const pos = REC_ZONE_POS[key];
+          return <ellipse key={key} cx={pos.x} cy={pos.y} rx={30} ry={38} fill={LEVELS[Math.max(0, categoryLevels[zone.primary] - 2)].color} />;
+        })}
+      </g>
+      <g filter="url(#rec-mid)" opacity="0.6">
+        {Object.entries(REC_ZONE_CATS).map(([key, zone]) => {
+          const pos = REC_ZONE_POS[key];
+          return <ellipse key={key} cx={pos.x} cy={pos.y} rx={16} ry={22} fill={LEVELS[Math.max(0, categoryLevels[zone.primary] - 1)].color} />;
+        })}
+      </g>
+      <g filter="url(#rec-core)" opacity="0.85">
+        {Object.entries(REC_ZONE_CATS).map(([key, zone]) => {
+          const pos = REC_ZONE_POS[key];
+          return <ellipse key={key} cx={pos.x} cy={pos.y} rx={6} ry={8} fill={LEVELS[categoryLevels[zone.primary]].color} />;
+        })}
+      </g>
+    </svg>
+  );
+}
+
+export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hideAqiRow, hideMap, titleStyle }) {
   const [activePollutant, setActivePollutant] = useState('pm25');
   const [chartView, setChartView] = useState('line');
+  const [activeZone, setActiveZone] = useState(null);
 
   if (!sensor) {
     return <div style={{ padding: 40, fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--gray2)' }}>Nessun sensore selezionato.</div>;
@@ -40,8 +93,20 @@ export default function RecordPage({ lang, sensor }) {
   const activeLi = getPollLevel(activePollutant, activeVal);
   const activeLv = LEVELS[activeLi];
 
-  const sensorRows = HOURLY_DATA.filter(r => r.sensorId === sensor.id);
-  const histRows = sensorRows.slice(-24);
+  const recCatLevels = {
+    particulates: Math.max(0, ...Object.keys(POLLUTANTS).filter(k => POLLUTANTS[k].category === 'particulates').map(k => getPollLevel(k, sensor[k] || 0))),
+    gaseous:      Math.max(0, ...Object.keys(POLLUTANTS).filter(k => POLLUTANTS[k].category === 'gaseous').map(k => getPollLevel(k, sensor[k] || 0))),
+    systemic:     Math.max(0, ...Object.keys(POLLUTANTS).filter(k => POLLUTANTS[k].category === 'systemic').map(k => getPollLevel(k, sensor[k] || 0))),
+  };
+  const recZoneColors = Object.fromEntries(
+    Object.entries(REC_ZONE_CATS).map(([k, z]) => [k, LEVELS[recCatLevels[z.primary]].color])
+  );
+
+  const sensorRows = liveHistory ?? HOURLY_DATA.filter(r => r.sensorId === sensor.id);
+  const histRows = liveHistory ? liveHistory.slice(-120) : sensorRows.slice(-24);
+  const chartTimeLabel = liveHistory
+    ? (L ? 'ultime misurazioni' : 'recent readings')
+    : (L ? 'ultime 24 ore' : 'last 24 hours');
 
   const chartViews = [
     { key: 'line',  label: L ? 'Andamento' : 'Trend' },
@@ -53,14 +118,15 @@ export default function RecordPage({ lang, sensor }) {
     <div className="record-page">
 
       {/* TITLE */}
-      <div style={{ padding: '24px 24px 16px 24px', borderBottom: '1px solid var(--gray)' }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
+      <div style={{ padding: hideAqiRow ? '28px 32px' : '24px 24px 16px 24px', borderBottom: afterTitle ? 'none' : '1px solid var(--gray)', textAlign: 'left' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: hideAqiRow ? 'clamp(64px, 8vw, 128px)' : 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em', ...titleStyle }}>
           {sensor.name}
         </span>
       </div>
+      {afterTitle}
 
       {/* AQI BOXES — horizontal row */}
-      <div style={{ display: 'flex', gap: 2, padding: 2, background: 'var(--white)', borderBottom: '1px solid var(--gray)', flexWrap: 'wrap' }}>
+      {!hideAqiRow && <div style={{ display: 'flex', gap: 2, padding: 2, background: 'var(--white)', borderBottom: '1px solid var(--gray)', flexWrap: 'wrap' }}>
 
         {/* AQI quality + recommendations */}
         <div style={{ flex: '1 1 180px', background: lv.color, padding: '12px 14px' }}>
@@ -121,10 +187,10 @@ export default function RecordPage({ lang, sensor }) {
           </div>
         </div>
 
-      </div>
+      </div>}
 
       {/* MAP */}
-      <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--gray)' }}>
+      {!hideMap && <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--gray)' }}>
         <div style={{ height: 280, width: '100%' }}>
           <MapContainer
             key={sensor.id}
@@ -158,7 +224,74 @@ export default function RecordPage({ lang, sensor }) {
             })}
           </MapContainer>
         </div>
-      </div>
+      </div>}
+
+      {/* BODY FIGURE — Pi mode */}
+      {hideAqiRow && (
+        <div
+          style={{ position: 'relative', height: '88vh', overflow: 'hidden', background: 'var(--white)', borderBottom: '1px solid var(--gray)' }}
+          onClick={() => setActiveZone(null)}
+        >
+          <img src={REC_BODY_IMG} alt=""
+            style={{ position: 'absolute', right: '18%', top: '7%', height: '90%', width: 'auto', zIndex: 1, pointerEvents: 'none', objectFit: 'contain' }} />
+
+          <RecordBlobOverlay categoryLevels={recCatLevels} />
+
+          {Object.entries(REC_ZONE_CATS).map(([key, zone]) => {
+            const color = recZoneColors[key];
+            return (
+              <div
+                key={key}
+                style={{
+                  position: 'absolute', left: '36vw', right: '42%', top: REC_ZONE_Y[key],
+                  transform: 'translateY(-50%)', display: 'flex', alignItems: 'center',
+                  pointerEvents: 'none', zIndex: 10,
+                }}
+              >
+                <div style={{ width: 14, height: 14, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                <div style={{ flex: 1, height: 1.5, background: color, opacity: 0.7 }} />
+              </div>
+            );
+          })}
+
+          {/* Left info panel — all zones always visible */}
+          <div
+            style={{ position: 'absolute', top: 0, left: 0, bottom: 0, zIndex: 20, width: 'calc(100vw / 6 * 1.5)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6, padding: 12, overflowY: 'auto' }}
+          >
+            {Object.entries(REC_ZONE_CATS).map(([key, zone]) => {
+              const levelIndex = recCatLevels[zone.primary];
+              const lv = LEVELS[levelIndex];
+              const sym = SYMPTOMS[zone.primary][lv.key];
+              const noSym = !sym || (!sym.gen && !sym.sen);
+              return (
+                <div key={key} style={{ background: lv.color, padding: '12px 14px' }}>
+                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.75)', marginBottom: 6 }}>
+                    {L ? 'SINTOMI' : 'SYMPTOMS'} — {L ? lv.it : lv.en}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 12 }}>
+                    {L ? zone.label_it : zone.label_en}
+                  </div>
+                  {noSym ? (
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.85)' }}>
+                      {L ? 'Nessun sintomo atteso a questo livello.' : 'No symptoms expected at this level.'}
+                    </div>
+                  ) : (
+                    [
+                      { who: L ? 'Popolazione generale' : 'General population', text: L ? sym.gen?.it : sym.gen?.en },
+                      { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: L ? sym.sen?.it : sym.sen?.en },
+                    ].filter(s => s.text).map((s, i) => (
+                      <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
+                        <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
+                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* CHART */}
       <div className="chart-area">
@@ -179,7 +312,7 @@ export default function RecordPage({ lang, sensor }) {
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {chartViews.map(({ key, label }) => (
-              <button key={key} onClick={() => setChartView(key)} style={pill(chartView === key, 'var(--black)')}>
+              <button key={key} onClick={() => setChartView(key)} style={pill(chartView === key, 'var(--primary)')}>
                 {label}
               </button>
             ))}
@@ -188,13 +321,13 @@ export default function RecordPage({ lang, sensor }) {
 
         {chartView === 'line' && (
           <>
-            <div className="chart-title">{poll.name} {poll.unit} — {L ? 'ultime 24 ore' : 'last 24 hours'}</div>
+            <div className="chart-title">{poll.name} {poll.unit} — {chartTimeLabel}</div>
             <MultiLineChart
               data={histRows}
               pollutants={[activePollutant]}
               mode="pollutant"
               width={900}
-              height={220}
+              height={280}
               pollutantColors={{ [activePollutant]: activeLv.color }}
             />
           </>
@@ -207,13 +340,13 @@ export default function RecordPage({ lang, sensor }) {
         )}
         {chartView === 'multi' && (
           <>
-            <div className="chart-title">{L ? 'Confronto inquinanti — ultime 24 ore' : 'Pollutant comparison — last 24 hours'}</div>
+            <div className="chart-title">{L ? `Confronto inquinanti — ${chartTimeLabel}` : `Pollutant comparison — ${chartTimeLabel}`}</div>
             <MultiLineChart
               data={histRows}
               pollutants={Object.keys(POLLUTANTS)}
               mode="pollutant"
               width={900}
-              height={220}
+              height={280}
             />
           </>
         )}
