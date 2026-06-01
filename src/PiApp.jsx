@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LiveDataProvider, useLiveData } from './contexts/LiveDataContext';
 import RecordPage from './pages/RecordPage';
@@ -8,14 +8,20 @@ import { SUGGESTIONS } from './data/symptoms';
 import { getSensorAQI } from './utils/aqi';
 import { SENSORS } from './data/sensors';
 
+function GrayscaleTiles() {
+  const map = useMap();
+  useEffect(() => {
+    const pane = map.getPanes().tilePane;
+    pane.style.filter = 'grayscale(1) contrast(1.15) brightness(0.96)';
+  }, [map]);
+  return null;
+}
+
 const SENSOR_META = {
   street:    'Piazza Fontana',
   owner:     'Tonio Baghdad',
   installed: '28.05.2026',
 };
-
-const IMG_W = 180;
-const IMG_H = 120;
 
 function SensorCard({ sensor, lang }) {
   const L = lang === 'it';
@@ -38,29 +44,23 @@ function SensorCard({ sensor, lang }) {
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--gray)' }}>
 
-      {/* Col 1 — Image */}
-      <div style={{ flex: 1, overflow: 'hidden', borderRight: '1px solid var(--gray)' }}>
-        <img src="/assets/Piazza-Fontana-1.jpg" alt="Piazza Fontana"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%', display: 'block' }} />
-      </div>
-
-      {/* Col 2 — Map */}
+      {/* Col 1 — Map */}
       <div style={{ flex: 1, borderRight: '1px solid var(--gray)' }}>
         <MapContainer
           center={[40.4760, 17.2270]}
-          zoom={13}
+          zoom={14}
           style={{ height: '100%', width: '100%' }}
           zoomControl={false}
           attributionControl={false}
         >
-          <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-          {SENSORS.map(s => {
-            const slv = LEVELS[getSensorAQI(s)];
-            return (
-              <CircleMarker key={s.id} center={[s.lat, s.lon]} radius={8}
-                pathOptions={{ fillColor: slv.color, fillOpacity: 0.75, color: '#111', weight: 1.5 }} />
-            );
-          })}
+          <TileLayer url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png" />
+          <GrayscaleTiles />
+          {SENSORS.map(s => (
+            <CircleMarker key={s.id} center={[s.lat, s.lon]} radius={5}
+              pathOptions={{ fillColor: '#111', fillOpacity: 0.18, color: '#111', weight: 1 }} />
+          ))}
+          <CircleMarker center={[40.4760, 17.2270]} radius={11}
+            pathOptions={{ fillColor: lv.color, fillOpacity: 0.9, color: '#111', weight: 2 }} />
         </MapContainer>
       </div>
 
