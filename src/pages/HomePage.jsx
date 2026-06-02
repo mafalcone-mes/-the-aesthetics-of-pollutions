@@ -63,6 +63,26 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
 
   const currentHour = new Date().getHours();
 
+  // Per-sensor readings for the current hour of the latest day
+  const currentHourSensors = useMemo(() => {
+    if (!HOURLY_DATA.length) return SENSORS;
+    const last = HOURLY_DATA[HOURLY_DATA.length - 1];
+    const ly = last.dateObj.getFullYear();
+    const lm = last.dateObj.getMonth();
+    const ld = last.dateObj.getDate();
+    return SENSORS.map(s => {
+      const row = HOURLY_DATA.find(r =>
+        r.sensorId === s.id &&
+        r.dateObj.getFullYear() === ly &&
+        r.dateObj.getMonth() === lm &&
+        r.dateObj.getDate() === ld &&
+        r.hour === currentHour
+      );
+      if (!row) return s;
+      return { ...s, pm25: row.pm25, pm10: row.pm10, no2: row.no2, o3: row.o3, so2: row.so2, co: row.co, nh3: row.nh3, c6h6: row.c6h6 };
+    });
+  }, [currentHour]);
+
   useEffect(() => {
     if (!onHeroVisible) return;
     onHeroVisible(true);
@@ -268,7 +288,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
               gap: 24,
               padding: 24,
             }}>
-              {SENSORS.map((s, i) => {
+              {currentHourSensors.map((s, i) => {
                 const aqiIdx = getSensorAQI(s);
                 const lv = LEVELS[aqiIdx];
                 return (

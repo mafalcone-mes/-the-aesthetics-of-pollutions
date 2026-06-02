@@ -341,12 +341,12 @@ export default function SymptomsPage({ lang, liveRows }) {
     <div className="symptoms-page">
 
       {/* BODY FIGURE — full viewport */}
-      <div style={{ position: 'relative', height: '95vh', overflow: 'hidden', backgroundImage: "url('/assets/cielo.png')", backgroundSize: 'cover', backgroundPosition: 'center' }} onClick={() => setActiveZone(null)}>
+      <div style={{ position: 'relative', height: '95vh', overflow: 'hidden', background: 'var(--white)' }} onClick={() => setActiveZone(null)}>
 
         {/* Floating title */}
         <div style={{ position: 'absolute', top: 48, left: 12, zIndex: 21, pointerEvents: 'none' }}>
           <div style={{
-            fontFamily: 'var(--font-display)',
+            fontFamily: 'var(--font-title)',
             fontSize: 'clamp(28px, 3.5vw, 56px)',
             fontWeight: 400,
             textTransform: 'uppercase',
@@ -594,53 +594,72 @@ export default function SymptomsPage({ lang, liveRows }) {
 
 
       {/* SYMPTOMS MATRIX */}
-      <div className="symptoms-matrix-section">
+      <div style={{ background: 'var(--white)' }}>
         {CATS.map((cat) => {
           const lvIdx = categoryLevels[cat.key];
           const catLv = LEVELS[lvIdx];
           return (
-            <div key={cat.key} className="symptoms-matrix-cat" style={{ borderLeft: `5px solid ${catLv.color}` }}>
-              <div
-                className="symptoms-matrix-cat-header"
-                style={{ background: `color-mix(in srgb, ${catLv.color} 14%, var(--white))` }}
-              >
-                <span className="symptoms-matrix-cat-title">{L ? cat.it.split(' (')[0] : cat.en.split(' (')[0]}</span>
-                <span className="symptoms-matrix-cat-sub">
+            <div key={cat.key} style={{ borderBottom: '1px solid var(--gray)', padding: '40px 40px' }}>
+
+              {/* Category header */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 32 }}>
+                <div style={{ fontFamily: 'var(--font-title)', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--black)' }}>
+                  {L ? cat.it.split(' (')[0] : cat.en.split(' (')[0]}
+                </div>
+                <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, color: 'var(--gray2)', letterSpacing: '0.06em' }}>
                   {cat.key === 'particulates' ? 'PM2.5 · PM10' : cat.key === 'gaseous' ? 'NO₂ · SO₂ · O₃' : 'CO · NH₃ · C₆H₆'}
-                </span>
-                <span className="symptoms-matrix-current-badge" style={{ background: catLv.color }}>
-                  <span>{lvIdx + 1}</span>
-                  <span>{L ? catLv.it : catLv.en}</span>
-                </span>
+                </div>
+                <div style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, background: catLv.color, padding: '4px 12px' }}>
+                  <span style={{ fontFamily: 'var(--font-title)', fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    {lvIdx + 1} — {L ? catLv.it : catLv.en}
+                  </span>
+                </div>
               </div>
-              <div className="symptoms-matrix-levels">
+
+              {/* Level circles — same layout as home page scale */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 {LEVELS.map((lv) => {
                   const sym = SYMPTOMS[cat.key][lv.key];
                   const isCurrent = categoryLevels[cat.key] === lv.index;
                   const noSym = !sym || (!sym.gen && !sym.sen);
+                  const size = 'clamp(130px, 14vw, 200px)';
                   return (
-                    <div key={lv.key} className={`symptoms-matrix-cell${isCurrent ? ' current' : ''}`} style={{ borderTop: `3px solid ${lv.color}` }}>
-                      <div className="symptoms-matrix-level-badge" style={{ background: lv.color }}>
-                        <span>{lv.index + 1}</span>
-                        <span>{L ? lv.it : lv.en}</span>
+                    <div key={lv.key} style={{
+                      width: size, height: size, flexShrink: 0,
+                      borderRadius: '50%',
+                      background: lv.color,
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center',
+                      textAlign: 'center', padding: '20px',
+                      boxSizing: 'border-box', overflow: 'hidden',
+                      outline: isCurrent ? `3px solid ${lv.color}` : 'none',
+                      outlineOffset: 4,
+                      opacity: isCurrent ? 1 : 0.55,
+                      transition: 'opacity 0.2s',
+                    }}>
+                      <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+                        {lv.index + 1}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(11px, 1.1vw, 15px)', fontWeight: 400, color: '#fff', textTransform: 'uppercase', lineHeight: 1.1, marginBottom: 5 }}>
+                        {L ? lv.it : lv.en}
                       </div>
                       {noSym ? (
-                        <div className="symptoms-matrix-none">—</div>
+                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(8px, 0.65vw, 10px)', color: 'rgba(255,255,255,0.7)', lineHeight: 1.3 }}>—</div>
                       ) : (
-                        <>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
                           {sym.gen && (
-                            <div className="symptoms-matrix-row">
-                              <span className="symptoms-matrix-who">{L ? 'Gen.' : 'Gen.'}</span>
-                              <span className="symptoms-matrix-text">{L ? sym.gen.it : sym.gen.en}</span>
+                            <div>
+                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 7, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>{L ? 'Gen.' : 'Gen.'}</div>
+                              <div style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(8px, 0.65vw, 10px)', color: 'rgba(255,255,255,0.9)', lineHeight: 1.3 }}>{L ? sym.gen.it : sym.gen.en}</div>
                             </div>
                           )}
                           {sym.sen && (
-                            <div className="symptoms-matrix-row">
-                              <span className="symptoms-matrix-who">{L ? 'Sen.' : 'Sen.'}</span>
-                              <span className="symptoms-matrix-text">{L ? sym.sen.it : sym.sen.en}</span>
+                            <div>
+                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 7, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>{L ? 'Sen.' : 'Sen.'}</div>
+                              <div style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(8px, 0.65vw, 10px)', color: 'rgba(255,255,255,0.9)', lineHeight: 1.3 }}>{L ? sym.sen.it : sym.sen.en}</div>
                             </div>
                           )}
-                        </>
+                        </div>
                       )}
                     </div>
                   );
