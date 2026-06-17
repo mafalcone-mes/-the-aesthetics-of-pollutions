@@ -594,77 +594,60 @@ export default function SymptomsPage({ lang, liveRows }) {
 
 
       {/* SYMPTOMS MATRIX */}
-      <div style={{ background: 'var(--white)' }}>
+      <div className="symptoms-matrix-section">
         {CATS.map((cat) => {
           const lvIdx = categoryLevels[cat.key];
           const catLv = LEVELS[lvIdx];
           return (
-            <div key={cat.key} style={{ borderBottom: '1px solid var(--gray)', padding: '40px 40px' }}>
+            <div key={cat.key} className="symptoms-matrix-cat">
 
               {/* Category header */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 32 }}>
-                <div style={{ fontFamily: 'var(--font-title)', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--black)' }}>
+              <div className="symptoms-matrix-cat-header">
+                <span className="symptoms-matrix-cat-title">
                   {L ? cat.it.split(' (')[0] : cat.en.split(' (')[0]}
-                </div>
-                <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, color: 'var(--gray2)', letterSpacing: '0.06em' }}>
+                </span>
+                <span className="symptoms-matrix-cat-sub">
                   {cat.key === 'particulates' ? 'PM2.5 · PM10' : cat.key === 'gaseous' ? 'NO₂ · SO₂ · O₃' : 'CO · NH₃ · C₆H₆'}
-                </div>
-                <div style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, background: catLv.color, padding: '4px 12px' }}>
-                  <span style={{ fontFamily: 'var(--font-title)', fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                    {lvIdx + 1} — {L ? catLv.it : catLv.en}
-                  </span>
+                </span>
+                <div className="symptoms-matrix-current-badge" style={{ background: catLv.color }}>
+                  {lvIdx + 1} — {L ? catLv.it : catLv.en}
                 </div>
               </div>
 
-              {/* Level circles — same layout as home page scale */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              {/* 6-column grid — one cell per level */}
+              <div className="symptoms-matrix-levels">
                 {LEVELS.map((lv) => {
                   const sym = SYMPTOMS[cat.key][lv.key];
-                  const isCurrent = categoryLevels[cat.key] === lv.index;
+                  const isCurrent = lvIdx === lv.index;
                   const noSym = !sym || (!sym.gen && !sym.sen);
-                  const size = 'clamp(130px, 14vw, 200px)';
                   return (
-                    <div key={lv.key} style={{
-                      width: size, height: size, flexShrink: 0,
-                      borderRadius: '50%',
-                      background: lv.color,
-                      display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center',
-                      textAlign: 'center', padding: '20px',
-                      boxSizing: 'border-box', overflow: 'hidden',
-                      outline: isCurrent ? `3px solid ${lv.color}` : 'none',
-                      outlineOffset: 4,
-                      opacity: isCurrent ? 1 : 0.55,
-                      transition: 'opacity 0.2s',
-                    }}>
-                      <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-                        {lv.index + 1}
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(11px, 1.1vw, 15px)', fontWeight: 400, color: '#fff', textTransform: 'uppercase', lineHeight: 1.1, marginBottom: 5 }}>
-                        {L ? lv.it : lv.en}
+                    <div key={lv.key} className={`symptoms-matrix-cell${isCurrent ? ' current' : ''}`}>
+                      <div className="symptoms-matrix-level-badge" style={{ background: lv.color }}>
+                        {lv.index + 1}&nbsp;{L ? lv.it : lv.en}
                       </div>
                       {noSym ? (
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(8px, 0.65vw, 10px)', color: 'rgba(255,255,255,0.7)', lineHeight: 1.3 }}>—</div>
+                        <span className="symptoms-matrix-none">—</span>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
+                        <>
                           {sym.gen && (
-                            <div>
-                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 7, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>{L ? 'Gen.' : 'Gen.'}</div>
-                              <div style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(8px, 0.65vw, 10px)', color: 'rgba(255,255,255,0.9)', lineHeight: 1.3 }}>{L ? sym.gen.it : sym.gen.en}</div>
+                            <div className="symptoms-matrix-row">
+                              <span className="symptoms-matrix-who">GEN</span>
+                              <span className="symptoms-matrix-text">{L ? sym.gen.it : sym.gen.en}</span>
                             </div>
                           )}
                           {sym.sen && (
-                            <div>
-                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 7, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>{L ? 'Sen.' : 'Sen.'}</div>
-                              <div style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(8px, 0.65vw, 10px)', color: 'rgba(255,255,255,0.9)', lineHeight: 1.3 }}>{L ? sym.sen.it : sym.sen.en}</div>
+                            <div className="symptoms-matrix-row">
+                              <span className="symptoms-matrix-who">SEN</span>
+                              <span className="symptoms-matrix-text">{L ? sym.sen.it : sym.sen.en}</span>
                             </div>
                           )}
-                        </div>
+                        </>
                       )}
                     </div>
                   );
                 })}
               </div>
+
             </div>
           );
         })}
