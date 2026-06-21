@@ -188,9 +188,16 @@ export default function RecordPage({ lang, sensor, liveHistory, hideAqiRow, hide
   return (
     <div className="record-page" style={fit ? { height: fitHeightValue, display: 'flex', flexDirection: 'column', overflow: 'hidden' } : undefined}>
 
-      {/* TITLE */}
+      {/* TITLE — same treatment as the home page hero, blended by this sensor's own AQI */}
       <div style={{ flexShrink: 0, padding: hideAqiRow ? '10px 32px' : '36px 36px', borderBottom: '1px solid var(--gray)', textAlign: 'left' }}>
-        <span style={{ fontFamily: 'var(--font-title)', fontSize: hideAqiRow ? 'clamp(48px, 6vw, 96px)' : 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em', ...titleStyle }}>
+        <span style={{
+          fontFamily: "'Ronzino Variable', sans-serif",
+          fontVariationSettings: `"BLND" ${Math.max(50, ai * 200)}`,
+          fontSize: 'clamp(48px, 6vw, 96px)', textTransform: 'uppercase',
+          lineHeight: 0.92, letterSpacing: '-0.02em',
+          color: 'var(--white)', WebkitTextStroke: '6px var(--primary)', paintOrder: 'stroke fill',
+          ...titleStyle,
+        }}>
           {sensor.name}
         </span>
       </div>

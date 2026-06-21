@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SENSORS } from './data/sensors';
+import { MOCK_REPORTS } from './data/reports';
 import { getSensorAQI } from './utils/aqi';
 import TopBar from './components/TopBar';
 import MobileNav from './components/MobileNav';
@@ -9,7 +10,7 @@ import HomePage from './pages/HomePage';
 import MapPage from './pages/MapPage';
 import ArchivePage from './pages/ArchivePage';
 import RecordPage from './pages/RecordPage';
-import SymptomsPage from './pages/SymptomsPage';
+import GuidePage from './pages/GuidePage';
 import AboutPanel from './components/AboutPanel';
 import PageTransition from './components/PageTransition';
 
@@ -20,11 +21,30 @@ const TWEAK_DEFAULTS = {
   variant: 'brutalist',
 };
 
+const VALID_PAGES = ['home', 'map', 'archive', 'record', 'guide'];
+
+// Lets external static pages (e.g. the guide) deep-link in via ?page=map&lang=en
+// instead of always landing on Home — read once on mount, ignored after that.
+function getInitialPage() {
+  const p = new URLSearchParams(window.location.search).get('page');
+  return VALID_PAGES.includes(p) ? p : 'home';
+}
+function getInitialLang() {
+  return new URLSearchParams(window.location.search).get('lang') === 'en' ? 'en' : 'it';
+}
+
 export default function App() {
-  const [page, setPage] = useState('home');
-  const [lang, setLang] = useState('it');
+  const [page, setPage] = useState(getInitialPage);
+  const [lang, setLang] = useState(getInitialLang);
   const [selectedSensor, setSelectedSensor] = useState(SENSORS[1]);
   const transitionRef = useRef(null);
+
+  // Symptom reports — seeded with mock data, then live submissions (from the
+  // Symptoms/Map report form) append on top so Archive's qualitative table
+  // can read the same shared list for the whole session.
+  const [reports, setReports] = useState(MOCK_REPORTS);
+  const addReport = useCallback((entry) => setReports((prev) => [entry, ...prev]), []);
+  const reportsControl = { reports, addReport };
 
   const navigate = useCallback((newPage, sensor = null) => {
     if (sensor) setSelectedSensor(sensor);
@@ -68,10 +88,10 @@ export default function App() {
       <TopBar page={page} setPage={navigate} lang={lang} setLang={setLang} onNavHover={setHoveredNav} />
       <main className="main-content">
         {page === 'home'     && <HomePage     lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} hoveredNav={hoveredNav} onHeroVisible={setHeroVisible} />}
-        {page === 'map'      && <MapPage      lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} />}
-        {page === 'archive'  && <ArchivePage  lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} />}
+        {page === 'map'      && <MapPage      lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} reportsControl={reportsControl} />}
+        {page === 'archive'  && <ArchivePage  lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} reports={reports} />}
         {page === 'record'   && <RecordPage   lang={lang} sensor={selectedSensor} hideAqiRow hideMap fitHeight="calc(100vh - 64px)" />}
-        {page === 'symptoms' && <SymptomsPage lang={lang} setPage={navigate} />}
+        {page === 'guide'    && <GuidePage    lang={lang} />}
       </main>
       <footer className="footer">
         <span className="footer-text">Aria Bene Comune — Linux Group Taranto — 2026</span>

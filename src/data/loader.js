@@ -4,6 +4,7 @@
 import rawStations from './stations_taranto.csv?raw';
 import rawHourly   from './hourly_taranto.csv?raw';
 import rawWind     from './wind_daily.csv?raw';
+import rawReports  from './mock_reports.csv?raw';
 import { POLLUTANTS } from './pollutants';
 import { getPollLevel } from '../utils/aqi';
 
@@ -149,3 +150,38 @@ export function getLatestWind() {
   const dates = Object.keys(WIND_DAILY).sort();
   return dates.length ? WIND_DAILY[dates[dates.length - 1]] : null;
 }
+
+// ── mock symptom reports (qualitative data) ───────────────────────────────────
+// Seeded by scripts/generate_mock_reports.mjs from the same hourly pollution
+// data — sensor/district are joined here, same pattern as HOURLY_DATA above.
+function parseReports(raw) {
+  const lines = raw.trim().split('\n');
+  return lines.slice(1).map(line => {
+    const cols = line.match(/(".*?"|[^,]+)(?=,|$)/g).map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"'));
+    const [idStr, sensorIdStr, tsStr, name, symptomsStr, note] = cols;
+
+    const sensorId = Number(sensorIdStr);
+    const meta = SENSOR_META.find(s => s.id === sensorId);
+    if (!meta) return null;
+
+    const [datePart, timePart] = tsStr.split('T');
+    const [yr, mo, dy] = datePart.split('-').map(Number);
+    const hr = Number((timePart || '00:00').split(':')[0]);
+    const dateObj = new Date(yr, mo - 1, dy, hr);
+
+    return {
+      id: Number(idStr),
+      sensorId,
+      sensorName: meta.name,
+      district: meta.district,
+      dateObj,
+      dateStr: dateObj.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      hourStr: String(hr).padStart(2, '0') + ':00',
+      name,
+      symptoms: symptomsStr ? symptomsStr.split(';') : [],
+      note: note || '',
+    };
+  }).filter(Boolean);
+}
+
+export const MOCK_REPORTS = parseReports(rawReports).sort((a, b) => a.dateObj - b.dateObj);

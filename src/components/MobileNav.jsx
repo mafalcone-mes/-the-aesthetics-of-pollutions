@@ -1,7 +1,7 @@
 const ITEMS = [
-  { id: 'home',     icon: '◈', it: 'Home',     en: 'Home' },
-  { id: 'archive',  icon: '▤', it: 'Archivio', en: 'Archive' },
-  { id: 'symptoms', icon: '♡', it: 'Sintomi',  en: 'Symptoms' },
+  { id: 'home',    icon: '◈', it: 'Home',     en: 'Home' },
+  { id: 'archive', icon: '▤', it: 'Archivio', en: 'Archive' },
+  { id: 'guide',   icon: '?', it: 'Guida',    en: 'Guide' },
 ];
 
 export default function MobileNav({ page, setPage, lang }) {

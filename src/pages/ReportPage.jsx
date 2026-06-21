@@ -89,9 +89,15 @@ export default function ReportPage({ lang }) {
   return (
     <div className="report-page">
 
-      {/* TITLE */}
+      {/* TITLE — same treatment as the home page hero */}
       <div style={{ padding: '24px 24px 16px 24px', borderBottom: '1px solid var(--gray)' }}>
-        <span style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
+        <span style={{
+          fontFamily: "'Ronzino Variable', sans-serif",
+          fontVariationSettings: `"BLND" ${Math.max(50, globalAQI * 200)}`,
+          fontSize: 'clamp(48px, 6vw, 96px)', textTransform: 'uppercase',
+          lineHeight: 0.92, letterSpacing: '-0.02em',
+          color: 'var(--white)', WebkitTextStroke: '6px var(--primary)', paintOrder: 'stroke fill',
+        }}>
           {L ? 'Segnala un Sintomo' : 'Report a Symptom'}
         </span>
       </div>

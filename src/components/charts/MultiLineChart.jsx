@@ -56,7 +56,7 @@ export default function MultiLineChart({ data, pollutants, mode = 'pollutant', w
     const yTicks = [0, 1, 2, 3, 4, 5];
 
     return (
-      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
+      <svg className="chart-fade-in" viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
         {yTicks.map(lv => (
           <line key={lv} x1={PAD.left} y1={yScale(lv)} x2={PAD.left + W} y2={yScale(lv)} stroke="#DDDAD3" strokeWidth="1" />
         ))}
@@ -147,7 +147,7 @@ export default function MultiLineChart({ data, pollutants, mode = 'pollutant', w
     : [];
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
+    <svg className="chart-fade-in" viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
       {yTicks.map((_, i) => (
         <line key={i} x1={PAD.left} y1={PAD.top + H - (i / 4) * H} x2={PAD.left + W} y2={PAD.top + H - (i / 4) * H}
           stroke="#DDDAD3" strokeWidth="1" />

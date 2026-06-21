@@ -37,6 +37,7 @@ export default function RadarChart({ sensors, pollutants, lang, width = 900, hei
 
   return (
     <svg
+        className={decorative ? undefined : 'chart-fade-in'}
         width="100%"
         height={decorative ? '100%' : undefined}
         viewBox={`0 0 ${width} ${height}`}

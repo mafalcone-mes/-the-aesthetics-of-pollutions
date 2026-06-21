@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, ZoomControl, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, ZoomControl, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
@@ -9,6 +9,7 @@ import { WIND_DAILY } from '../data/loader';
 import { getSensorAQI, getPollLevel } from '../utils/aqi';
 import { SUGGESTIONS } from '../data/symptoms';
 import SymptomsPage from './SymptomsPage';
+import BwFilmstrip from '../components/BwFilmstrip';
 
 const TARANTO_CENTER = [40.4760, 17.2270];
 
@@ -44,8 +45,35 @@ function pillStyleWhite(active) {
   };
 }
 
+// Sensor list sits over the cielo.png sky background next to the map — pills
+// need an opaque white face (unlike pillStyleWhite's transparent default) so
+// they stay legible over the photo.
+function pillStyleOnSky(active) {
+  return {
+    padding: '7px 14px',
+    border: '1.5px solid ' + (active ? 'var(--primary)' : 'rgba(0,0,0,0.18)'),
+    background: active ? 'var(--primary)' : 'var(--white)',
+    color: active ? '#fff' : 'var(--black)',
+    fontFamily: 'Epilogue', fontSize: 11, fontWeight: active ? 700 : 400,
+    letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
+    textAlign: 'left',
+  };
+}
+
 function toISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function useIsNarrow(breakpoint = 768) {
+  const [isNarrow, setIsNarrow] = useState(() => window.innerWidth <= breakpoint);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const onChange = () => setIsNarrow(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [breakpoint]);
+  return isNarrow;
 }
 
 
@@ -135,6 +163,58 @@ function BlobOverlay({ wind, activePollutant, sensors }) {
       if (svgRef.current) { svgRef.current.remove(); svgRef.current = null; }
     };
   }, [map, wind, activePollutant, sensors]);
+
+  return null;
+}
+
+// Pulsing ring under sensors at poor-or-worse severity (level ≥ 4) — a constant,
+// data-driven "this one's bad" cue that doesn't depend on hover/selection.
+function SeverityPulseOverlay({ sensors, activePollutant }) {
+  const map = useMap();
+  const svgRef = useRef(null);
+
+  useEffect(() => {
+    if (!sensors.length) return;
+
+    const render = () => {
+      if (svgRef.current) { svgRef.current.remove(); svgRef.current = null; }
+
+      const ns = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('width', '1');
+      svg.setAttribute('height', '1');
+      svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible';
+
+      sensors.forEach((s, i) => {
+        const lvIdx = activePollutant
+          ? getPollLevel(activePollutant, s[activePollutant] || 0)
+          : getSensorAQI(s);
+        if (lvIdx < 4) return;
+        let pt;
+        try { pt = map.latLngToLayerPoint([s.lat, s.lon]); } catch { return; }
+
+        const circle = document.createElementNS(ns, 'circle');
+        circle.setAttribute('cx', pt.x);
+        circle.setAttribute('cy', pt.y);
+        circle.setAttribute('r', 10);
+        circle.setAttribute('fill', 'none');
+        circle.setAttribute('stroke', LEVELS[lvIdx].color);
+        circle.setAttribute('stroke-width', 2.5);
+        circle.style.cssText = `animation: map-pulse-ring 2.2s ease-out ${(i % 4) * 0.4}s infinite;`;
+        svg.appendChild(circle);
+      });
+
+      map.getPanes().overlayPane.appendChild(svg);
+      svgRef.current = svg;
+    };
+
+    render();
+    map.on('zoomend viewreset', render);
+    return () => {
+      map.off('zoomend viewreset', render);
+      if (svgRef.current) { svgRef.current.remove(); svgRef.current = null; }
+    };
+  }, [map, sensors, activePollutant]);
 
   return null;
 }
@@ -250,11 +330,14 @@ function FlyTo({ sensor }) {
   return null;
 }
 
-export default function MapPage({ lang, setPage, setSelectedSensor }) {
+export default function MapPage({ lang, setPage, setSelectedSensor, reportsControl }) {
   const [selectedSensorId, setSelectedSensorId] = useState('all');
   const [activePollutant, setActivePollutant] = useState(null);
-  const markerRefs = useRef({});
   const L_lang = lang === 'it';
+  const isNarrow = useIsNarrow();
+
+  // Same city-wide AQI snapshot the home page hero uses to drive its title's font blend
+  const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
 
   // ── time controls ──────────────────────────────────────────────────────────
   const availableDates = useMemo(() =>
@@ -289,6 +372,20 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
   };
   const wind = useMemo(() => getWind(displayDate), [displayDate]);
 
+  // Unwrapped wind-arrow rotation — accumulates by the shortest signed delta
+  // each time wind changes, so the CSS transition never spins the long way
+  // round when direction crosses the 0°/360° seam between two dates.
+  const [windArrowDeg, setWindArrowDeg] = useState(0);
+  useEffect(() => {
+    if (!wind) return;
+    const mathAngle = Math.atan2(-wind.v, wind.u) * 180 / Math.PI;
+    const target = 90 - mathAngle;
+    setWindArrowDeg(prev => {
+      const delta = (((target - prev) % 360) + 540) % 360 - 180;
+      return prev + delta;
+    });
+  }, [wind]);
+
   // Sensors with readings at displayDate + displayHour
   const displaySensors = useMemo(() => {
     const rows = HOURLY_DATA.filter(r =>
@@ -319,20 +416,15 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
     return () => clearInterval(id);
   }, [isPlaying, timeMode, rangeDates.length]);
 
-  // ── popup management ───────────────────────────────────────────────────────
+  // ── selected-sensor detail panel (rendered outside the map, to its right) ──
   const selectedSensor = selectedSensorId !== 'all' ? SENSORS.find(s => s.id === selectedSensorId) : null;
+  const detailSensor = selectedSensorId !== 'all' ? displaySensors.find(s => s.id === selectedSensorId) : null;
+  const detailSensorIdx = detailSensor ? displaySensors.findIndex(s => s.id === selectedSensorId) : 0;
+  const detailLv = detailSensor ? LEVELS[getSensorAQI(detailSensor)] : null;
 
   const getDotLevel = (s) => activePollutant
     ? getPollLevel(activePollutant, s[activePollutant] || 0)
     : getSensorAQI(s);
-
-  useEffect(() => {
-    Object.entries(markerRefs.current).forEach(([id, marker]) => {
-      if (!marker) return;
-      if (selectedSensorId !== 'all' && String(id) === String(selectedSensorId)) marker.openPopup();
-      else marker.closePopup();
-    });
-  }, [selectedSensorId]);
 
   // ── shared health recommendation (same data source as the embedded Symptoms section) ──
   const rowsForHealthCalc = useMemo(() => {
@@ -363,9 +455,12 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
 
   const fmtHour = h => `${String(h).padStart(2, '0')}:00`;
 
-  const panelW = 'calc(100vw / 6 * 1.5)';
+  // Filters-on-top-of-content, sky-backed map area below — same SECTION/PANEL/
+  // AREA rules as ArchivePage's chart sections.
   const BOX = { background: 'var(--white)', padding: '12px 14px' };
-  const PANEL = { ...BOX, width: panelW, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, borderRight: '1px solid var(--gray)' };
+  const SECTION = { display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--gray)' };
+  const PANEL = { ...BOX, width: '100%', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', padding: '16px clamp(16px, 4vw, 24px)', borderBottom: '1px solid var(--gray)' };
+  const MAP_AREA = { ...BOX, padding: '24px clamp(16px, 4vw, 24px)', background: 'url(/assets/cielo.png) center / cover no-repeat' };
 
   const sharedTimeControl = {
     timeMode, setTimeMode,
@@ -378,158 +473,206 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
   };
   const sharedSensorControl = { selectedSensorId, setSelectedSensorId };
 
+  // Health-rec block — third slot of the filters panel above the map.
+  const healthRecBlock = (
+    <div style={{ background: lvSuggestion.color, padding: '12px 14px', flex: '1 1 260px', minWidth: 240, transition: 'background 0.5s ease' }}>
+      <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
+        {L_lang ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'}
+      </div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 8 }}>
+        {L_lang ? lvSuggestion.it : lvSuggestion.en}
+      </div>
+      {[
+        { who: L_lang ? 'Popolazione generale' : 'General population', text: L_lang ? SUGGESTIONS[lvSuggestion.key]?.gen?.it : SUGGESTIONS[lvSuggestion.key]?.gen?.en },
+        { who: L_lang ? 'Popolazione sensibile' : 'Sensitive population', text: L_lang ? SUGGESTIONS[lvSuggestion.key]?.sen?.it : SUGGESTIONS[lvSuggestion.key]?.sen?.en },
+      ].map((s, i) => (
+        <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
+          <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Sensor-selector block — third slot of the filters panel above the
+  // Symptoms section, in place of the health-rec block used above the map.
+  const sensorFilterBlock = (
+    <div style={{ flex: '1 1 260px', minWidth: 240 }}>
+      <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
+        {L_lang ? 'Sensore' : 'Sensor'}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        <span style={pillStyleWhite(selectedSensorId === 'all')} onClick={() => setSelectedSensorId('all')}>
+          {L_lang ? 'Tutti' : 'All'}
+        </span>
+        {SENSORS.map(s => (
+          <span key={s.id} style={pillStyleWhite(selectedSensorId === s.id)}
+            onClick={() => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id)}>
+            {s.name.replace('Taranto - ', '')}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Filters panel — shared by both render sites (above the map, above the
+  // Symptoms section); only the third slot differs between them.
+  const mapFiltersPanel = (thirdBlock) => (
+    <div className="map-fade-in" style={{ ...PANEL, animationDelay: '90ms' }}>
+      <div style={{ ...SUB_LABEL, color: 'var(--black)', marginBottom: 0, width: '100%' }}>{L_lang ? 'Mappa' : 'Map'}</div>
+
+      <div style={{ flex: '1 1 260px', minWidth: 240 }}>
+        <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
+          {L_lang ? 'Tempo' : 'Time'}
+        </div>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+          {['single', 'range'].map(m => (
+            <span key={m}
+              style={{ ...pillStyleWhite(timeMode === m), flex: 1, textAlign: 'center', display: 'block' }}
+              onClick={() => { setTimeMode(m); setIsPlaying(false); }}>
+              {m === 'single' ? (L_lang ? 'Giorno' : 'Day') : (L_lang ? 'Intervallo' : 'Range')}
+            </span>
+          ))}
+        </div>
+        {timeMode === 'single' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <select value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={SEL_STYLE}>
+              {availableDates.map(d => (
+                <option key={d} value={d}>
+                  {new Date(d + 'T12:00:00').toLocaleDateString(L_lang ? 'it-IT' : 'en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
+                </option>
+              ))}
+            </select>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L_lang ? 'Ora' : 'Hour'}</div>
+              <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{fmtHour(selectedHour)}</div>
+            </div>
+            <input type="range" min={0} max={23} value={selectedHour}
+              onChange={e => setSelectedHour(Number(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>{L_lang ? 'Da' : 'From'}</div>
+                <select value={rangeDateStart} onChange={e => setRangeDateStart(e.target.value)} style={SEL_STYLE}>
+                  {availableDates.filter(d => d <= rangeDateEnd).map(d => (
+                    <option key={d} value={d}>
+                      {new Date(d + 'T12:00:00').toLocaleDateString(L_lang ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>{L_lang ? 'A' : 'To'}</div>
+                <select value={rangeDateEnd} onChange={e => setRangeDateEnd(e.target.value)} style={SEL_STYLE}>
+                  {availableDates.filter(d => d >= rangeDateStart).map(d => (
+                    <option key={d} value={d}>
+                      {new Date(d + 'T12:00:00').toLocaleDateString(L_lang ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L_lang ? 'Ora fissa' : 'Fixed hour'}</div>
+              <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{fmtHour(selectedHour)}</div>
+            </div>
+            <input type="range" min={0} max={23} value={selectedHour}
+              onChange={e => setSelectedHour(Number(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
+
+            <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L_lang ? 'Timeline' : 'Timeline'}</div>
+            <input type="range" min={0} max={Math.max(0, rangeDates.length - 1)} value={playhead}
+              onChange={e => { setIsPlaying(false); setPlayhead(Number(e.target.value)); }}
+              style={{ width: '100%', accentColor: 'var(--primary)', margin: 0, cursor: 'pointer' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateStart}</span>
+              <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateEnd}</span>
+            </div>
+            <div style={{
+              background: 'var(--primary)', color: '#fff', fontFamily: 'Epilogue',
+              fontSize: 11, fontWeight: 700, padding: '4px 10px', letterSpacing: '0.05em',
+              textAlign: 'center',
+            }}>
+              {displayDate}
+            </div>
+
+            <button onClick={() => setIsPlaying(p => !p)} style={{ ...pillStyleWhite(isPlaying), width: '100%', textAlign: 'center' }}>
+              {isPlaying ? (L_lang ? '⏸ Pausa' : '⏸ Pause') : (L_lang ? '▶ Anima' : '▶ Play')}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div style={{ flex: '1 1 260px', minWidth: 240 }}>
+        <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
+          {L_lang ? 'Inquinante' : 'Pollutant'}
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          <span style={pillStyleWhite(activePollutant === null)} onClick={() => setActivePollutant(null)}>AQI</span>
+          {Object.keys(POLLUTANTS).map(k => (
+            <span key={k} style={pillStyleWhite(activePollutant === k)}
+              onClick={() => setActivePollutant(prev => prev === k ? null : k)}>
+              {POLLUTANTS[k].name}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {thirdBlock}
+    </div>
+  );
+
   return (
     <div>
-      <div style={{ padding: '24px 24px 0 24px' }}>
-        <div style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(40px, 5.5vw, 88px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em', color: 'var(--black)' }}>
+      <div className="map-fade-in" style={{ padding: '24px 24px 0 24px' }}>
+        <div style={{
+          fontFamily: "'Ronzino Variable', sans-serif",
+          fontVariationSettings: `"BLND" ${Math.max(50, globalAQI * 200)}`,
+          fontSize: 'clamp(40px, 5.5vw, 88px)', textTransform: 'uppercase',
+          lineHeight: 0.92, letterSpacing: '-0.02em',
+          color: 'var(--white)', WebkitTextStroke: '6px var(--primary)', paintOrder: 'stroke fill',
+        }}>
           {L_lang ? 'Aria e Salute' : 'Air & Health'}
         </div>
       </div>
 
-      {/* MAP — tight bordered row, same PANEL + CONTENT rules as RecordPage/ArchivePage */}
-      <div style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--gray)' }}>
+      {/* MAP FILTERS — full-width panel on top, same pattern as Archive's chart filters */}
+      <div style={SECTION}>
+        {mapFiltersPanel(healthRecBlock)}
 
-        <div style={PANEL}>
-          <div style={{ ...SUB_LABEL, color: 'var(--black)', marginBottom: 0 }}>{L_lang ? 'Mappa' : 'Map'}</div>
+        {/* MAP AREA — sky backdrop; sensor list pinned to the left edge, detail panel to the
+            right edge, map fills the (now much bigger) space between them */}
+        <div className="map-fade-in" style={{ ...MAP_AREA, animationDelay: '160ms' }}>
+          <div style={{
+            display: 'flex', flexDirection: isNarrow ? 'column' : 'row', gap: 20,
+            width: '100%', height: isNarrow ? 'auto' : '76vh',
+          }}>
 
-          <div>
-            <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
-              {L_lang ? 'Tempo' : 'Time'}
-            </div>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-              {['single', 'range'].map(m => (
-                <span key={m}
-                  style={{ ...pillStyleWhite(timeMode === m), flex: 1, textAlign: 'center', display: 'block' }}
-                  onClick={() => { setTimeMode(m); setIsPlaying(false); }}>
-                  {m === 'single' ? (L_lang ? 'Giorno' : 'Day') : (L_lang ? 'Intervallo' : 'Range')}
-                </span>
-              ))}
-            </div>
-            {timeMode === 'single' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <select value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={SEL_STYLE}>
-                  {availableDates.map(d => (
-                    <option key={d} value={d}>
-                      {new Date(d + 'T12:00:00').toLocaleDateString(L_lang ? 'it-IT' : 'en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
-                    </option>
-                  ))}
-                </select>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L_lang ? 'Ora' : 'Hour'}</div>
-                  <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{fmtHour(selectedHour)}</div>
-                </div>
-                <input type="range" min={0} max={23} value={selectedHour}
-                  onChange={e => setSelectedHour(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
+            {/* Sensor list — sits over the sky photo, pills kept opaque white for legibility */}
+            <div style={{
+              width: isNarrow ? '100%' : 170, flexShrink: 0, overflowY: 'auto',
+              display: 'flex', flexDirection: 'column', gap: 8,
+            }}>
+              <div style={{ ...SUB_LABEL, color: 'var(--black)', marginBottom: 2 }}>
+                {L_lang ? 'Sensore' : 'Sensor'}
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>{L_lang ? 'Da' : 'From'}</div>
-                    <select value={rangeDateStart} onChange={e => setRangeDateStart(e.target.value)} style={SEL_STYLE}>
-                      {availableDates.filter(d => d <= rangeDateEnd).map(d => (
-                        <option key={d} value={d}>
-                          {new Date(d + 'T12:00:00').toLocaleDateString(L_lang ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>{L_lang ? 'A' : 'To'}</div>
-                    <select value={rangeDateEnd} onChange={e => setRangeDateEnd(e.target.value)} style={SEL_STYLE}>
-                      {availableDates.filter(d => d >= rangeDateStart).map(d => (
-                        <option key={d} value={d}>
-                          {new Date(d + 'T12:00:00').toLocaleDateString(L_lang ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L_lang ? 'Ora fissa' : 'Fixed hour'}</div>
-                  <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{fmtHour(selectedHour)}</div>
-                </div>
-                <input type="range" min={0} max={23} value={selectedHour}
-                  onChange={e => setSelectedHour(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
-
-                <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L_lang ? 'Timeline' : 'Timeline'}</div>
-                <input type="range" min={0} max={Math.max(0, rangeDates.length - 1)} value={playhead}
-                  onChange={e => { setIsPlaying(false); setPlayhead(Number(e.target.value)); }}
-                  style={{ width: '100%', accentColor: 'var(--primary)', margin: 0, cursor: 'pointer' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateStart}</span>
-                  <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateEnd}</span>
-                </div>
-                <div style={{
-                  background: 'var(--primary)', color: '#fff', fontFamily: 'Epilogue',
-                  fontSize: 11, fontWeight: 700, padding: '4px 10px', letterSpacing: '0.05em',
-                  textAlign: 'center',
-                }}>
-                  {displayDate}
-                </div>
-
-                <button onClick={() => setIsPlaying(p => !p)} style={{ ...pillStyleWhite(isPlaying), width: '100%', textAlign: 'center' }}>
-                  {isPlaying ? (L_lang ? '⏸ Pausa' : '⏸ Pause') : (L_lang ? '▶ Anima' : '▶ Play')}
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
-              {L_lang ? 'Sensore' : 'Sensor'}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              <span style={pillStyleWhite(selectedSensorId === 'all')} onClick={() => setSelectedSensorId('all')}>
-                {L_lang ? 'Tutti' : 'All'}
-              </span>
-              {SENSORS.map(s => (
-                <span key={s.id} style={pillStyleWhite(selectedSensorId === s.id)}
-                  onClick={() => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id)}>
-                  {s.name}
+              <div style={{ display: 'flex', flexDirection: isNarrow ? 'row' : 'column', flexWrap: isNarrow ? 'wrap' : 'nowrap', gap: 6 }}>
+                <span style={pillStyleOnSky(selectedSensorId === 'all')} onClick={() => setSelectedSensorId('all')}>
+                  {L_lang ? 'Tutti' : 'All'}
                 </span>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
-              {L_lang ? 'Inquinante' : 'Pollutant'}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              <span style={pillStyleWhite(activePollutant === null)} onClick={() => setActivePollutant(null)}>AQI</span>
-              {Object.keys(POLLUTANTS).map(k => (
-                <span key={k} style={pillStyleWhite(activePollutant === k)}
-                  onClick={() => setActivePollutant(prev => prev === k ? null : k)}>
-                  {POLLUTANTS[k].name}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ background: lvSuggestion.color, padding: '12px 14px', margin: '0 -14px -14px' }}>
-            <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
-              {L_lang ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'}
-            </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 8 }}>
-              {L_lang ? lvSuggestion.it : lvSuggestion.en}
-            </div>
-            {[
-              { who: L_lang ? 'Popolazione generale' : 'General population', text: L_lang ? SUGGESTIONS[lvSuggestion.key]?.gen?.it : SUGGESTIONS[lvSuggestion.key]?.gen?.en },
-              { who: L_lang ? 'Popolazione sensibile' : 'Sensitive population', text: L_lang ? SUGGESTIONS[lvSuggestion.key]?.sen?.it : SUGGESTIONS[lvSuggestion.key]?.sen?.en },
-            ].map((s, i) => (
-              <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
-                <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+                {SENSORS.map(s => (
+                  <span key={s.id} style={pillStyleOnSky(selectedSensorId === s.id)}
+                    onClick={() => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id)}>
+                    {s.name.replace('Taranto - ', '')}
+                  </span>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* MAP CANVAS */}
-        <div style={{ flex: 1, minHeight: '70vh', position: 'relative' }}>
+            <div style={{ flex: 1, position: 'relative', height: isNarrow ? '50vh' : '100%' }}>
           <MapContainer
             center={TARANTO_CENTER}
             zoom={13}
@@ -544,15 +687,14 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
             <FlyTo sensor={selectedSensor} />
             <BlobOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
             <WindParticleOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
-            {displaySensors.map((s, sensorIdx) => {
+            <SeverityPulseOverlay activePollutant={activePollutant} sensors={displaySensors} />
+            {displaySensors.map((s) => {
               const dotLv = getDotLevel(s);
               const dotColor = LEVELS[dotLv].color;
-              const popupLv = LEVELS[getSensorAQI(s)];
               const isSel = selectedSensorId === s.id;
               return (
                 <CircleMarker
                   key={s.id}
-                  ref={(el) => { if (el) markerRefs.current[s.id] = el; }}
                   center={[s.lat, s.lon]}
                   radius={isSel ? 14 : 9}
                   pathOptions={{
@@ -560,108 +702,27 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
                     fillOpacity: 0.85,
                     color: '#111010',
                     weight: isSel ? 2.5 : 1.5,
+                    className: `map-sensor-marker${isSel ? ' selected' : ''}`,
                   }}
                   eventHandlers={{ click: () => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id) }}
-                >
-                  <Popup
-                    closeButton={false}
-                    className="map-popup"
-                    eventHandlers={{ remove: () => setSelectedSensorId((prev) => (prev === s.id ? 'all' : prev)) }}
-                  >
-                    <div style={{ width: 280 }}>
-                      {/* Meta + pollutants + AQI scale — same composition as the Home page sensor cards */}
-                      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gray)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          {[
-                            { label: L_lang ? 'Sensore' : 'Sensor',     value: s.name },
-                            { label: L_lang ? 'Posizione' : 'Location', value: s.location },
-                          ].map((item, idx) => (
-                            <div key={idx}>
-                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
-                                {item.label}
-                              </div>
-                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.01em', color: 'var(--black)' }}>
-                                {item.value}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: 12 }}>
-                          {Object.keys(POLLUTANTS).map(k => (
-                            <div key={k}>
-                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
-                                {POLLUTANTS[k].name}
-                              </div>
-                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--black)' }}>
-                                {s[k] != null ? Number(s[k]).toFixed(1) : '—'}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div style={{ marginTop: 12 }}>
-                          <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 5 }}>
-                            {L_lang ? 'Scala AQI' : 'AQI Scale'}
-                          </div>
-                          <div style={{ display: 'flex', gap: 2, marginBottom: 4 }}>
-                            {LEVELS.map(l => (
-                              <div key={l.key} style={{
-                                flex: 1, height: 6, background: l.color,
-                                outline: l.key === popupLv.key ? `2px solid ${l.color}` : 'none',
-                                outlineOffset: 1,
-                                opacity: l.key === popupLv.key ? 1 : 0.4,
-                              }} />
-                            ))}
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.35)' }}>
-                            <span>1 — {L_lang ? 'Buono' : 'Good'}</span>
-                            <span>6 — {L_lang ? 'Estremo' : 'Extreme'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Sensor photo, same images used on the Home page sensor cards */}
-                      <div style={{ height: 140, overflow: 'hidden' }}>
-                        <img
-                          src={SENSOR_PHOTOS[sensorIdx % SENSOR_PHOTOS.length]}
-                          alt=""
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => { setSelectedSensor(s); setPage('record'); }}
-                        style={{
-                          width: '100%', padding: '8px', background: 'var(--black)', color: '#fff',
-                          border: 'none', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 10,
-                          cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase',
-                        }}
-                      >
-                        {L_lang ? 'Apri record →' : 'Open record →'}
-                      </button>
-                    </div>
-                  </Popup>
-                </CircleMarker>
+                />
               );
             })}
           </MapContainer>
 
           {/* Wind — floating top-right, map chrome like the zoom control */}
           {wind && (() => {
-            const mathAngle = Math.atan2(-wind.v, wind.u) * 180 / Math.PI;
-            const arrowRot = 90 - mathAngle;
             const pts = ['N','NE','E','SE','S','SW','W','NW'];
             const compassPt = pts[Math.round(((wind.dir + 180) % 360) / 45) % 8];
             return (
-              <div style={{
+              <div className="map-fade-in" style={{
                 position: 'absolute', top: 12, right: 12, zIndex: 1000,
-                background: 'var(--white)', padding: '10px 14px',
+                background: 'var(--white)', padding: '10px 14px', animationDelay: '220ms',
                 display: 'flex', alignItems: 'center', gap: 12, pointerEvents: 'none',
               }}>
                 <svg width="32" height="32" viewBox="-16 -16 32 32" style={{ flexShrink: 0 }}>
                   <circle r="14" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
-                  <g transform={`rotate(${arrowRot})`}>
+                  <g style={{ transform: `rotate(${windArrowDeg}deg)`, transformOrigin: '0px 0px', transition: 'transform 0.6s ease' }}>
                     <line x1="0" y1="10" x2="0" y2="-8" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
                     <polygon points="0,-13 -4,-5 4,-5" fill="var(--primary)" />
                   </g>
@@ -680,18 +741,127 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
               </div>
             );
           })()}
+            </div>
+
+            {/* Detail panel — sensor info appears OUTSIDE the map, to its right, instead of a Leaflet popup */}
+            <div style={{ width: isNarrow ? '100%' : 260, flexShrink: 0, overflowY: 'auto' }}>
+              {detailSensor ? (
+                <div className="map-fade-in" style={{ background: 'var(--white)' }}>
+                  <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--gray)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ ...SUB_LABEL, color: 'var(--black)' }}>{L_lang ? 'Sensore selezionato' : 'Selected sensor'}</span>
+                    <span onClick={() => setSelectedSensorId('all')}
+                      style={{ cursor: 'pointer', fontFamily: 'Epilogue', fontSize: 16, color: 'var(--gray2)', lineHeight: 1 }}>×</span>
+                  </div>
+
+                  <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gray)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {[
+                        { label: L_lang ? 'Sensore' : 'Sensor',     value: detailSensor.name },
+                        { label: L_lang ? 'Posizione' : 'Location', value: detailSensor.location },
+                      ].map((item, idx) => (
+                        <div key={idx}>
+                          <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
+                            {item.label}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.01em', color: 'var(--black)' }}>
+                            {item.value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: 12 }}>
+                      {Object.keys(POLLUTANTS).map(k => (
+                        <div key={k}>
+                          <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
+                            {POLLUTANTS[k].name}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--black)' }}>
+                            {detailSensor[k] != null ? Number(detailSensor[k]).toFixed(1) : '—'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 5 }}>
+                        {L_lang ? 'Scala AQI' : 'AQI Scale'}
+                      </div>
+                      <div style={{ display: 'flex', gap: 2, marginBottom: 4 }}>
+                        {LEVELS.map(l => (
+                          <div key={l.key} style={{
+                            flex: 1, height: 6, background: l.color,
+                            outline: l.key === detailLv.key ? `2px solid ${l.color}` : 'none',
+                            outlineOffset: 1,
+                            opacity: l.key === detailLv.key ? 1 : 0.4,
+                          }} />
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.35)' }}>
+                        <span>1 — {L_lang ? 'Buono' : 'Good'}</span>
+                        <span>6 — {L_lang ? 'Estremo' : 'Extreme'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sensor photo, same images used on the Home page sensor cards */}
+                  <div style={{ height: 140, overflow: 'hidden' }}>
+                    <img
+                      src={SENSOR_PHOTOS[detailSensorIdx % SENSOR_PHOTOS.length]}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => { setSelectedSensor(detailSensor); setPage('record'); }}
+                    style={{
+                      width: '100%', padding: '8px', background: 'var(--primary)', color: '#fff',
+                      border: 'none', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 10,
+                      cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase',
+                    }}
+                  >
+                    {L_lang ? 'Apri record →' : 'Open record →'}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ background: 'var(--white)', padding: '16px', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--gray2)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                  {L_lang ? 'Seleziona un sensore sulla mappa per vedere i dettagli.' : 'Select a sensor on the map to see its details.'}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Symptom Matrix only — full width */}
-      <SymptomsPage
-        lang={lang}
-        embedded
-        hideHero
-        hideReport
-        timeControl={sharedTimeControl}
-        sensorControl={sharedSensorControl}
-      />
+      <BwFilmstrip />
+
+      <div className="map-fade-in" style={{ padding: '24px 24px 0 24px' }}>
+        <div style={{
+          fontFamily: "'Ronzino Variable', sans-serif",
+          fontVariationSettings: `"BLND" ${Math.max(50, globalAQI * 200)}`,
+          fontSize: 'clamp(40px, 5.5vw, 88px)', textTransform: 'uppercase',
+          lineHeight: 0.92, letterSpacing: '-0.02em',
+          color: 'var(--white)', WebkitTextStroke: '6px var(--primary)', paintOrder: 'stroke fill',
+        }}>
+          {L_lang ? 'Sintomi' : 'Symptoms'}
+        </div>
+      </div>
+
+      <div style={SECTION}>
+        {mapFiltersPanel(sensorFilterBlock)}
+      </div>
+
+      {/* Symptom boxes + matrix + report form — full width, under the map */}
+      <div className="map-fade-in" style={{ animationDelay: '260ms' }}>
+        <SymptomsPage
+          lang={lang}
+          embedded
+          timeControl={sharedTimeControl}
+          sensorControl={sharedSensorControl}
+          reportsControl={reportsControl}
+        />
+      </div>
     </div>
   );
 }

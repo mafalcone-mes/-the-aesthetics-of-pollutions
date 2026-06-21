@@ -5,6 +5,8 @@ import { HOURLY_DATA } from '../data/timeseries';
 import { SENSORS } from '../data/sensors';
 import { getSensorAQI } from '../utils/aqi';
 import { SUGGESTIONS } from '../data/symptoms';
+import BwFilmstrip from '../components/BwFilmstrip';
+import HeroDots from '../components/HeroDots';
 
 const SAGOME = Object.keys(import.meta.glob('/public/assets/sagome/*.png')).map(
   p => p.replace('/public', '')
@@ -103,152 +105,59 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
       <div
         ref={heroRef}
         style={{
-          minHeight: '100vh',
+          minHeight: '80vh',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
+          zIndex: 0,
           overflow: 'hidden',
-          backgroundImage: "url('/assets/cielo.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
         }}
       >
+        {/* Background layer — filter lives here only, so it doesn't affect
+            the dots/title/etc. drawn on top of it */}
+        <div className="home-hero-bg-drift" style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: "url('/assets/cielo.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+          filter: 'saturate(1.6)',
+          zIndex: -1,
+        }} />
+
+        <HeroDots level={globalAQI} />
+
         {/* Title */}
         <div style={{
-          position: 'relative',
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
           zIndex: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
           textAlign: 'center',
-          padding: '40px 40px 40px',
+          width: '100%',
+          padding: '0 40px',
+          boxSizing: 'border-box',
         }}>
-          <div style={{
+          <div className="home-hero-title-in" style={{
             fontFamily: "'Ronzino Variable', sans-serif",
             fontVariationSettings: `"BLND" ${Math.max(50, currentAQI * 200)}`,
-            fontSize: 'clamp(56px, 11vw, 160px)',
+            fontSize: 'clamp(64px, 14vw, 520px)',
             textTransform: 'uppercase',
             lineHeight: 0.88,
             letterSpacing: '-0.02em',
             color: 'var(--white)',
             WebkitTextStroke: '6px var(--primary)',
             paintOrder: 'stroke fill',
+            whiteSpace: 'nowrap',
           }}>
-            ARIA BENE COMUNE
+            ARIA BENE<br />COMUNE
           </div>
         </div>
 
-        {/* 24-hour columns — fills the rest of the hero */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          minHeight: 0,
-          position: 'relative',
-          zIndex: 1,
-        }}>
-          {hourlyAQI.map((aqiIdx, h) => {
-            const levelColor = aqiIdx !== null ? LEVELS[aqiIdx].color : 'var(--gray)';
-            const isCurrent = h === currentHour;
-            return (
-              <div
-                key={h}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  background: `linear-gradient(to bottom, ${levelColor} 0%, ${levelColor} 70%, var(--primary) 100%)`,
-                  borderRight: h < 23 ? '1px solid rgba(0,0,0,0.1)' : 'none',
-                  paddingTop: 10,
-                  boxSizing: 'border-box',
-                  filter: isCurrent ? 'none' : 'saturate(0.6) brightness(0.85)',
-                  transition: 'filter 0.3s',
-                }}
-              >
-                <span style={{
-                  fontFamily: 'var(--font-title)',
-                  fontSize: 'clamp(6px, 0.75vw, 11px)',
-                  fontWeight: isCurrent ? 700 : 600,
-                  color: isCurrent ? '#fff' : 'rgba(255,255,255,0.55)',
-                  letterSpacing: '0.02em',
-                  userSelect: 'none',
-                }}>
-                  {String(h).padStart(2, '0') + ':00'}
-                </span>
-                {isCurrent && (
-                  <div style={{
-                    width: 4,
-                    height: 4,
-                    borderRadius: '50%',
-                    background: '#fff',
-                    marginTop: 5,
-                    opacity: 0.9,
-                  }} />
-                )}
-              </div>
-            );
-          })}
-
-          {/* Health recommendation circle — current hour AQI */}
-          {(() => {
-            const lv = LEVELS[currentAQI];
-            const sug = SUGGESTIONS[lv.key];
-            const sugGenText = L ? sug?.gen?.it : sug?.gen?.en;
-            const sugSenText = L ? sug?.sen?.it : sug?.sen?.en;
-            return (
-              <div style={{
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: 380,
-                height: 380,
-                borderRadius: '50%',
-                background: lv.color,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                textAlign: 'center',
-                padding: '36px',
-                boxSizing: 'border-box',
-                zIndex: 4,
-                pointerEvents: 'none',
-              }}>
-                <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>
-                  {L ? "Qualità dell'aria" : 'Air Quality'}
-                </div>
-                <div style={{ fontFamily: 'var(--font-title)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1 }}>
-                  {L ? lv.it : lv.en}
-                </div>
-                <div style={{ width: '80%', height: 1, background: 'rgba(255,255,255,0.25)', margin: '2px 0' }} />
-                {sugGenText && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
-                      {L ? 'Tutti' : 'Everyone'}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.9)' }}>
-                      {sugGenText}
-                    </div>
-                  </div>
-                )}
-                {sugSenText && sugSenText !== sugGenText && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
-                      {L ? 'Soggetti sensibili' : 'Sensitive groups'}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.9)' }}>
-                      {sugSenText}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-
       </div>
+
+      <BwFilmstrip />
 
       {/* STATEMENT */}
       <div style={{ background: 'var(--white)', padding: '100px 48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 64 }}>
@@ -286,6 +195,8 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
         </a>
       </div>
 
+      <BwFilmstrip />
+
       {/* SENSOR GRID + VIDEO — share one continuous cielo.png background */}
       <div style={{
         backgroundImage: "url('/assets/cielo.png')",
@@ -311,8 +222,73 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
         };
         const POLL_KEYS = ['pm25', 'pm10', 'no2', 'o3', 'so2', 'co'];
         const POLL_LABELS = { pm25: 'PM2.5', pm10: 'PM10', no2: 'NO₂', o3: 'O₃', so2: 'SO₂', co: 'CO' };
+        const lv = LEVELS[currentAQI];
+        const sug = SUGGESTIONS[lv.key];
+        const sugGenText = L ? sug?.gen?.it : sug?.gen?.en;
+        const sugSenText = L ? sug?.sen?.it : sug?.sen?.en;
         return (
           <div style={{ borderTop: '1px solid var(--gray)' }}>
+
+            {/* Section title + intro */}
+            <div style={{ padding: '64px 24px 0', textAlign: 'center' }}>
+              <div style={{
+                fontFamily: "'Ronzino Variable', sans-serif",
+                fontVariationSettings: `"BLND" ${Math.max(50, currentAQI * 200)}`,
+                fontSize: 'clamp(56px, 8vw, 140px)',
+                textTransform: 'uppercase',
+                lineHeight: 0.95,
+                letterSpacing: '-0.01em',
+                color: 'var(--white)',
+                WebkitTextStroke: '5px var(--primary)',
+                paintOrder: 'stroke fill',
+              }}>
+                {L ? 'Sensori Attivi' : 'Active Sensors'}
+              </div>
+              <div style={{ marginTop: 16, height: 26 }} />
+            </div>
+
+            {/* Health recommendation — colour rectangle, in normal flow */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 24px 42px' }}>
+              <div style={{
+                background: lv.color,
+                padding: '32px 40px',
+                maxWidth: 520,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: 6,
+              }}>
+                <div style={{ fontFamily: 'var(--font-title)', fontSize: 12, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>
+                  {L ? "Qualità dell'aria" : 'Air Quality'}
+                </div>
+                <div style={{ fontFamily: 'var(--font-title)', fontSize: 34, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1 }}>
+                  {L ? lv.it : lv.en}
+                </div>
+                <div style={{ width: 120, height: 1, background: 'rgba(255,255,255,0.35)', margin: '4px 0' }} />
+                {sugGenText && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)' }}>
+                      {L ? 'Tutti' : 'Everyone'}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 15, lineHeight: 1.45, color: '#fff' }}>
+                      {sugGenText}
+                    </div>
+                  </div>
+                )}
+                {sugSenText && sugSenText !== sugGenText && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)' }}>
+                      {L ? 'Soggetti sensibili' : 'Sensitive groups'}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.4, color: 'rgba(255,255,255,0.85)' }}>
+                      {sugSenText}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(2, 1fr)',
@@ -464,7 +440,8 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
       </div>
       </div>
 
-      {/* THRESHOLD LIMITS */}
+      {/* THRESHOLD LIMITS — temporarily disabled, video stays the last element */}
+      {false && (
       <div style={{ background: 'var(--white)', borderTop: '1px solid var(--gray)' }}>
 
         {/* Header */}
@@ -590,6 +567,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
         ))}
 
       </div>
+      )}
     </div>
   );
 }

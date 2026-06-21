@@ -26,10 +26,15 @@
       --c-molto-scarso: #951635;
       --c-estremo:      #7C2181;
 
-      --font-body:  'Epilogue', sans-serif;  /* real serif for reading */
+      --font-body:  'Source Serif 4', serif;
       --font-title: 'Epilogue', sans-serif;
 
       --fs: 17px;                /* base font size, controlled by text-size buttons */
+    }
+
+    @font-face {
+      font-family: 'Ronzino Variable';
+      src: url('assets/ruined Ronzino (1)-ruined Ronzino-blend-variable.otf') format('opentype');
     }
 
     html { overflow-x: hidden; scroll-behavior: smooth; scroll-padding-top: 116px; }
@@ -60,25 +65,45 @@
     }
     .skip-link:focus { top: 8px; }
 
-    /* ── TOPBAR ── */
+    /* ── TOPBAR — same structure/rules as the app's real TopBar ── */
     .topbar {
-      display: flex; align-items: center;
-      min-height: 56px; padding: 0 18px; gap: 12px;
+      display: flex; align-items: stretch;
+      min-height: 64px; gap: 12px;
       border-bottom: 1px solid var(--gray);
       background: var(--white);
       position: sticky; top: 0; z-index: 100;
     }
     .topbar-logo {
-      font-family: var(--font-title); font-weight: 700; font-size: 12px;
-      letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap;
+      font-family: var(--font-title); font-weight: 600; font-size: 12px;
+      line-height: 1.15; padding: 10px 16px;
+      border-right: 1px solid var(--gray);
+      letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+      display: flex; flex-direction: column; justify-content: center;
+      text-decoration: none; color: var(--black);
     }
-    .topbar-divider { width: 1px; height: 18px; background: var(--gray); flex-shrink: 0; }
+    .topbar-logo:hover { color: var(--primary); }
+    .topbar-logo span { display: block; }
     .topbar-center {
-      flex: 1;
+      flex: 1; display: flex; align-items: center;
       font-family: var(--font-title); font-size: 11px; font-weight: 600;
       letter-spacing: 0.06em; text-transform: uppercase; color: var(--gray2);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .topbar-nav {
+      display: flex; flex-direction: row;
+      border-left: 1px solid var(--gray);
+    }
+    .topbar-nav a {
+      display: flex; align-items: center; justify-content: center; padding: 0 24px;
+      font-family: var(--font-title); font-size: 14px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      text-decoration: none; color: var(--black);
+      border-right: 1px solid var(--gray); cursor: pointer;
+      transition: background 0.15s;
+    }
+    .topbar-nav a:last-child { border-right: none; }
+    .topbar-nav a:hover { color: var(--primary); }
+    .topbar-nav a.active { color: var(--primary); }
     /* text-size control */
     .text-size {
       display: flex; align-items: center; gap: 4px; flex-shrink: 0;
@@ -99,7 +124,7 @@
 
     /* ── READING PROGRESS BAR ── */
     .progress-track {
-      position: sticky; top: 56px; z-index: 99;
+      position: sticky; top: 64px; z-index: 99;
       height: 5px; background: var(--gray); width: 100%;
     }
     .progress-fill { height: 100%; width: 0%; background: var(--primary); transition: width 0.1s linear; }
@@ -116,11 +141,15 @@
       color: var(--gray2); margin-bottom: 10px;
     }
     .hero-title {
-      font-family: var(--font-title);
+      font-family: 'Ronzino Variable', sans-serif;
+      font-variation-settings: "BLND" 150;
       font-size: clamp(56px, 11vw, 150px);
-      font-weight: 800; line-height: 0.95;
+      font-weight: 400; line-height: 0.95;
       letter-spacing: -0.02em; text-transform: uppercase;
-      color: var(--black); margin-bottom: 14px;
+      color: var(--white);
+      -webkit-text-stroke: 6px var(--primary);
+      paint-order: stroke fill;
+      margin-bottom: 14px;
     }
     .hero-subtitle {
       font-family: var(--font-body); font-size: 1.05rem; line-height: 1.65;
@@ -182,9 +211,8 @@
     }
     .toc {
       border-right: 1px solid var(--gray);
-      position: sticky; top: 117px;     /* topbar 56 + progress 5 + ~56 hero? we recompute */
-      top: 61px;
-      height: calc(100vh - 61px);
+      position: sticky; top: 69px;      /* topbar 64 + progress 5 */
+      height: calc(100vh - 69px);
       overflow-y: auto; min-width: 0;
       background: color-mix(in srgb, var(--white) 92%, transparent);
     }
@@ -397,8 +425,8 @@
     }
     @media (max-width: 600px) {
       .topbar-center { display: none; }
-      .topbar-divider { display: none; }
       .text-size-label { display: none; }
+      .topbar-nav a { padding: 0 12px; font-size: 11px; }
       .toc-list { display: block; }
       .hero { padding: 28px 16px 26px; }
       .hero-title { font-size: clamp(48px, 18vw, 92px); }
@@ -437,10 +465,11 @@
 
 <a href="#s1" class="skip-link">Skip to content</a>
 
-<!-- TOPBAR -->
+<!-- TOPBAR — same structure as the app's real TopBar, linking back into it -->
 <header class="topbar">
-  <div class="topbar-logo">Aria Bene Comune</div>
-  <div class="topbar-divider"></div>
+  <a class="topbar-logo" href="/">
+    <span>ARIA</span><span>BENE</span><span>COMUNE</span>
+  </a>
   <div class="topbar-center">Sensor Guide</div>
   <div class="text-size" role="group" aria-label="Text size">
     <span class="text-size-label">Text size</span>
@@ -448,6 +477,11 @@
     <button type="button" class="ts-a2" data-size="19" aria-pressed="false" aria-label="Large text size">A</button>
     <button type="button" class="ts-a3" data-size="22" aria-pressed="false" aria-label="Extra large text size">A</button>
   </div>
+  <nav class="topbar-nav">
+    <a href="/?page=map&amp;lang=en">Map</a>
+    <a href="/?page=archive&amp;lang=en">Archive</a>
+    <a href="guida-eng.html" class="active">Guide</a>
+  </nav>
 </header>
 
 <!-- READING PROGRESS -->

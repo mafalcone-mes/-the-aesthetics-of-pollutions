@@ -71,6 +71,21 @@ export const ORGAN_SYMPTOMS = {
   },
 };
 
+// Shared options for the symptom-report form (SymptomsPage embedded form) and
+// for labelling mock/live report entries (ArchivePage qualitative table).
+export const SYMPTOM_OPTIONS = [
+  { key: 'cough',     it: 'Tosse',                     en: 'Cough' },
+  { key: 'breath',    it: 'Difficoltà respiratorie',    en: 'Breathing difficulty' },
+  { key: 'eyes',      it: 'Irritazione agli occhi',     en: 'Eye irritation' },
+  { key: 'throat',    it: 'Bruciore / gola secca',      en: 'Throat burning / dryness' },
+  { key: 'headache',  it: 'Mal di testa',               en: 'Headache' },
+  { key: 'nausea',    it: 'Nausea',                     en: 'Nausea' },
+  { key: 'dizziness', it: 'Vertigini',                  en: 'Dizziness' },
+  { key: 'fatigue',   it: 'Stanchezza / affaticamento', en: 'Fatigue' },
+  { key: 'chest',     it: 'Oppressione al petto',       en: 'Chest tightness' },
+  { key: 'other',     it: 'Altro',                      en: 'Other' },
+];
+
 export const SUGGESTIONS = {
   buono:                  { gen: { it: "La qualità dell'aria è buona. Goditi le tue attività all'aperto.", en: 'Air quality is good. Enjoy your outdoor activities.' },
                             sen: { it: "La qualità dell'aria è buona. Goditi le tue attività all'aperto.", en: 'Air quality is good. Enjoy your outdoor activities.' } },
