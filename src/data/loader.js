@@ -46,12 +46,27 @@ function districtOf(s) {
   return s.comune;
 }
 
+// Sensors are community-owned and named after the people who host them.
+const SENSOR_NAMES = {
+  19: 'Sensore di Tonio',
+  20: 'Sensore di Maria',
+  21: 'Sensore di Giuseppe',
+  22: 'Sensore di Anna',
+  37: 'Sensore di Vito',
+  38: 'Sensore di Rosa',
+};
+
+// "Taranto - Archimede" / "Statte - Wind" → "Via Archimede" / "Via Wind"
+function locationOf(s) {
+  return `Via ${s.name.replace(/^(Taranto|Statte)\s*-\s*/, '')}`;
+}
+
 export const SENSOR_META = ALL_STATIONS
   .filter(s => ACTIVE_IDS.has(s.id))
   .map(s => ({
     id:       s.id,
-    name:     s.name,
-    location: s.name,          // full denominazione as location label
+    name:     SENSOR_NAMES[s.id] || s.name,
+    location: locationOf(s),
     district: districtOf(s),
     lat:      s.latitude,
     lon:      s.longitude,

@@ -10,7 +10,7 @@ import HomePage from './pages/HomePage';
 import MapPage from './pages/MapPage';
 import ArchivePage from './pages/ArchivePage';
 import RecordPage from './pages/RecordPage';
-import GuidePage from './pages/GuidePage';
+import AboutPage from './pages/AboutPage';
 import AboutPanel from './components/AboutPanel';
 import PageTransition from './components/PageTransition';
 
@@ -21,10 +21,11 @@ const TWEAK_DEFAULTS = {
   variant: 'brutalist',
 };
 
-const VALID_PAGES = ['home', 'map', 'archive', 'record', 'guide'];
+const VALID_PAGES = ['home', 'map', 'archive', 'record', 'about'];
 
-// Lets external static pages (e.g. the guide) deep-link in via ?page=map&lang=en
-// instead of always landing on Home — read once on mount, ignored after that.
+// Lets external static pages (e.g. the printable guide) deep-link in via
+// ?page=map&lang=en instead of always landing on Home — read once on mount,
+// ignored after that.
 function getInitialPage() {
   const p = new URLSearchParams(window.location.search).get('page');
   return VALID_PAGES.includes(p) ? p : 'home';
@@ -87,11 +88,11 @@ export default function App() {
     <div className="app-shell">
       <TopBar page={page} setPage={navigate} lang={lang} setLang={setLang} onNavHover={setHoveredNav} />
       <main className="main-content">
-        {page === 'home'     && <HomePage     lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} hoveredNav={hoveredNav} onHeroVisible={setHeroVisible} />}
+        {page === 'home'     && <HomePage     lang={lang} hoveredNav={hoveredNav} onHeroVisible={setHeroVisible} setPage={navigate} setSelectedSensor={setSelectedSensor} reportsControl={reportsControl} />}
         {page === 'map'      && <MapPage      lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} reportsControl={reportsControl} />}
         {page === 'archive'  && <ArchivePage  lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} reports={reports} />}
         {page === 'record'   && <RecordPage   lang={lang} sensor={selectedSensor} hideAqiRow hideMap fitHeight="calc(100vh - 64px)" />}
-        {page === 'guide'    && <GuidePage    lang={lang} />}
+        {page === 'about'    && <AboutPage    lang={lang} />}
       </main>
       <footer className="footer">
         <span className="footer-text">Aria Bene Comune — Linux Group Taranto — 2026</span>

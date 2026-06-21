@@ -430,7 +430,7 @@ export default function SymptomsPage({ lang, liveRows, timeControl, sensorContro
                     {SENSORS.map(s => (
                       <span key={s.id} style={pillStyleWhite(activeSensor === s.id)}
                         onClick={() => setActiveSensor(s.id)}>
-                        {s.name.replace('Taranto - ', '')}
+                        {s.location}
                       </span>
                     ))}
                   </div>
@@ -570,7 +570,7 @@ export default function SymptomsPage({ lang, liveRows, timeControl, sensorContro
                   <button key={s.id} type="button"
                     onClick={() => setForm((f) => ({ ...f, sensorId: s.id }))}
                     style={pillStyleWhite(form.sensorId === s.id)}>
-                    {s.name.replace('Taranto - ', '')}
+                    {s.location}
                   </button>
                 ))}
               </div>

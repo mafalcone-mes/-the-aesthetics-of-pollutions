@@ -9,7 +9,6 @@ import { WIND_DAILY } from '../data/loader';
 import { getSensorAQI, getPollLevel } from '../utils/aqi';
 import { SUGGESTIONS } from '../data/symptoms';
 import SymptomsPage from './SymptomsPage';
-import BwFilmstrip from '../components/BwFilmstrip';
 
 const TARANTO_CENTER = [40.4760, 17.2270];
 
@@ -508,7 +507,7 @@ export default function MapPage({ lang, setPage, setSelectedSensor, reportsContr
         {SENSORS.map(s => (
           <span key={s.id} style={pillStyleWhite(selectedSensorId === s.id)}
             onClick={() => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id)}>
-            {s.name.replace('Taranto - ', '')}
+            {s.location}
           </span>
         ))}
       </div>
@@ -666,7 +665,7 @@ export default function MapPage({ lang, setPage, setSelectedSensor, reportsContr
                 {SENSORS.map(s => (
                   <span key={s.id} style={pillStyleOnSky(selectedSensorId === s.id)}
                     onClick={() => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id)}>
-                    {s.name.replace('Taranto - ', '')}
+                    {s.location}
                   </span>
                 ))}
               </div>
@@ -833,8 +832,6 @@ export default function MapPage({ lang, setPage, setSelectedSensor, reportsContr
           </div>
         </div>
       </div>
-
-      <BwFilmstrip />
 
       <div className="map-fade-in" style={{ padding: '24px 24px 0 24px' }}>
         <div style={{

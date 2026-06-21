@@ -24,8 +24,13 @@
       --c-molto-scarso: #951635;
       --c-estremo:      #7C2181;
 
-      --font-body:  'Epilogue', sans-serif;
+      --font-body:  'Source Serif 4', serif;
       --font-title: 'Epilogue', sans-serif;
+    }
+
+    @font-face {
+      font-family: 'Ronzino Variable';
+      src: url('assets/ruined Ronzino (1)-ruined Ronzino-blend-variable.otf') format('opentype');
     }
 
     html { overflow-x: hidden; }
@@ -41,31 +46,46 @@
     ::-webkit-scrollbar-track { background: var(--gray); }
     ::-webkit-scrollbar-thumb { background: var(--gray2); }
 
-    /* ── TOPBAR — matches PiNav ── */
+    /* ── TOPBAR — same structure/rules as the app's real TopBar ── */
     .topbar {
-      display: flex; align-items: center;
-      height: 52px; padding: 0 18px; gap: 12px;
+      display: flex; align-items: stretch;
+      height: 64px;
       border-bottom: 1px solid var(--gray);
       background: var(--white);
       position: sticky; top: 0; z-index: 100;
     }
     .topbar-logo {
-      font-family: var(--font-title); font-weight: 700; font-size: 11px;
-      letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap;
+      font-family: var(--font-title); font-weight: 600; font-size: 12px;
+      line-height: 1.15; padding: 10px 16px;
+      border-right: 1px solid var(--gray);
+      letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+      display: flex; flex-direction: column; justify-content: center;
+      text-decoration: none; color: var(--black);
     }
-    .topbar-logo span { display: inline; }
-    .topbar-divider { width: 1px; height: 18px; background: var(--gray); flex-shrink: 0; }
+    .topbar-logo:hover { color: var(--primary); }
+    .topbar-logo span { display: block; }
     .topbar-center {
-      flex: 1;
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 0 24px;
       font-family: var(--font-title); font-size: 10px; font-weight: 600;
       letter-spacing: 0.06em; text-transform: uppercase; color: var(--gray2);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .topbar-tag {
-      font-family: var(--font-title); font-size: 9px; font-weight: 700;
-      letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray2);
-      flex-shrink: 0;
+    .topbar-nav {
+      display: flex; flex-direction: row;
+      border-left: 1px solid var(--gray);
     }
+    .topbar-nav a {
+      display: flex; align-items: center; justify-content: center; padding: 0 28px;
+      font-family: var(--font-title); font-size: 14px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      text-decoration: none; color: var(--black);
+      border-right: 1px solid var(--gray); cursor: pointer;
+      transition: background 0.15s;
+    }
+    .topbar-nav a:last-child { border-right: none; }
+    .topbar-nav a:hover { color: var(--primary); }
+    .topbar-nav a.active { color: var(--primary); }
 
     /* ── HERO — compact white block like record-header ── */
     .hero {
@@ -78,11 +98,15 @@
       color: var(--gray2); margin-bottom: 8px;
     }
     .hero-title {
-      font-family: var(--font-title);
+      font-family: 'Ronzino Variable', sans-serif;
+      font-variation-settings: "BLND" 150;
       font-size: clamp(64px, 12vw, 160px);
-      font-weight: 800; line-height: 0.95;
+      font-weight: 400; line-height: 0.95;
       letter-spacing: -0.02em; text-transform: uppercase;
-      color: var(--black); margin-bottom: 10px;
+      color: var(--white);
+      -webkit-text-stroke: 6px var(--primary);
+      paint-order: stroke fill;
+      margin-bottom: 10px;
     }
     .hero-subtitle {
       font-family: var(--font-body); font-size: 13px; line-height: 1.6;
@@ -102,8 +126,8 @@
     }
     .toc {
       border-right: 1px solid var(--gray);
-      position: sticky; top: 52px;
-      height: calc(100vh - 52px);
+      position: sticky; top: 64px;
+      height: calc(100vh - 64px);
       overflow-y: auto; min-width: 0;
     }
     .toc-header {
@@ -394,9 +418,9 @@
 
     /* Mobile */
     @media (max-width: 600px) {
-      /* Topbar: hide center text on mobile */
+      /* Topbar: hide center text, shrink nav links on mobile */
       .topbar-center { display: none; }
-      .topbar-divider { display: none; }
+      .topbar-nav a { padding: 0 12px; font-size: 11px; }
 
       /* TOC: single column list, smaller text */
       .toc-list { display: block; }
@@ -482,12 +506,17 @@
 </head>
 <body>
 
-<!-- TOPBAR -->
+<!-- TOPBAR — same structure as the app's real TopBar, linking back into it -->
 <header class="topbar">
-  <div class="topbar-logo">Aria Bene Comune</div>
-  <div class="topbar-divider"></div>
+  <a class="topbar-logo" href="/">
+    <span>ARIA</span><span>BENE</span><span>COMUNE</span>
+  </a>
   <div class="topbar-center">Guida al Sensore</div>
-  <div class="topbar-tag">Guida tecnica</div>
+  <nav class="topbar-nav">
+    <a href="/?page=map">Mappa</a>
+    <a href="/?page=archive">Archivio</a>
+    <a href="guida.html" class="active">Guida</a>
+  </nav>
 </header>
 
 <!-- HERO -->

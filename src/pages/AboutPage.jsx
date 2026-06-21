@@ -1,11 +1,30 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { SENSORS } from '../data/sensors';
+import { LEVELS } from '../data/levels';
+import { POLLUTANTS } from '../data/pollutants';
 import { getSensorAQI } from '../utils/aqi';
+import BwFilmstrip from '../components/BwFilmstrip';
 
-// Skeleton port of guida-eng.html / guida.html into a real bilingual page —
-// same TopBar, same Ronzino-Variable hero treatment, same SECTION/PANEL rules
-// as every other page. Chapters 1-2 are fully ported; 3-6 are stubs to fill
-// in next — see CHAPTERS below for the full intended structure.
+const THRESHOLD_CATS = [
+  { key: 'particulates', it: 'Particolato',   en: 'Particulates',  pollutants: ['pm25', 'pm10'] },
+  { key: 'gaseous',      it: 'Gas irritanti', en: 'Gaseous',        pollutants: ['no2', 'o3', 'so2'] },
+  { key: 'systemic',     it: 'Sistemici',     en: 'Systemic',       pollutants: ['co', 'nh3', 'c6h6'] },
+];
+
+const LEVEL_DESCS = {
+  buono:                 { it: 'Nessun rischio significativo per la salute.',                                    en: 'No significant health risk.' },
+  sufficiente:           { it: 'Rischio molto basso; la popolazione sensibile può avvertire lievi effetti.',     en: 'Very low risk; sensitive groups may experience mild effects.' },
+  mediocre:              { it: 'Rischio moderato; le persone sensibili possono avvertire effetti sulla salute.',  en: 'Moderate risk; sensitive people may experience health effects.' },
+  scarso:                { it: 'La salute può risentirne; raccomandata prudenza per tutti.',                      en: 'Health may be affected; caution recommended for everyone.' },
+  'molto-scarso':        { it: "Effetti sulla salute probabili; limitare le attività all'aperto.",               en: 'Health effects likely; limit outdoor activities.' },
+  'estremamente-scarso': { it: "Emergenza sanitaria; evitare le attività all'aperto.",                           en: 'Health emergency; avoid outdoor activities.' },
+};
+
+const fRange = ([lo, hi]) => `${lo}–${hi >= 999 ? '∞' : hi}`;
+
+// Ported from guida-eng.html / guida.html into a real bilingual page — same
+// TopBar, same Ronzino-Variable hero treatment, same SECTION/PANEL rules as
+// every other page. See CHAPTERS below for the full structure.
 const CHAPTERS = [
   { id: 's1', it: 'Introduzione', en: 'Introduction' },
   { id: 's2', it: 'I componenti', en: 'The Components' },
@@ -81,6 +100,7 @@ function SubHeading({ children, first }) {
       fontFamily: 'var(--font-title)', fontSize: 13, fontWeight: 400,
       letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--primary)',
       margin: first ? '0 0 10px' : '40px 0 10px',
+      clear: 'right',
     }}>
       {children}
     </h3>
@@ -88,14 +108,20 @@ function SubHeading({ children, first }) {
 }
 
 function P({ children }) {
-  return <p style={{ fontFamily: 'var(--font-body)', fontSize: 15, lineHeight: 1.7, color: 'var(--black)', marginBottom: 16 }}>{children}</p>;
+  return (
+    <p style={{
+      fontFamily: 'var(--font-body)', fontSize: 'clamp(15px, 1vw, 17px)', lineHeight: 1.7, color: 'var(--black)',
+      margin: '0 calc(50% - 50vw) 16px', width: '100vw', boxSizing: 'border-box',
+      padding: '0 28px', clear: 'right',
+    }}>{children}</p>
+  );
 }
 
 function UL({ items }) {
   return (
     <ul style={{ paddingLeft: 22, marginBottom: 16 }}>
       {items.map((it, i) => (
-        <li key={i} style={{ fontFamily: 'var(--font-body)', fontSize: 15, lineHeight: 1.7, color: 'var(--black)', marginBottom: 8 }}>{it}</li>
+        <li key={i} style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(15px, 1vw, 17px)', lineHeight: 1.7, color: 'var(--black)', marginBottom: 8 }}>{it}</li>
       ))}
     </ul>
   );
@@ -105,7 +131,7 @@ function OL({ items }) {
   return (
     <ol style={{ paddingLeft: 22, marginBottom: 16 }}>
       {items.map((it, i) => (
-        <li key={i} style={{ fontFamily: 'var(--font-body)', fontSize: 15, lineHeight: 1.7, color: 'var(--black)', marginBottom: 8 }}>{it}</li>
+        <li key={i} style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(15px, 1vw, 17px)', lineHeight: 1.7, color: 'var(--black)', marginBottom: 8 }}>{it}</li>
       ))}
     </ol>
   );
@@ -147,11 +173,48 @@ function Table({ headers, rows }) {
   );
 }
 
-function Diagram({ src, alt, caption }) {
+// Widths for the floated, right-column Diagram/CodeBlock variants.
+const FLOAT_SIZES = {
+  sm: 'min(280px, 36%)',
+  md: 'min(360px, 44%)',
+  lg: 'min(440px, 52%)',
+};
+
+// One-time fade+slide-in the first time a floated element scrolls into view.
+function useRevealed() {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        obs.disconnect();
+      }
+    }, { threshold: 0.15 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, visible];
+}
+
+function Diagram({ src, alt, caption, size = 'md', shift = false, full = false }) {
+  const [ref, visible] = useRevealed();
+  const layoutStyle = full
+    ? { margin: '16px calc(50% - 50vw)', width: '100vw', clear: 'right' }
+    : { float: 'right', clear: 'right', width: FLOAT_SIZES[size], margin: `0 ${shift ? 'clamp(20px, 6vw, 60px)' : 0} 16px 24px` };
   return (
-    <div style={{ margin: '22px 0', padding: 'clamp(12px, 3vw, 24px)', background: 'url(/assets/cielo.png) center / cover no-repeat' }}>
+    <div ref={ref} style={{
+      ...layoutStyle,
+      padding: 'clamp(12px, 3vw, 24px)', background: 'url(/assets/cielo.png) center / cover no-repeat',
+      boxSizing: 'border-box',
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'translateX(0)' : `translateX(${full ? 0 : 48}px)`,
+      transition: 'opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1)',
+    }}>
       <div style={{ textAlign: 'center', border: '1px solid var(--gray)', padding: 20, background: 'var(--white)' }}>
-        <img src={src} alt={alt} style={{ maxWidth: '100%', height: 'auto' }} />
+        <img src={src} alt={alt} style={{ width: '100%', maxWidth: 480, height: 'auto' }} />
         {caption && (
           <div style={{ fontFamily: 'var(--font-title)', fontSize: 12, fontWeight: 400, letterSpacing: '0.04em', color: 'var(--gray2)', marginTop: 12 }}>
             {caption}
@@ -174,9 +237,9 @@ function SchemaBox({ children }) {
 
 function Callout({ label, children }) {
   return (
-    <div style={{ padding: '14px 18px', margin: '16px 0', background: 'color-mix(in srgb, var(--primary) 9%, var(--white))', borderLeft: '3px solid var(--primary)' }}>
+    <div style={{ padding: '14px 18px', margin: '16px 0', background: 'color-mix(in srgb, var(--primary) 9%, var(--white))', borderLeft: '3px solid var(--primary)', clear: 'right', boxSizing: 'border-box' }}>
       <div style={{ ...SUB_LABEL, color: 'var(--primary)', marginBottom: 6 }}>{label}</div>
-      <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.68, color: 'var(--black)', margin: 0 }}>{children}</p>
+      <p style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(14px, 0.95vw, 16px)', lineHeight: 1.68, color: 'var(--black)', margin: 0 }}>{children}</p>
     </div>
   );
 }
@@ -192,9 +255,10 @@ function Term({ title, children }) {
 
 // Code block with a one-click copy button — for terminal commands / config
 // snippets in the ESP32 + Raspberry Pi setup chapters.
-function CodeBlock({ children }) {
+function CodeBlock({ children, size = 'md', shift = false, full = false }) {
   const [copied, setCopied] = useState(false);
   const code = Array.isArray(children) ? children.join('') : children;
+  const [ref, visible] = useRevealed();
 
   const copy = async () => {
     try {
@@ -204,8 +268,19 @@ function CodeBlock({ children }) {
     } catch {}
   };
 
+  const layoutStyle = full
+    ? { margin: '16px calc(50% - 50vw)', width: '100vw', clear: 'right' }
+    : { float: 'right', clear: 'right', width: FLOAT_SIZES[size], margin: `0 ${shift ? 'clamp(20px, 6vw, 60px)' : 0} 16px 24px` };
+
   return (
-    <div style={{ margin: '16px 0', padding: 'clamp(12px, 3vw, 24px)', background: 'url(/assets/cielo.png) center / cover no-repeat' }}>
+    <div ref={ref} style={{
+      ...layoutStyle,
+      padding: 'clamp(12px, 3vw, 24px)', background: 'url(/assets/cielo.png) center / cover no-repeat',
+      boxSizing: 'border-box',
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'translateX(0)' : `translateX(${full ? 0 : 48}px)`,
+      transition: 'opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1)',
+    }}>
       <div className="guide-copy-btn-wrap" style={{ position: 'relative' }}>
         <button onClick={copy} className="guide-copy-btn" style={{
           position: 'absolute', top: 8, right: 8, zIndex: 2,
@@ -234,7 +309,7 @@ function CodeBlock({ children }) {
 function ChapterNav({ prev, next, L }) {
   return (
     <nav className="guide-chapter-nav" aria-label={L ? 'Navigazione capitoli' : 'Chapter navigation'}
-      style={{ display: 'flex', gap: 12, justifyContent: 'space-between', marginTop: 28 }}>
+      style={{ display: 'flex', gap: 12, justifyContent: 'space-between', marginTop: 28, maxWidth: 640, clear: 'right' }}>
       {prev ? (
         <a href={`#${prev.id}`} style={{ flex: 1, minWidth: 0, textDecoration: 'none', border: '1px solid var(--gray)', background: 'var(--white)', padding: '14px 16px' }}>
           <span style={{ display: 'block', fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gray2)', marginBottom: 4 }}>
@@ -257,7 +332,7 @@ function ChapterNav({ prev, next, L }) {
 
 function ComponentGrid({ L }) {
   return (
-    <div style={{ margin: '16px 0', padding: 'clamp(12px, 3vw, 24px)', background: 'url(/assets/cielo.png) center / cover no-repeat' }}>
+    <div style={{ clear: 'right', margin: '16px calc(50% - 50vw)', width: '100vw', padding: 'clamp(12px, 3vw, 24px)', background: 'url(/assets/cielo.png) center / cover no-repeat', boxSizing: 'border-box' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         {COMPONENTS.map((c) => (
           <div key={c.name} style={{ padding: '20px 16px', textAlign: 'center', background: 'var(--white)', border: '1px solid var(--gray)' }}>
@@ -314,7 +389,7 @@ function StartHere({ L }) {
           ? 'Questa guida è scritta per essere seguita da chiunque, anche senza esperienza di elettronica. Due passaggi sono un po’ più pratici: saldare una fila di pin e digitare qualche comando sul Raspberry Pi. Li spieghiamo entrambi, un passo alla volta.'
           : 'This guide is written so anyone can follow it, even if you have never touched electronics. Two parts of the build are a bit more hands-on: soldering a row of pins, and typing a few commands on the Raspberry Pi. We explain both, one step at a time.'}
       </P>
-      <p style={{ fontFamily: 'var(--font-body)', fontSize: 15, lineHeight: 1.7, color: 'var(--black)', borderLeft: '3px solid var(--primary)', paddingLeft: 14, fontStyle: 'italic', marginBottom: 0 }}>
+      <p style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(15px, 1vw, 17px)', lineHeight: 1.7, color: 'var(--black)', borderLeft: '3px solid var(--primary)', paddingLeft: 14, fontStyle: 'italic', marginBottom: 0 }}>
         {L
           ? <>Non devi farlo da solo. È un bel progetto da costruire <strong>con qualcuno</strong> — un nipote, un vicino, un amico, o in un makerspace locale. Se un passaggio sembra troppo tecnico, è il momento di farlo insieme, non di rinunciare.</>
           : <>You don't have to do it alone. This is a lovely project to build <strong>with someone</strong> — a grandchild, a neighbour, a friend, or at a local makerspace or fab lab. If a step feels technical, that's the moment to do it together, not to give up.</>}
@@ -329,17 +404,171 @@ function StartHere({ L }) {
   );
 }
 
-export default function GuidePage({ lang }) {
+export default function AboutPage({ lang }) {
   const L = lang === 'it';
   const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
+  const videoRef = useRef(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+
+  // Before the first play, show a frame from the middle of the film as the
+  // static preview instead of frame zero — purely cosmetic, doesn't affect
+  // where playback actually starts.
+  const showMidFrame = (e) => {
+    const v = e.currentTarget;
+    if (!videoPlaying && v.duration) v.currentTime = v.duration / 2;
+  };
+
+  const startVideo = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = 0;
+    v.play();
+    setVideoPlaying(true);
+  };
 
   return (
     <div>
-      {/* HERO — same Ronzino Variable + AQI-blend treatment as every other page */}
-      <div style={{ padding: 'clamp(16px, 4vw, 24px) clamp(16px, 4vw, 24px) 16px', borderBottom: '1px solid var(--gray)' }}>
-        <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
-          {L ? 'Nodo ESP32 + Server Raspberry Pi' : 'ESP32 Node + Raspberry Pi Server'}
+      {/* TITLE — same treatment as Map's title block */}
+      <div style={{ padding: '24px 24px 0 24px' }}>
+        <span style={{
+          fontFamily: "'Ronzino Variable', sans-serif",
+          fontVariationSettings: `"BLND" ${Math.max(50, globalAQI * 200)}`,
+          fontSize: 'clamp(56px, 8vw, 140px)', textTransform: 'uppercase',
+          lineHeight: 0.95, letterSpacing: '-0.01em',
+          color: 'var(--white)', WebkitTextStroke: '5px var(--primary)', paintOrder: 'stroke fill',
+        }}>
+          {L ? 'Chi Siamo' : 'About'}
+        </span>
+      </div>
+
+      {/* VIDEO + STATEMENT — share one continuous cielo.png background */}
+      <div style={{ background: "url('/assets/cielo.png') center / cover no-repeat" }}>
+        <div style={{ position: 'relative' }}>
+          <video
+            ref={videoRef}
+            src="/assets/GliIncappucciati_MatteoFalcone.mov"
+            controls={videoPlaying}
+            playsInline
+            preload="metadata"
+            onLoadedMetadata={showMidFrame}
+            style={{ width: '100%', display: 'block' }}
+          />
+          {!videoPlaying && (
+            <button
+              type="button"
+              onClick={startVideo}
+              aria-label={L ? 'Avvia il video' : 'Play the video'}
+              style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+              }}
+            >
+              <span style={{
+                width: 0, height: 0,
+                borderTop: 'clamp(20px, 3vw, 36px) solid transparent',
+                borderBottom: 'clamp(20px, 3vw, 36px) solid transparent',
+                borderLeft: 'clamp(32px, 4.6vw, 56px) solid #fff',
+              }} />
+            </button>
+          )}
         </div>
+
+        <div style={{ padding: 'clamp(32px, 6vw, 64px) 48px', display: 'flex', flexWrap: 'wrap', gap: 28, alignItems: 'flex-start' }}>
+          <div style={{ flex: '1 1 360px' }}>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(19px, 2.4vw, 28px)', fontWeight: 400, lineHeight: 1.5, color: 'var(--black)', maxWidth: 860, margin: 0 }}>
+              {L
+                ? <>Questo progetto è pensato in particolare per chi resiste nelle <strong>Sacrifice Zones</strong> del mondo, come strumento per contrastare la recinzione dell'informazione. Aria Bene Comune è stato realizzato da Matteo Falcone e dagli hacker etici del gruppo Linux Jonix Group. L'idea nasce come risposta al bisogno dei tarantini di informazioni affidabili e pulite sull'aria che respiriamo. Unisciti alla comunità, costruisci il tuo sensore e diventa un nodo attivo!</>
+                : <>This project is especially aimed at people resisting in <strong>Sacrifice Zones</strong> of the world, as a tool to counter the information enclosure. Aria Bene Comune has been realized by Matteo Falcone and the ethical hackers of the group Linux Jonix Group. The idea starts as an answer to the needs of tarantinian of trustworthy and clean information about the air we breath. Join the community, build your own sensor and be an active node!</>}
+            </p>
+          </div>
+          <img
+            src="/assets/DSC3330.jpg"
+            alt=""
+            style={{ width: 'clamp(240px, 32vw, 420px)', aspectRatio: '2 / 3', objectFit: 'cover', flexShrink: 0 }}
+          />
+        </div>
+      </div>
+
+      {/* THRESHOLD EXPLANATION — what the AQI levels and pollutant limits mean,
+          placed right before the sensor guide starts. Same title/body/table
+          rules as the rest of the page; rectangular level/pollutant swatches
+          instead of circles, in the site's sharp-cornered visual language. */}
+      <div style={{ borderBottom: '1px solid var(--gray)' }}>
+
+        <div style={{ padding: 'clamp(16px, 4vw, 24px) clamp(16px, 4vw, 24px) 16px', borderBottom: '1px solid var(--gray)' }}>
+          <span style={{
+            fontFamily: "'Ronzino Variable', sans-serif",
+            fontVariationSettings: `"BLND" ${Math.max(50, globalAQI * 200)}`,
+            fontSize: 'clamp(48px, 6vw, 96px)', textTransform: 'uppercase',
+            lineHeight: 0.92, letterSpacing: '-0.02em',
+            color: 'var(--white)', WebkitTextStroke: '6px var(--primary)', paintOrder: 'stroke fill',
+          }}>
+            {L ? 'Limiti Inquinanti' : 'Pollutant Thresholds'}
+          </span>
+        </div>
+
+        <div style={{ padding: '22px 28px 28px' }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(18px, 1.8vw, 24px)', lineHeight: 1.6, color: 'var(--black)', marginBottom: 16, maxWidth: 860 }}>
+            {L
+              ? "Le soglie si basano sulle linee guida WHO (2021), adattate a un sistema a 6 livelli. Il livello complessivo è determinato dall'inquinante con il valore più critico. I limiti usati puntano a proteggere la salute umana, ma non riflettono i limiti legali italiani o europei, che sono più alti e obsoleti rispetto alle evidenze scientifiche più recenti."
+              : 'Thresholds are based on WHO Air Quality Guidelines (2021), adapted into a 6-level system. The overall level is set by the single worst-performing pollutant. The thresholds used aim to protect human health, but do not reflect Italian or European legal limits, which are higher and outdated compared to the latest scientific evidence.'}
+          </p>
+
+          <SubHeading>{L ? 'Scala cromatica' : 'Colour scale'}</SubHeading>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+            {LEVELS.map(lv => (
+              <div key={lv.key} style={{ flex: '1 1 150px', background: lv.color, padding: '14px 16px' }}>
+                <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 4 }}>{lv.index + 1}</div>
+                <div style={{ fontFamily: 'var(--font-title)', fontSize: 17, fontWeight: 400, textTransform: 'uppercase', color: '#fff', marginBottom: 6 }}>
+                  {L ? lv.it : lv.en}
+                </div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.45, color: 'rgba(255,255,255,0.85)' }}>
+                  {L ? LEVEL_DESCS[lv.key].it : LEVEL_DESCS[lv.key].en}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tables + pollutant types — same matrix component the Symptoms page uses:
+              category header (title + pollutant list) above a 6-column grid, one
+              cell per AQI level, each cell listing that level's threshold per pollutant. */}
+          <SubHeading>{L ? 'Soglie per inquinante' : 'Thresholds by pollutant'}</SubHeading>
+          <div className="symptoms-matrix-section" style={{ borderTop: '1px solid var(--gray)', marginBottom: 16 }}>
+            {THRESHOLD_CATS.map(cat => (
+              <div key={cat.key} className="symptoms-matrix-cat">
+                <div className="symptoms-matrix-cat-header">
+                  <span className="symptoms-matrix-cat-title">{L ? cat.it : cat.en}</span>
+                  <span className="symptoms-matrix-cat-sub">
+                    {cat.pollutants.map(k => `${POLLUTANTS[k].name} (${POLLUTANTS[k].unit})`).join(' · ')}
+                  </span>
+                </div>
+                <div className="symptoms-matrix-levels">
+                  {LEVELS.map((lv, i) => (
+                    <div key={lv.key} className="symptoms-matrix-cell">
+                      <div className="symptoms-matrix-level-badge" style={{ background: lv.color }}>
+                        {lv.index + 1}&nbsp;{L ? lv.it : lv.en}
+                      </div>
+                      {cat.pollutants.map(k => (
+                        <div key={k} className="symptoms-matrix-row">
+                          <span className="symptoms-matrix-who">{POLLUTANTS[k].name}</span>
+                          <span className="symptoms-matrix-text">{fRange(POLLUTANTS[k].ranges[i])} {POLLUTANTS[k].unit}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* GUIDE — existing chapter content, now appended after the new
+          About/Sensori-Attivi sections rather than being the page's lede */}
+      <div id="guide-start" style={{ scrollMarginTop: 80 }}>
+
+      <div style={{ padding: 'clamp(16px, 4vw, 24px) clamp(16px, 4vw, 24px) 16px', borderBottom: '1px solid var(--gray)' }}>
         <span style={{
           fontFamily: "'Ronzino Variable', sans-serif",
           fontVariationSettings: `"BLND" ${Math.max(50, globalAQI * 200)}`,
@@ -349,11 +578,6 @@ export default function GuidePage({ lang }) {
         }}>
           {L ? 'Guida al Sensore' : 'Sensor Guide'}
         </span>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.6, color: 'var(--gray2)', maxWidth: 580, marginTop: 14 }}>
-          {L
-            ? 'Un nodo della rete comunitaria — passo per passo, per principianti assoluti. Non serve esperienza di elettronica o programmazione.'
-            : 'A step-by-step, plain-language guide to building your own air-quality sensor — from parts in a box to live readings you and your community can trust.'}
-        </p>
       </div>
 
       <StartHere L={L} />
@@ -371,13 +595,8 @@ export default function GuidePage({ lang }) {
 
           {/* 01 — INTRODUCTION */}
           <SectionLabel num={1} title={L ? 'Introduzione' : 'Introduction'} />
-          <div style={{ padding: '22px 28px 28px' }}>
+          <div style={{ padding: '22px 28px 28px', display: 'flow-root' }}>
             <SubHeading first>{L ? '1.1 Perché monitorare dal basso' : '1.1 Why monitoring from below'}</SubHeading>
-            <P>
-              {L
-                ? <>Questa è una guida per costruire un sensore di qualità dell'aria che monitora i livelli di inquinamento. È stata scritta per creare una rete di sensori di proprietà della comunità a Taranto, ma può essere usata da chiunque senta il bisogno di adottare metodologie di citizen science per monitorare lo spazio in cui vive. È pensata in particolare per chi resiste nelle <strong>Sacrifice Zones</strong> del mondo, come strumento per contrastare la recinzione dell'informazione.</>
-                : <>This is a guide to building an air-quality sensor to monitor pollution levels. This guide has been written to create a community-owned network of sensors in Taranto, but it can be used by anyone who feels the need to use citizen-science methodologies to monitor their living space. It is especially aimed at people resisting in <strong>Sacrifice Zones</strong> of the world, as a tool to counter the information enclosure.</>}
-            </P>
             <P>
               {L
                 ? <>Questa guida ti accompagna passo per passo nella costruzione del sensore per la qualità dell'aria <strong>"Aria Bene Comune"</strong>. È pensata per chi parte da zero: non serve esperienza di elettronica o programmazione. Useremo materiali semplici, codice aperto e un linguaggio chiaro. Sperimentiamo e impariamo insieme!</>
@@ -401,7 +620,7 @@ export default function GuidePage({ lang }) {
                 ? <>Costruendo e attivando questo sensore, diventi uno dei nodi della rete. Ogni nodo ha un proprio identificativo (nello <Term title={L ? 'Lo sketch è il piccolo programma che carichi sulla scheda ESP32.' : 'The sketch is the small program you load onto the ESP32 board.'}>sketch</Term> è il campo <strong>sensor_id</strong>, ad es. "S1"): è ciò che permette di distinguere i dati provenienti dai diversi sensori della comunità.</>
                 : <>By building and activating this sensor, you become one of the network's nodes. Every node has its own identifier (in the <Term title="The sketch is the small program you load onto the ESP32 board.">sketch</Term>, it is the <strong>sensor_id</strong> field, e.g. "S1"): this is what allows data from different community sensors to be distinguished.</>}
             </P>
-            <CodeBlock>{'// config.h\n#define SENSOR_ID "S1"\n#define WIFI_SSID "your-network"\n#define WIFI_PASS "your-password"'}</CodeBlock>
+            <CodeBlock full>{'// config.h\n#define SENSOR_ID "S1"\n#define WIFI_SSID "your-network"\n#define WIFI_PASS "your-password"'}</CodeBlock>
             <Callout label={L ? 'In breve' : 'In short'}>
               {L
                 ? 'Il tuo sensore funziona perfettamente da solo, ma è pensato per contribuire, insieme a molti altri, a un quadro condiviso e continuamente aggiornato dell’aria che respiriamo.'
@@ -412,7 +631,7 @@ export default function GuidePage({ lang }) {
 
           {/* 02 — THE COMPONENTS */}
           <SectionLabel num={2} title={L ? 'I componenti' : 'The Components'} />
-          <div style={{ padding: '22px 28px 28px' }}>
+          <div style={{ padding: '22px 28px 28px', display: 'flow-root' }}>
             <SubHeading first>{L ? '2.1 Cosa comprare' : '2.1 What to buy'}</SubHeading>
             <ComponentGrid L={L} />
 
@@ -427,7 +646,7 @@ export default function GuidePage({ lang }) {
                 ? "Una breadboard è una tavoletta di plastica piena di piccoli foretti che permette di collegare componenti elettronici senza saldare. Basta spingere fili e pin nei foretti. La parte intelligente è che molti di quei foretti sono già collegati tra loro all'interno della tavoletta, tramite strisce metalliche nascoste. Quindi quando inserisci due fili in due foretti collegati internamente, quei due fili sono elettricamente connessi — come se li avessi attorcigliati insieme."
                 : 'A breadboard is a plastic board full of small holes that lets you connect electronic parts together without soldering. You just push wires and pins into the holes. The clever part is that many of those holes are already connected to each other inside the board, by hidden metal strips. So when you put two wires into two holes that are internally joined, those two wires are electrically connected — as if you had twisted them together.'}
             </P>
-            <Diagram src="/assets/diagrams/breadboard_basics.svg"
+            <Diagram src="/assets/diagrams/breadboard_basics.svg" full
               alt={L ? 'Schema di una breadboard: ogni colonna numerata di cinque foretti è collegata verticalmente, e le due guide laterali corrono in orizzontale per alimentazione e massa.' : 'Diagram of a breadboard showing that each numbered column of five holes is joined vertically inside, and the two long side rails run horizontally for power and ground.'} />
             <P>{L ? 'Ci sono solo due schemi da ricordare:' : 'There are only two patterns to remember:'}</P>
             <UL items={L ? [
@@ -491,7 +710,7 @@ export default function GuidePage({ lang }) {
 
           {/* 03 — BUILDING THE SENSOR NODE (ESP32) */}
           <SectionLabel num={3} title={L ? 'Costruire il nodo sensore (ESP32)' : 'Building the Sensor Node (ESP32)'} />
-          <div style={{ padding: '22px 28px 28px' }}>
+          <div style={{ padding: '22px 28px 28px', display: 'flow-root' }}>
             <SubHeading first>{L ? '3.1 Saldare i pin header' : '3.1 Soldering header pins'}</SubHeading>
             <OL items={L ? [
               'Procurati strisce di "pin header maschio" (le economiche file di pin che si tagliano a misura). Stacca un pezzo con il numero giusto di pin per ogni fila di foretti della scheda.',
@@ -518,7 +737,7 @@ export default function GuidePage({ lang }) {
                 ? "Il modo più rapido per capire i collegamenti è guardarli. Lo schema sotto mostra l'ESP32 al centro, il BME680 a sinistra e il MiCS-6814 a destra, con ogni filo colorato che va dal pin del sensore al pin giusto dell'ESP32. In basso, la legenda collega ogni filo alla riga di codice corrispondente."
                 : 'The quickest way to understand the connections is to look at them. The diagram below shows the ESP32 in the centre, the BME680 on the left, and the MiCS-6814 on the right, with each coloured wire going from the sensor pin to the correct ESP32 pin. At the bottom, the legend links each wire to the corresponding line of code.'}
             </P>
-            <Diagram src="/assets/diagrams/wired_breadboard.svg"
+            <Diagram src="/assets/diagrams/wired_breadboard.svg" full
               alt={L ? "Schema di cablaggio del nodo sensore: l'ESP32 al centro con il BME680 e il MiCS-6814 ai lati, e fili jumper colorati da ogni pin del sensore al pin corrispondente dell'ESP32." : 'Wiring diagram of the sensor node: the ESP32 in the centre with the BME680 and MiCS-6814 either side, and colour-coded jumper wires from each sensor pin to its matching ESP32 pin.'}
               caption={L ? 'Schema di cablaggio del nodo sensore. I colori dei fili sono solo un aiuto visivo: ciò che conta è che ogni pin vada dove indicato.' : 'Wiring diagram of the sensor node. The wire colours are just a visual aid: what matters is that each pin goes where indicated.'} />
             <Callout label={L ? 'Sicurezza' : 'Safety'}>
@@ -581,7 +800,7 @@ export default function GuidePage({ lang }) {
                 ? 'Collega l’ESP32 al tuo computer con un cavo USB-C. Poi copia il codice sotto e caricalo sull’ESP32 usando l’Arduino IDE.'
                 : 'Connect the ESP32 to your laptop with a USB-C cable. Then copy the code below and upload it to the ESP32 using the Arduino IDE.'}
             </P>
-            <CodeBlock>{`#include <Wire.h>
+            <CodeBlock full>{`#include <Wire.h>
 #include <ArduinoJson.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME680.h>
@@ -689,7 +908,7 @@ void loop() {
 
           {/* 04 — SETTING UP THE SERVER (RASPBERRY PI) */}
           <SectionLabel num={4} title={L ? 'Configurare il server (Raspberry Pi)' : 'Setting Up the Server (Raspberry Pi)'} />
-          <div style={{ padding: '22px 28px 28px' }}>
+          <div style={{ padding: '22px 28px 28px', display: 'flow-root' }}>
             <SubHeading first>{L ? '4.1 Collegamenti USB' : '4.1 USB connections'}</SubHeading>
             <P>
               {L
@@ -704,7 +923,7 @@ void loop() {
               <>The <strong>ESP32</strong>, connected via USB cable, usually appears as <code>/dev/ttyACM0</code>.</>,
             ]} />
             <P>{L ? 'Se i nomi non corrispondono, esegui nel Terminale:' : 'If the names do not match, run in the Terminal:'}</P>
-            <CodeBlock>ls /dev/ttyUSB* /dev/ttyACM*</CodeBlock>
+            <CodeBlock full>ls /dev/ttyUSB* /dev/ttyACM*</CodeBlock>
             <P>
               {L
                 ? <>e aggiorna le variabili <code>SDS011_PORT</code> e <code>ESP_PORT</code> in cima al programma.</>
@@ -717,7 +936,7 @@ void loop() {
                 ? 'Installa Raspberry Pi OS sulla microSD con Raspberry Pi Imager, poi apri un Terminale ed esegui:'
                 : 'Install Raspberry Pi OS on the microSD with Raspberry Pi Imager, then open a Terminal and run:'}
             </P>
-            <CodeBlock>{`sudo apt update && sudo apt upgrade -y
+            <CodeBlock full>{`sudo apt update && sudo apt upgrade -y
 sudo apt install -y python3-pip
 pip3 install flask flask-cors pyserial`}</CodeBlock>
             <P>
@@ -725,7 +944,7 @@ pip3 install flask flask-cors pyserial`}</CodeBlock>
                 ? <>Copia il file del server sul Pi e, se presente, la cartella <code>dist/</code> con la dashboard React. Poi aggiungi il tuo utente al gruppo della porta seriale:</>
                 : <>Copy the server file to the Pi and, if present, the <code>dist/</code> folder with the React dashboard. Then add your user to the serial port group:</>}
             </P>
-            <CodeBlock>{`sudo usermod -a -G dialout $USER
+            <CodeBlock full>{`sudo usermod -a -G dialout $USER
 sudo reboot`}</CodeBlock>
 
             <SubHeading>{L ? '4.3 Come funziona il programma del Pi' : '4.3 How the Pi program works'}</SubHeading>
@@ -776,13 +995,13 @@ sudo reboot`}</CodeBlock>
             ]} />
 
             <SubHeading>{L ? 'Avviare il server' : 'Starting the server'}</SubHeading>
-            <CodeBlock>{L
+            <CodeBlock full>{L
               ? `cd ~/aria-bene-comune     # la cartella dove hai messo il file
 python3 server.py          # usa il vero nome del tuo file`
               : `cd ~/aria-bene-comune     # the folder where you put the file
 python3 server.py          # use the actual name of your file`}</CodeBlock>
             <P>{L ? "Trova l'indirizzo IP del Pi con:" : "Find the Pi's IP address with:"}</P>
-            <CodeBlock>hostname -I</CodeBlock>
+            <CodeBlock full>hostname -I</CodeBlock>
             <P>
               {L
                 ? <>Da qualsiasi dispositivo sulla stessa rete, apri un browser su <code>http://INDIRIZZO-IP:5050</code> per vedere la dashboard.</>
@@ -796,7 +1015,7 @@ python3 server.py          # use the actual name of your file`}</CodeBlock>
 
           {/* 05 — FIRST BOOT, CALIBRATION & TROUBLESHOOTING */}
           <SectionLabel num={5} title={L ? 'Prima accensione, calibrazione e risoluzione dei problemi' : 'First Boot, Calibration & Troubleshooting'} />
-          <div style={{ padding: '22px 28px 28px' }}>
+          <div style={{ padding: '22px 28px 28px', display: 'flow-root' }}>
             <SubHeading first>{L ? '5.1 Prima accensione e collaudo' : '5.1 First boot and testing'}</SubHeading>
             <OL items={L ? [
               "Collega l'SDS011 e l'ESP32 alle porte USB del Pi.",
@@ -870,7 +1089,7 @@ python3 server.py          # use the actual name of your file`}</CodeBlock>
 
           {/* 06 — THE DIY ENCLOSURE */}
           <SectionLabel num={6} title={L ? 'La custodia fai-da-te' : 'The DIY Enclosure'} />
-          <div style={{ padding: '22px 28px 28px' }}>
+          <div style={{ padding: '22px 28px 28px', display: 'flow-root' }}>
             <P>
               {L
                 ? <>Una delle idee centrali di <strong>"Aria Bene Comune"</strong> è che il sensore sia davvero accessibile a tutti: open source e costruito con <strong>materiali di recupero</strong>. Non serve una custodia acquistata o stampata in 3D. Va bene qualsiasi contenitore impermeabile che hai già in casa: una scatola di biscotti, un contenitore per alimenti, una cassetta degli attrezzi di plastica.</>
@@ -1008,6 +1227,8 @@ python3 server.py          # use the actual name of your file`}</CodeBlock>
           </div>
 
         </main>
+      </div>
+
       </div>
     </div>
   );

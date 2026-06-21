@@ -1,7 +1,6 @@
 const NAV = [
-  { id: 'map',     it: 'Mappa',    en: 'Map' },
   { id: 'archive', it: 'Archivio', en: 'Archive' },
-  { id: 'guide',   it: 'Guida',    en: 'Guide' },
+  { id: 'about',   it: 'Chi siamo', en: 'About' },
 ];
 
 export default function TopBar({ page, setPage, lang, setLang, onNavHover }) {

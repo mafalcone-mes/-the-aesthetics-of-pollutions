@@ -38,6 +38,9 @@ body { font-family: var(--font-body); overflow-x: hidden; }
 ::-webkit-scrollbar-track { background: var(--gray); }
 ::-webkit-scrollbar-thumb { background: var(--primary); }
 
+.about-sensor-carousel { scrollbar-width: none; }
+.about-sensor-carousel::-webkit-scrollbar { display: none; }
+
 #root { min-height: 100vh; display: flex; flex-direction: column; }
 .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
 

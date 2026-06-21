@@ -166,7 +166,7 @@ function SensorPills({ L, sensors, setSensors }) {
         {SENSORS.map(s => (
           <span key={s.id} style={pillStyle(sensors.has(String(s.id)))}
             onClick={() => toggleSet(sensors, setSensors, String(s.id), 'all')}>
-            {s.name.replace('Taranto - ', '')}
+            {s.location}
           </span>
         ))}
       </div>

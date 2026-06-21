@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sensor Guide — Aria Bene Comune</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;600;700;800;900&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:   #1A1A1A;
+      --ink:     #262220;        /* body text, slightly warmer than pure black */
+      --white:   #FAF8F7;
+      --gray:    #DDDAD3;
+      --gray2:   #6F6B64;        /* DARKENED from #9B9790 for contrast (AA) */
+      --gray2-soft: #9B9790;     /* old value kept for non-text decorative use */
+      --primary: #B7410E;
+
+      --c-buono:        #77BF85;
+      --c-sufficiente:  #318665;
+      --c-mediocre:     #F0A500;
+      --c-scarso:       #EA5154;
+      --c-molto-scarso: #951635;
+      --c-estremo:      #7C2181;
+
+      --font-body:  'Source Serif 4', serif;
+      --font-title: 'Epilogue', sans-serif;
+
+      --fs: 17px;                /* base font size, controlled by text-size buttons */
+    }
+
+    @font-face {
+      font-family: 'Ronzino Variable';
+      src: url('assets/ruined Ronzino (1)-ruined Ronzino-blend-variable.otf') format('opentype');
+    }
+
+    html { overflow-x: hidden; scroll-behavior: smooth; scroll-padding-top: 116px; }
+    html, body { background: var(--white); color: var(--ink); font-family: var(--font-body); }
+    body {
+      width: 100%; max-width: 100vw;
+      background-image: url('assets/cielo.png');
+      background-size: cover; background-position: center top;
+      background-repeat: no-repeat; background-attachment: fixed;
+      font-size: var(--fs);
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--gray); }
+    ::-webkit-scrollbar-thumb { background: var(--gray2); }
+
+    /* visible keyboard focus everywhere */
+    a:focus-visible, button:focus-visible {
+      outline: 3px solid var(--primary); outline-offset: 2px; border-radius: 2px;
+    }
+
+    /* skip link for screen readers / keyboard */
+    .skip-link {
+      position: absolute; left: 8px; top: -48px; z-index: 200;
+      background: var(--primary); color: #fff; padding: 10px 16px;
+      font-family: var(--font-title); font-weight: 700; font-size: 14px;
+      text-decoration: none; transition: top 0.15s;
+    }
+    .skip-link:focus { top: 8px; }
+
+    /* ── TOPBAR — same structure/rules as the app's real TopBar ── */
+    .topbar {
+      display: flex; align-items: stretch;
+      min-height: 64px; gap: 12px;
+      border-bottom: 1px solid var(--gray);
+      background: var(--white);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-logo {
+      font-family: var(--font-title); font-weight: 600; font-size: 12px;
+      line-height: 1.15; padding: 10px 16px;
+      border-right: 1px solid var(--gray);
+      letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+      display: flex; flex-direction: column; justify-content: center;
+      text-decoration: none; color: var(--black);
+    }
+    .topbar-logo:hover { color: var(--primary); }
+    .topbar-logo span { display: block; }
+    .topbar-center {
+      flex: 1; display: flex; align-items: center;
+      font-family: var(--font-title); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--gray2);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .topbar-nav {
+      display: flex; flex-direction: row;
+      border-left: 1px solid var(--gray);
+    }
+    .topbar-nav a {
+      display: flex; align-items: center; justify-content: center; padding: 0 24px;
+      font-family: var(--font-title); font-size: 14px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      text-decoration: none; color: var(--black);
+      border-right: 1px solid var(--gray); cursor: pointer;
+      transition: background 0.15s;
+    }
+    .topbar-nav a:last-child { border-right: none; }
+    .topbar-nav a:hover { color: var(--primary); }
+    .topbar-nav a.active { color: var(--primary); }
+    /* text-size control */
+    .text-size {
+      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+    }
+    .text-size button {
+      font-family: var(--font-title); font-weight: 700; color: var(--black);
+      background: var(--white); border: 1px solid var(--gray); cursor: pointer;
+      line-height: 1; padding: 7px 9px; border-radius: 4px;
+    }
+    .text-size button:hover { background: var(--gray); color: var(--primary); }
+    .text-size button[aria-pressed="true"] { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .ts-a1 { font-size: 12px; } .ts-a2 { font-size: 15px; } .ts-a3 { font-size: 18px; }
+    .text-size-label {
+      font-family: var(--font-title); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray2);
+      margin-right: 2px;
+    }
+
+    /* ── READING PROGRESS BAR ── */
+    .progress-track {
+      position: sticky; top: 64px; z-index: 99;
+      height: 5px; background: var(--gray); width: 100%;
+    }
+    .progress-fill { height: 100%; width: 0%; background: var(--primary); transition: width 0.1s linear; }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 30px 28px 26px;
+      border-bottom: 1px solid var(--gray);
+      
+    }
+    .hero-eyebrow {
+      font-family: var(--font-title); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--gray2); margin-bottom: 10px;
+    }
+    .hero-title {
+      font-family: 'Ronzino Variable', sans-serif;
+      font-variation-settings: "BLND" 150;
+      font-size: clamp(56px, 11vw, 150px);
+      font-weight: 400; line-height: 0.95;
+      letter-spacing: -0.02em; text-transform: uppercase;
+      color: var(--white);
+      -webkit-text-stroke: 6px var(--primary);
+      paint-order: stroke fill;
+      margin-bottom: 14px;
+    }
+    .hero-subtitle {
+      font-family: var(--font-body); font-size: 1.05rem; line-height: 1.65;
+      color: var(--ink); max-width: 620px; margin-bottom: 16px;
+    }
+    .hero-params { display: flex; flex-wrap: wrap; gap: 6px; }
+    .hero-param {
+      padding: 4px 10px; border: 1px solid var(--gray);
+      font-family: var(--font-title); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--black);
+    }
+
+    /* ── START-HERE BANNER ── */
+    .starthere {
+      margin: 0; padding: 22px 28px;
+      background: color-mix(in srgb, var(--primary) 7%, var(--white));
+      border-bottom: 1px solid var(--gray);
+    }
+    .starthere h2 {
+      font-family: var(--font-title); font-size: 14px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--primary);
+      margin-bottom: 12px;
+    }
+    .starthere-facts {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;
+    }
+    .fact {
+      flex: 1 1 160px; border: 1px solid var(--gray); background: var(--white);
+      padding: 12px 14px;
+    }
+    .fact-k {
+      font-family: var(--font-title); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray2);
+      margin-bottom: 4px;
+    }
+    .fact-v { font-family: var(--font-title); font-size: 15px; font-weight: 600; color: var(--black); }
+    .starthere p { font-size: 1rem; line-height: 1.65; margin-bottom: 12px; }
+    .starthere p:last-child { margin-bottom: 0; }
+    .starthere .helper {
+      border-left: 3px solid var(--primary); padding-left: 14px;
+      font-style: italic; color: var(--ink);
+    }
+    .starthere-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .btn {
+      display: inline-block; font-family: var(--font-title); font-weight: 700;
+      font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+      text-decoration: none; padding: 11px 18px; cursor: pointer;
+      border: 1px solid var(--primary);
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: #93340b; }
+    .btn-ghost { background: transparent; color: var(--primary); }
+    .btn-ghost:hover { background: color-mix(in srgb, var(--primary) 10%, var(--white)); }
+
+    /* ── TOC ── */
+    .toc-wrap {
+      display: grid; grid-template-columns: 240px 1fr;
+      min-width: 0; max-width: 100%;
+    }
+    .toc {
+      border-right: 1px solid var(--gray);
+      position: sticky; top: 69px;      /* topbar 64 + progress 5 */
+      height: calc(100vh - 69px);
+      overflow-y: auto; min-width: 0;
+      background: color-mix(in srgb, var(--white) 92%, transparent);
+    }
+    .toc-header {
+      padding: 14px 16px 12px;
+      font-family: var(--font-title); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gray2); border-bottom: 1px solid var(--gray);
+    }
+    .toc-list { list-style: none; }
+    .toc-list li a {
+      display: block; padding: 14px 16px;
+      font-family: var(--font-title); font-size: 14px; font-weight: 600;
+      letter-spacing: 0.02em; text-decoration: none;
+      color: var(--black); border-bottom: 1px solid var(--gray);
+      border-left: 3px solid transparent;
+      transition: background 0.12s, color 0.12s, border-color 0.12s; line-height: 1.3;
+    }
+    .toc-list li a:hover { background: var(--gray); color: var(--primary); }
+    .toc-list li a.active {
+      background: color-mix(in srgb, var(--primary) 8%, var(--white));
+      color: var(--primary); border-left-color: var(--primary);
+    }
+    .toc-num {
+      font-family: var(--font-title); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; color: var(--gray2); display: block; margin-bottom: 2px;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .content { padding: 0; min-width: 0; }
+
+    .section {
+      padding: 24px 30px 28px;
+      border-bottom: 1px solid var(--gray);
+      min-width: 0;
+ 
+    }
+
+    .section-label {
+      display: flex; align-items: center; gap: 14px;
+      padding: 13px 18px; border-bottom: 1px solid var(--gray);
+      background: var(--primary); color: var(--white);
+      scroll-margin-top: 70px;
+    }
+    .section-label-num, .section-label-text {
+      font-family: var(--font-title); font-size: 18px; font-weight: 400;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--white);
+    }
+
+    /* Typography */
+    h3.section-h3 {
+      font-family: var(--font-title); font-size: 14px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--primary);
+      margin: 40px 0 12px;
+    }
+    h3.section-h3:first-child { margin-top: 0; }
+
+    p { font-size: 1rem; line-height: 1.75; margin-bottom: 20px; color: var(--ink); }
+    p:last-child { margin-bottom: 0; }
+    ul, ol { padding-left: 22px; margin-bottom: 16px; }
+    li { font-size: 1rem; line-height: 1.72; margin-bottom: 8px; color: var(--ink); }
+    li:last-child { margin-bottom: 0; }
+
+    /* jargon helper */
+    .term {
+      border-bottom: 1px dotted var(--gray2); cursor: help;
+      text-decoration: none; color: inherit;
+    }
+
+    /* ── CALLOUT ── */
+    .callout {
+      padding: 14px 18px; margin: 16px 0;
+      background: color-mix(in srgb, var(--primary) 9%, var(--white));
+      border-left: 3px solid var(--primary);
+    }
+    .callout-label {
+      font-family: var(--font-title); font-size: 12px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--primary); margin-bottom: 6px;
+    }
+    .callout p { font-size: 0.95rem; margin-bottom: 0; line-height: 1.68; color: var(--ink); }
+
+    /* ── TABLES ── */
+    .table-wrap { overflow-x: auto; margin: 16px 0; -webkit-overflow-scrolling: touch; max-width: 100%; }
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-title); font-weight: 400; font-size: 0.92rem; min-width: 480px; }
+    thead th {
+      text-align: left; padding: 10px 13px;
+      font-family: var(--font-title); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--gray2); background: var(--gray);
+      border-right: 1px solid var(--white); border-bottom: 1px solid var(--gray);
+    }
+    thead th:last-child { border-right: none; }
+    tbody td {
+      padding: 12px 13px; border-bottom: 1px solid var(--gray);
+      border-right: 1px solid var(--gray); vertical-align: top; line-height: 1.6;
+    }
+    tbody td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    td strong { font-family: var(--font-title); font-size: 0.9rem; font-weight: 700; letter-spacing: 0.02em; }
+
+    /* ── CODE BLOCKS ── */
+    .code-wrap { position: relative; }
+    .code-copy {
+      position: absolute; top: 8px; right: 8px; z-index: 2;
+      font-family: var(--font-title); font-weight: 700; font-size: 10px;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      background: var(--white); color: var(--black);
+      border: 1px solid var(--gray2); cursor: pointer; padding: 6px 10px; border-radius: 4px;
+    }
+    .code-copy:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+    pre {
+      background: #1d1a18; color: #ECE7DE;
+      padding: 18px 20px; margin: 16px 0;
+      overflow-x: auto; font-size: 13px; line-height: 1.7;
+      font-family: 'Courier New', Courier, monospace;
+      border-left: 3px solid var(--primary);
+      max-width: 100%; -webkit-overflow-scrolling: touch;
+      word-break: normal; white-space: pre;
+    }
+    code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.88em; background: var(--gray); padding: 2px 6px; color: var(--black);
+      word-break: break-all; border-radius: 3px;
+    }
+    pre code { background: transparent; color: inherit; padding: 0; word-break: normal; }
+
+    /* ── ASCII / SCHEMA ── */
+    .ascii-diagram {
+      background: var(--gray); padding: 16px 20px; margin: 16px 0;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px; line-height: 1.7; overflow-x: auto;
+      border-left: 3px solid var(--gray2);
+      white-space: pre; max-width: 100%; -webkit-overflow-scrolling: touch;
+    }
+    .schema-box { border: 1px solid var(--gray); padding: 16px 20px; margin: 16px 0; background: var(--gray); }
+    .schema-box .ascii-diagram { background: transparent; border: none; padding: 0; margin: 0; }
+
+    .trouble-table tbody td:first-child {
+      font-family: var(--font-title); font-size: 0.82rem; font-weight: 700;
+      letter-spacing: 0.02em; width: 180px;
+    }
+    .sub-label {
+      display: block;
+      font-family: var(--font-title); font-size: 14px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--primary); margin: 40px 0 12px;
+    }
+
+    /* ── FIGURE / DIAGRAM ── */
+    .figure-block { padding: 26px 30px 0; }
+    .figure { text-align: center; }
+    .figure img { max-width: 100%; max-height: 560px; height: auto; display: block; margin: 0 auto; }
+    .diagram { text-align: center; margin: 22px 0; border: 1px solid var(--gray); padding: 20px; background: var(--white); }
+    .diagram img { max-width: 100%; height: auto; }
+    .diagram-caption {
+      font-family: var(--font-title); font-size: 12px; font-weight: 400;
+      letter-spacing: 0.04em; color: var(--gray2); margin-top: 12px;
+    }
+
+    /* ── COMPONENT GRID ── */
+    .component-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0; }
+    .component-card { padding: 20px 16px; text-align: center; background: var(--white); border: 1px solid var(--gray); }
+    .component-card img { width: 100%; max-height: 100px; object-fit: contain; margin-bottom: 14px; }
+    .component-name { font-family: var(--font-title); font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--black); margin-bottom: 4px; }
+    .component-role { font-family: var(--font-title); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary); margin-bottom: 8px; }
+    .component-detail { font-family: var(--font-body); font-size: 0.92rem; line-height: 1.55; color: var(--ink); }
+
+    .endpoint-row td:first-child { font-family: 'Courier New', monospace; font-size: 12px; color: var(--primary); font-weight: 700; }
+
+    /* ── CHAPTER NAV (prev / next) ── */
+    .chapter-nav {
+      display: flex; gap: 12px; justify-content: space-between;
+      padding: 0; margin-top: 28px;
+    }
+    .chapter-nav a {
+      flex: 1 1 0; min-width: 0; text-decoration: none;
+      border: 1px solid var(--gray); background: var(--white);
+      padding: 14px 16px; transition: background 0.12s, border-color 0.12s;
+    }
+    .chapter-nav a:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, var(--white)); }
+    .chapter-nav a.next { text-align: right; }
+    .chapter-nav .cn-dir { display: block; font-family: var(--font-title); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray2); margin-bottom: 4px; }
+    .chapter-nav .cn-title { font-family: var(--font-title); font-size: 14px; font-weight: 600; color: var(--black); line-height: 1.3; }
+    .chapter-nav a.disabled { visibility: hidden; }
+
+    /* ── BACK TO TOP ── */
+    .to-top {
+      position: fixed; right: 18px; bottom: 18px; z-index: 90;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--primary); color: #fff; border: none; cursor: pointer;
+      font-size: 22px; line-height: 1; display: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .to-top.show { display: block; }
+
+    /* ── FOOTER ── */
+    footer { border-top: 1px solid var(--gray); padding: 16px 22px; display: flex; justify-content: space-between; align-items: center; background: var(--white); }
+    footer p { font-family: var(--font-body); font-size: 12px; color: var(--gray2); margin: 0; }
+    .footer-logo { font-family: var(--font-title); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--black); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .toc-wrap { grid-template-columns: 1fr; }
+      .toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--gray); }
+      .toc-list { display: grid; grid-template-columns: 1fr 1fr; }
+      .section { padding: 22px 22px 26px; }
+      .hero { padding: 24px 22px 22px; }
+    }
+    @media (max-width: 600px) {
+      .topbar-center { display: none; }
+      .text-size-label { display: none; }
+      .topbar-nav a { padding: 0 12px; font-size: 11px; }
+      .toc-list { display: block; }
+      .hero { padding: 28px 16px 26px; }
+      .hero-title { font-size: clamp(48px, 18vw, 92px); }
+      .starthere { padding: 20px 16px; }
+      .section { padding: 22px 16px 26px; }
+      .section-label-num, .section-label-text { font-size: 15px; letter-spacing: 0.05em; }
+      .figure-block { padding: 20px 16px 0; }
+      .component-grid { grid-template-columns: 1fr 1fr; }
+      table { font-size: 0.85rem; min-width: 440px; }
+      .chapter-nav { flex-direction: column; }
+      footer { flex-direction: column; gap: 6px; text-align: center; }
+    }
+    @media (max-width: 380px) {
+      .component-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── PRINT ── */
+    @media print {
+      body { background: #fff; }
+      .topbar, .progress-track, .toc, .to-top, .chapter-nav, .code-copy, .text-size, .starthere-actions { display: none !important; }
+      .toc-wrap { grid-template-columns: 1fr; }
+      .section, .hero, .starthere { background: #fff; border-color: #bbb; }
+      pre { white-space: pre-wrap; word-break: break-word; border-color: #888; }
+      a { color: var(--ink); text-decoration: none; }
+      .section-label { background: #eee !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .section-label-num, .section-label-text { color: #000 !important; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<a href="#s1" class="skip-link">Skip to content</a>
+
+<!-- TOPBAR — same structure as the app's real TopBar, linking back into it -->
+<header class="topbar">
+  <a class="topbar-logo" href="/">
+    <span>ARIA</span><span>BENE</span><span>COMUNE</span>
+  </a>
+  <div class="topbar-center">Sensor Guide</div>
+  <div class="text-size" role="group" aria-label="Text size">
+    <span class="text-size-label">Text size</span>
+    <button type="button" class="ts-a1" data-size="16" aria-pressed="false" aria-label="Normal text size">A</button>
+    <button type="button" class="ts-a2" data-size="19" aria-pressed="false" aria-label="Large text size">A</button>
+    <button type="button" class="ts-a3" data-size="22" aria-pressed="false" aria-label="Extra large text size">A</button>
+  </div>
+  <nav class="topbar-nav">
+    <a href="/?page=map&amp;lang=en">Map</a>
+    <a href="/?page=archive&amp;lang=en">Archive</a>
+    <a href="guida-eng.html" class="active">Guide</a>
+  </nav>
+</header>
+
+<!-- READING PROGRESS -->
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Aria Bene Comune · Citizen air monitoring</div>
+  <h1 class="hero-title">Sensor<br>Build<br>Guide</h1>
+  <p class="hero-subtitle">A step-by-step, plain-language guide to building your own air-quality sensor — from parts in a box to live readings you and your community can trust.</p>
+  <div class="hero-params">
+    <span class="hero-param">PM2.5 / PM10</span>
+    <span class="hero-param">NH₃ · CO · NO₂</span>
+    <span class="hero-param">VOC</span>
+    <span class="hero-param">Temp · Humidity · Pressure</span>
+  </div>
+</div>
+
+<!-- START HERE -->
+<section class="starthere" aria-label="Start here">
+  <h2>Start here</h2>
+  <div class="starthere-facts">
+    <div class="fact"><div class="fact-k">Time</div><div class="fact-v">A weekend, taken slowly</div></div>
+    <div class="fact"><div class="fact-k">Skill level</div><div class="fact-v">Beginner — no experience needed</div></div>
+    <div class="fact"><div class="fact-k">Involves</div><div class="fact-v">A little soldering &amp; a few computer steps</div></div>
+    <div class="fact"><div class="fact-k">Cost</div><div class="fact-v">Roughly the price of the parts list</div></div>
+  </div>
+  <p>This guide is written so anyone can follow it, even if you have never touched electronics. Two parts of the build are a bit more hands-on: soldering a row of pins, and typing a few commands on the Raspberry Pi. We explain both, one step at a time.</p>
+  <p class="helper">You don't have to do it alone. This is a lovely project to build <strong>with someone</strong> — a grandchild, a neighbour, a friend, or at a local makerspace or fab lab. If a step feels technical, that's the moment to do it together, not to give up.</p>
+  <div class="starthere-actions">
+    <a class="btn btn-primary" href="#s1">Begin with the introduction</a>
+    <a class="btn btn-ghost" href="#" onclick="window.print();return false;">Print / save as PDF</a>
+  </div>
+</section>
+
+<!-- LAYOUT: TOC + CONTENT -->
+<div class="toc-wrap">
+
+  <nav class="toc" aria-label="Chapters">
+    <div class="toc-header">Chapters</div>
+    <ol class="toc-list">
+      <li><a href="#s1"><span class="toc-num">01</span>Introduction</a></li>
+      <li><a href="#s2"><span class="toc-num">02</span>The Components</a></li>
+      <li><a href="#s3"><span class="toc-num">03</span>Building the Node (ESP32)</a></li>
+      <li><a href="#s4"><span class="toc-num">04</span>Setting Up the Server (Raspberry Pi)</a></li>
+      <li><a href="#s5"><span class="toc-num">05</span>First Boot, Calibration &amp; Troubleshooting</a></li>
+      <li><a href="#s6"><span class="toc-num">06</span>The DIY Enclosure</a></li>
+    </ol>
+  </nav>
+
+  <main class="content">
+
+    <!-- SENSOR PHOTO -->
+    <div class="figure-block">
+      <div class="figure">
+        <img src="assets/Sensore.png" alt="The finished air-quality sensor assembled inside its enclosure, ready to mount outdoors." />
+      </div>
+    </div>
+
+    <!-- 1. INTRODUCTION -->
+    <div class="section-label" id="s1">
+      <span class="section-label-num">01</span>
+      <span class="section-label-text">Introduction</span>
+    </div>
+    <div class="section">
+      <h3 class="section-h3">1.1 Why monitoring from below</h3>
+      <p>This is a guide to building an air-quality sensor to monitor pollution levels. This guide has been written to create a community-owned network of sensors in Taranto, but it can be used by anyone who feels the need to use citizen-science methodologies to monitor their living space. It is especially aimed at people resisting in <strong>Sacrifice Zones</strong> of the world, as a tool to counter the information enclosure.</p>
+      <p>This guide walks you step by step through building the <strong>"Aria Bene Comune"</strong> air quality sensor. It is written for people starting from scratch: no experience with electronics or programming is needed. We will use simple materials, open code, and plain language, because the tool to know your own air should be within everyone's reach, not locked behind specialist skills. This is not the ultimate guide to an air quality sensor; discussions and changes are invited and supported. Let's experiment and learn together!</p>
+
+      <h3 class="section-h3">1.2 Your role in the network</h3>
+      <p>By building and activating this sensor, you become one of the network's nodes. Every node has its own identifier (in the <span class="term" title="The sketch is the small program you load onto the ESP32 board.">sketch</span>, it is the <strong>sensor_id</strong> field, e.g. "S1"): this is what allows data from different community sensors to be distinguished.</p>
+      <p>The "Aria Bene Comune" is a community-owned platform, which will bring together data from all nodes into a single view.</p>
+      <p>The device measures the key indicators of the air we breathe:</p>
+      <ul>
+        <li><strong>Particulate matter PM2.5 and PM10</strong> — fine dust particles suspended in the air.</li>
+        <li><strong>Ammonia (NH₃), carbon monoxide (CO), and nitrogen dioxide (NO₂)</strong> — gases linked to traffic, combustion, and agricultural activity.</li>
+        <li><strong>Volatile organic compounds (VOC)</strong> — vapours from paints, solvents, and cleaning products; expressed as gas resistance in kΩ.</li>
+        <li><strong>Temperature, humidity, and atmospheric pressure</strong> — the basic environmental conditions.</li>
+      </ul>
+      <div class="callout">
+        <div class="callout-label">In short</div>
+        <p>Your sensor works perfectly on its own, but it is designed to contribute, together with many others, to a shared and continuously updated picture of the air we breathe.</p>
+      </div>
+      <nav class="chapter-nav" aria-label="Chapter navigation">
+        <a class="prev disabled" href="#" aria-hidden="true"></a>
+        <a class="next" href="#s2"><span class="cn-dir">Next →</span><span class="cn-title">02 · The Components</span></a>
+      </nav>
+    </div>
+
+    <!-- 2. THE COMPONENTS -->
+    <div class="section-label" id="s2">
+      <span class="section-label-num">02</span>
+      <span class="section-label-text">The Components</span>
+    </div>
+    <div class="section">
+      <h3 class="section-h3">2.1 What to buy</h3>
+      <div class="component-grid">
+        <div class="component-card"><img src="assets/RaspberryPi.png" alt="Raspberry Pi single-board computer" /><div class="component-name">Raspberry Pi</div><div class="component-role">Server + dashboard</div><div class="component-detail">Pi 4 or Pi Zero 2 W with Raspberry Pi OS</div></div>
+        <div class="component-card"><img src="assets/ESP32-DevKit.png" alt="ESP32 DevKit microcontroller board" /><div class="component-name">ESP32 DevKit</div><div class="component-role">Sensor node</div><div class="component-detail">Reads gases and environment, sends JSON via USB</div></div>
+        <div class="component-card"><img src="assets/SDS011.png" alt="SDS011 particulate matter sensor" /><div class="component-name">SDS011</div><div class="component-role">Particulate matter</div><div class="component-detail">PM2.5 and PM10, connected to Pi via USB adapter</div></div>
+        <div class="component-card"><img src="assets/MiCS-6814.png" alt="MiCS-6814 multi-gas sensor module" /><div class="component-name">MiCS-6814</div><div class="component-role">Multiple gases</div><div class="component-detail">NH₃, CO, NO₂ — analogue outputs to ESP32</div></div>
+        <div class="component-card"><img src="assets/BME680.png" alt="BME680 environmental sensor module" /><div class="component-name">BME680</div><div class="component-role">Environment + VOC</div><div class="component-detail">Temperature, humidity, pressure, gas (kΩ) via I²C</div></div>
+        <div class="component-card"><img src="assets/USBcable.png" alt="Two USB cables" /><div class="component-name">2 USB cables</div><div class="component-role">Data connections</div><div class="component-detail">ESP32→Pi and SDS011→Pi</div></div>
+        <div class="component-card"><img src="assets/Breadboard.png" alt="Breadboard and jumper wires" /><div class="component-name">Breadboard + jumpers</div><div class="component-role">Wiring</div><div class="component-detail">To connect MiCS-6814 and BME680 to the ESP32</div></div>
+        <div class="component-card"><img src="assets/PowerSupply.png" alt="Power supply adapter" /><div class="component-name">Power supply</div><div class="component-role">Power</div><div class="component-detail">Official Raspberry Pi power adapter</div></div>
+      </div>
+
+      <h3 class="section-h3">2.2 What a breadboard is</h3>
+      <p>If you have never used a breadboard, this section is for you. We'll go slowly, because once you understand one simple idea, everything else becomes easy.</p>
+      <p>A breadboard is a plastic board full of small holes that lets you connect electronic parts together without soldering. You just push wires and pins into the holes. The clever part is that many of those holes are already connected to each other inside the board, by hidden metal strips. So when you put two wires into two holes that are internally joined, those two wires are electrically connected — as if you had twisted them together.</p>
+      <div class="diagram">
+        <img src="assets/diagrams/breadboard_basics.svg" alt="Diagram of a breadboard showing that each numbered column of five holes is joined vertically inside, and the two long side rails run horizontally for power and ground." />
+      </div>
+      <p>There are only two patterns to remember:</p>
+      <ul>
+        <li><strong>The numbered columns (the main middle area):</strong> each column of 5 holes is joined together vertically. The top half (rows a–e) and the bottom half (rows f–j) are separate, divided by the channel in the middle. So holes a, b, c, d, e of column 6 are all the same electrical point; but the f–j holes of column 6 are a different point.</li>
+        <li><strong>The two long side rails (marked + and −):</strong> these run the whole length horizontally and are used to distribute power (+) and ground (−) to many parts at once. They're like two shared supply lines.</li>
+      </ul>
+      <div class="callout">
+        <div class="callout-label">In short</div>
+        <p>Two pins are connected only if they sit in holes that are internally joined. To connect two things, you either put them in the same column, or you run a jumper wire from one column to another. To NOT connect things, keep them in different columns.</p>
+      </div>
+
+      <h3 class="section-h3">2.3 Identifying your jumper wires</h3>
+      <ul>
+        <li><strong>Male–male (M–M):</strong> a metal pin on both ends. Used breadboard-to-breadboard, or breadboard to a pin header.</li>
+        <li><strong>Male–female (M–F):</strong> a pin on one end, a little socket on the other. Used to go from a breadboard hole to a board's pin, or directly between pins.</li>
+        <li><strong>Female–female (F–F):</strong> a socket on both ends. Used to connect two pins directly, no breadboard needed.</li>
+      </ul>
+      <div class="callout">
+        <div class="callout-label">Which to use here</div>
+        <p>If you solder header pins onto your boards and use the breadboard, male–male wires connect breadboard columns to each other and to the rails. The wire colour means nothing electrically — it's only to help you keep track; by convention people use red for + and black for ground.</p>
+      </div>
+
+      <h3 class="section-h3">2.4 Recommended assembly order</h3>
+      <p>Proceeding in small steps, checking after each one, makes it much easier to find any mistakes:</p>
+      <ol>
+        <li>With the ESP32 unplugged, wire the BME680 (3V3, GND, SDA→GPIO12, SCL→GPIO13).</li>
+        <li>Wire the MiCS-6814 (5V, GND, and the three gas outputs to GPIO1, GPIO2, GPIO3).</li>
+        <li>Re-check every wire against the wiring diagram in chapter 3 (section 3.2): in particular check the voltages (BME680 at 3.3 V, MiCS-6814 at 5 V) and that all GND grounds are common.</li>
+        <li>Upload the sketch to the ESP32 and open the Serial Monitor at 115200 baud: check that "BME680 OK" appears and then the JSON lines. This confirms the sensors are wired correctly.</li>
+        <li>Connect the ESP32 to the Raspberry Pi via USB, and connect the SDS011 too.</li>
+        <li>Start the server on the Pi and open <code>/api/status</code> in the browser: if both boards show as connected, the electronic assembly is complete.</li>
+        <li>Only at this point, place everything in the enclosure (chapter 6).</li>
+      </ol>
+      <div class="callout">
+        <div class="callout-label">Check before closing the box</div>
+        <p>It's best to do all these checks with the components still "out in the open", easy to reach. Once everything works, moving to the enclosure is much less stressful. If something doesn't work, chapter 5 (Troubleshooting) lists the most common causes.</p>
+      </div>
+      <nav class="chapter-nav" aria-label="Chapter navigation">
+        <a class="prev" href="#s1"><span class="cn-dir">← Previous</span><span class="cn-title">01 · Introduction</span></a>
+        <a class="next" href="#s3"><span class="cn-dir">Next →</span><span class="cn-title">03 · Building the Node</span></a>
+      </nav>
+    </div>
+
+    <!-- 3. BUILDING THE SENSOR NODE -->
+    <div class="section-label" id="s3">
+      <span class="section-label-num">03</span>
+      <span class="section-label-text">Building the Sensor Node (ESP32)</span>
+    </div>
+    <div class="section">
+      <h3 class="section-h3">3.1 Soldering header pins</h3>
+      <ol>
+        <li>Get strips of "male header pins" (the cheap rows of pins you snap to length). Snap off a piece with the right number of pins for each board's hole row.</li>
+        <li>Push the pins through the board's holes from the underside, so the long ends point down (those go into the breadboard) and the short ends sit on the component side.</li>
+        <li>A trick to hold them straight: push the long ends into the breadboard first, then sit the board on top. The breadboard keeps the pins perfectly aligned while you solder.</li>
+        <li>Heat each pin and its hole with the soldering iron for a second, then touch the solder so it flows around the joint, forming a small shiny cone. Repeat for every pin.</li>
+        <li>Let it cool. Your board now has pins and behaves like a breadboard-friendly module.</li>
+      </ol>
+      <div class="callout">
+        <div class="callout-label">Safety</div>
+        <p>A soldering iron reaches over 300 °C. Work on a heat-proof surface, in a ventilated space, never touch the metal tip, and unplug it when you're done. Safety glasses are a good idea. If you've never soldered, this is a great first project to do with a more experienced friend or at a makerspace.</p>
+      </div>
+
+      <h3 class="section-h3">3.2 Wiring the sensors to the ESP32</h3>
+      <p>The quickest way to understand the connections is to look at them. The diagram below shows the ESP32 in the centre, the BME680 on the left, and the MiCS-6814 on the right, with each coloured wire going from the sensor pin to the correct ESP32 pin. At the bottom, the legend links each wire to the corresponding line of code.</p>
+      <div class="diagram">
+        <img src="assets/diagrams/wired_breadboard.svg" alt="Wiring diagram of the sensor node: the ESP32 in the centre with the BME680 and MiCS-6814 either side, and colour-coded jumper wires from each sensor pin to its matching ESP32 pin." />
+        <div class="diagram-caption">Wiring diagram of the sensor node. The wire colours are just a visual aid: what matters is that each pin goes where indicated.</div>
+      </div>
+      <div class="callout">
+        <div class="callout-label">Safety</div>
+        <p>Always power off the ESP32 (unplug the USB) while wiring. The BME680 runs at 3.3 V; the MiCS-6814 at 5 V. All grounds (GND) must share a common reference.</p>
+      </div>
+      <p>This assumes your ESP32 and both sensors now have header pins and are pushed into the breadboard, each straddling the central channel so their two pin rows land in separate columns. Place the ESP32 toward one end and the two sensors further along, leaving a few free columns between them. Then make the connections one wire at a time. After each wire, pause and check it against the diagram above.</p>
+      <ol>
+        <li><strong>Set up the power rails.</strong> Run one male–male wire from the ESP32's 3V3 pin's column to the red (+) rail, and one from an ESP32 GND pin's column to the blue (−) rail. Now the whole length of those two rails carries 3.3 V and ground.</li>
+        <li><strong>Power the BME680.</strong> From the red (+) rail, run a wire to the column holding the BME680's VCC pin. From the blue (−) rail, run a wire to the BME680's GND column. (The BME680 runs at 3.3 V, which is what we put on the red rail.)</li>
+        <li><strong>BME680 data lines.</strong> Run a wire from the BME680's SDA column to the ESP32's GPIO12 column. Run another from the BME680's SCL column to the ESP32's GPIO13 column.</li>
+        <li><strong>Power the MiCS-6814.</strong> The MiCS-6814 needs 5 V, NOT 3.3 V. So do not use the red rail for it. Instead run a wire straight from the ESP32's 5V (VIN) column to the MiCS-6814's VCC column. For ground, you can use the blue (−) rail as normal (ground is shared by everything).</li>
+        <li><strong>MiCS-6814 gas outputs.</strong> Run three wires: NH₃ column → ESP32 GPIO1; NO₂ column → ESP32 GPIO2; CO column → ESP32 GPIO3.</li>
+        <li><strong>Final check.</strong> Count your wires against the diagram above. Confirm the BME680 is fed from 3.3 V, the MiCS-6814 from 5 V, and that every GND ends up on the blue rail (the common ground).</li>
+      </ol>
+      <div class="callout">
+        <div class="callout-label">The most common beginner mistakes</div>
+        <ul>
+          <li>Putting a wire one column off, so it lands on a neighbouring point — always count columns twice.</li>
+          <li>Feeding the BME680 with 5 V instead of 3.3 V — double-check the power wire.</li>
+          <li>Forgetting the common ground — every board's GND must reach the blue rail.</li>
+          <li>Pushing a wire into the central channel — wires go into the lettered holes, not the gap.</li>
+        </ul>
+      </div>
+
+      <h3 class="section-h3">3.3 Setting up the Arduino IDE</h3>
+      <ol>
+        <li>Download and install the Arduino IDE from <strong>arduino.cc</strong>.</li>
+        <li>In <em>File → Preferences</em>, add the ESP32 board package URL in the "Additional boards manager URLs" field.</li>
+        <li>In <em>Tools → Board → Boards Manager</em>, search for "esp32" and install the package.</li>
+        <li>Select <em>Tools → Board → ESP32 Dev Module</em>.</li>
+        <li>From the Library Manager install: <strong>Adafruit BME680</strong>, <strong>Adafruit Unified Sensor</strong>, and <strong>ArduinoJson</strong> (by Benoit Blanchon).</li>
+      </ol>
+
+      <h3 class="section-h3">3.4 The ESP32 sketch</h3>
+      <p>Connect the ESP32 to your laptop with a USB-C cable. Then copy the code below and upload it to the ESP32 using the Arduino IDE.</p>
+      <div class="code-wrap"><button type="button" class="code-copy" aria-label="Copy code to clipboard">Copy</button><pre><code>#include &lt;Wire.h&gt;
+#include &lt;ArduinoJson.h&gt;
+#include &lt;Adafruit_Sensor.h&gt;
+#include &lt;Adafruit_BME680.h&gt;
+
+const char* SENSOR_ID = "S1";
+const int PIN_NH3 = 1;
+const int PIN_NO2 = 2;
+const int PIN_CO  = 3;
+
+// Sampling: 5 close readings, one burst every 5 minutes
+const int  BURST_SAMPLES   = 5;       // readings per burst
+const long SAMPLE_GAP_MS   = 2000;   // gap between readings (2 s)
+const long CYCLE_PERIOD_MS = 300000; // interval between bursts (5 min)
+
+Adafruit_BME680 bme;
+bool bmeFound = false;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  Wire.begin(12, 13);
+  if (bme.begin(0x76, &Wire)) {
+    bme.setTemperatureOversampling(BME680_OS_8X);
+    bme.setHumidityOversampling(BME680_OS_2X);
+    bme.setPressureOversampling(BME680_OS_4X);
+    bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
+    bme.setGasHeater(320, 150);
+    bmeFound = true;
+    Serial.println("BME680 OK.");
+  } else {
+    Serial.println("BME680 not found - sending gas sensors only.");
+  }
+  Serial.println("Waiting 30s for MICS-6814 heaters...");
+  delay(30000);
+  Serial.println("Starting.");
+}
+
+void loop() {
+  double nh3Sum=0, no2Sum=0, coSum=0;
+  double tSum=0, hSum=0, pSum=0, gSum=0;
+  int gasCount=0, bmeCount=0;
+
+  for (int i = 0; i &lt; BURST_SAMPLES; i++) {
+    nh3Sum += (analogRead(PIN_NH3) / 4095.0) * 100.0;
+    no2Sum += (analogRead(PIN_NO2) / 4095.0) * 100.0;
+    coSum  += (analogRead(PIN_CO)  / 4095.0) * 100.0;
+    gasCount++;
+    if (bmeFound &amp;&amp; bme.performReading()) {
+      tSum += bme.temperature;
+      hSum += bme.humidity;
+      pSum += bme.pressure / 100.0;
+      gSum += bme.gas_resistance / 1000.0;
+      bmeCount++;
+    }
+    if (i &lt; BURST_SAMPLES - 1) delay(SAMPLE_GAP_MS);
+  }
+
+  StaticJsonDocument&lt;300&gt; doc;
+  doc["sensor_id"] = SENSOR_ID;
+  doc["samples"]   = gasCount;
+  doc["nh3"] = nh3Sum / gasCount;
+  doc["no2"] = no2Sum / gasCount;
+  doc["co"]  = coSum  / gasCount;
+  if (bmeCount &gt; 0) {
+    doc["temperature"] = tSum / bmeCount;
+    doc["humidity"]    = hSum / bmeCount;
+    doc["pressure"]    = pSum / bmeCount;
+    doc["gas_kohm"]    = gSum / bmeCount;
+  }
+
+  String payload;
+  serializeJson(doc, payload);
+  Serial.println(payload);
+
+  long burstElapsed = (long)(BURST_SAMPLES - 1) * SAMPLE_GAP_MS;
+  long wait = CYCLE_PERIOD_MS - burstElapsed;
+  if (wait &lt; 0) wait = 0;
+  delay(wait);
+}</code></pre></div>
+
+      <h3 class="section-h3">Code notes</h3>
+      <ul>
+        <li><strong>Built-in warm-up:</strong> the <code>delay(30000)</code> in setup waits 30 seconds to stabilise the MiCS-6814 heaters.</li>
+        <li><strong>Burst of 5 readings:</strong> averaging multiple readings reduces the noise typical of gas sensors, giving a more stable value.</li>
+        <li><strong>One transmission every 5 minutes:</strong> the <code>samples</code> field in the JSON indicates how many readings make up the average (normally 5).</li>
+        <li><strong>Gas values:</strong> <code>nh3</code>, <code>no2</code>, and <code>co</code> are the ADC reading as a percentage (0–100), not yet real concentrations.</li>
+        <li><strong>Robustness:</strong> if the BME680 is not found, the sketch continues sending gas data only.</li>
+      </ul>
+      <div class="callout">
+        <div class="callout-label">Quick check</div>
+        <p>After uploading the sketch, open the Serial Monitor at 115200 baud: you will see startup messages, then one line every 5 minutes such as<br><code>{"sensor_id":"S1","samples":5,"nh3":21.3,...}</code><br>For initial testing, temporarily lower <code>CYCLE_PERIOD_MS</code> to 15000 (15 s).</p>
+      </div>
+      <nav class="chapter-nav" aria-label="Chapter navigation">
+        <a class="prev" href="#s2"><span class="cn-dir">← Previous</span><span class="cn-title">02 · The Components</span></a>
+        <a class="next" href="#s4"><span class="cn-dir">Next →</span><span class="cn-title">04 · Setting Up the Server</span></a>
+      </nav>
+    </div>
+
+    <!-- 4. SETTING UP THE SERVER -->
+    <div class="section-label" id="s4">
+      <span class="section-label-num">04</span>
+      <span class="section-label-text">Setting Up the Server (Raspberry Pi)</span>
+    </div>
+    <div class="section">
+      <h3 class="section-h3">4.1 USB connections</h3>
+      <p>On the Raspberry Pi there is no breadboard wiring: two devices are connected via USB.</p>
+      <ul>
+        <li>The <strong>SDS011</strong> sensor, via its USB adapter, usually appears as <code>/dev/ttyUSB0</code>.</li>
+        <li>The <strong>ESP32</strong>, connected via USB cable, usually appears as <code>/dev/ttyACM0</code>.</li>
+      </ul>
+      <p>If the names do not match, run in the Terminal:</p>
+      <div class="code-wrap"><button type="button" class="code-copy" aria-label="Copy code to clipboard">Copy</button><pre><code>ls /dev/ttyUSB* /dev/ttyACM*</code></pre></div>
+      <p>and update the <code>SDS011_PORT</code> and <code>ESP_PORT</code> variables at the top of the program.</p>
+
+      <h3 class="section-h3">4.2 Installing the software</h3>
+      <p>Install Raspberry Pi OS on the microSD with Raspberry Pi Imager, then open a Terminal and run:</p>
+      <div class="code-wrap"><button type="button" class="code-copy" aria-label="Copy code to clipboard">Copy</button><pre><code>sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3-pip
+pip3 install flask flask-cors pyserial</code></pre></div>
+      <p>Copy the server file to the Pi and, if present, the <code>dist/</code> folder with the React dashboard. Then add your user to the serial port group:</p>
+      <div class="code-wrap"><button type="button" class="code-copy" aria-label="Copy code to clipboard">Copy</button><pre><code>sudo usermod -a -G dialout $USER
+sudo reboot</code></pre></div>
+
+      <h3 class="section-h3">4.3 How the Pi program works</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Program component</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><strong>SDS011 reader</strong></td><td>Reads packets from the particulate sensor and extracts PM2.5 and PM10.</td></tr>
+            <tr><td><strong>ESP32 reader</strong></td><td>Reads JSON lines from the ESP32 and extracts gas and environmental data.</td></tr>
+            <tr><td><strong>Merge loop</strong></td><td>Every 30 seconds merges the latest readings into a single "snapshot".</td></tr>
+            <tr><td><strong>Hourly average</strong></td><td>Accumulates snapshots for the current hour and, at the turn of each hour, calculates and archives the average.</td></tr>
+            <tr><td><strong>Saving</strong></td><td>Writes data to CSV files and history to <code>history.json</code> and <code>hourly.json</code>.</td></tr>
+            <tr><td><strong>Simulation</strong></td><td>If a board is missing, generates realistic data in its place.</td></tr>
+            <tr><td><strong>Web server (Flask)</strong></td><td>Publishes the API endpoints and serves the dashboard on port 5050.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="section-h3">Available endpoints</h3>
+      <div class="table-wrap">
+        <table class="endpoint-row">
+          <thead><tr><th>Address</th><th>What it returns</th></tr></thead>
+          <tbody>
+            <tr><td>/api/live</td><td>The latest merged snapshot of all values.</td></tr>
+            <tr><td>/api/history</td><td>The history of the last 24 hours.</td></tr>
+            <tr><td>/api/hourly</td><td>The hourly averages (the data displayed by the platform).</td></tr>
+            <tr><td>/api/status</td><td>Connection status of both boards.</td></tr>
+            <tr><td>/api/pm</td><td>The last 50 particulate readings.</td></tr>
+            <tr><td>/api/mean</td><td>The last 50 ESP32 readings, averaged by sensor.</td></tr>
+            <tr><td>/data (POST)</td><td>Allows an ESP32 to send data via Wi-Fi instead of USB.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="section-h3">From sample to hourly average</h3>
+      <ol>
+        <li>The ESP32 takes 5 close readings and sends their average: <strong>one value every 5 minutes</strong> (about 12 values per hour).</li>
+        <li>The Raspberry Pi receives these values and, together with the particulate from the SDS011, accumulates them for the current hour.</li>
+        <li>At the turn of each new hour, the server calculates the average of all values collected in the just-completed hour and archives it in <code>hourly.json</code>.</li>
+        <li>The <strong>hourly average</strong> is the data exposed at <code>/api/hourly</code> — what the community platform shows to citizens.</li>
+      </ol>
+
+      <h3 class="section-h3">Starting the server</h3>
+      <div class="code-wrap"><button type="button" class="code-copy" aria-label="Copy code to clipboard">Copy</button><pre><code>cd ~/aria-bene-comune     # the folder where you put the file
+python3 server.py          # use the actual name of your file</code></pre></div>
+      <p>Find the Pi's IP address with:</p>
+      <div class="code-wrap"><button type="button" class="code-copy" aria-label="Copy code to clipboard">Copy</button><pre><code>hostname -I</code></pre></div>
+      <p>From any device on the same network, open a browser at <code>http://IP-ADDRESS:5050</code> to see the dashboard.</p>
+      <nav class="chapter-nav" aria-label="Chapter navigation">
+        <a class="prev" href="#s3"><span class="cn-dir">← Previous</span><span class="cn-title">03 · Building the Node</span></a>
+        <a class="next" href="#s5"><span class="cn-dir">Next →</span><span class="cn-title">05 · First Boot &amp; Troubleshooting</span></a>
+      </nav>
+    </div>
+
+    <!-- 5. FIRST BOOT, CALIBRATION AND TROUBLESHOOTING -->
+    <div class="section-label" id="s5">
+      <span class="section-label-num">05</span>
+      <span class="section-label-text">First Boot, Calibration &amp; Troubleshooting</span>
+    </div>
+    <div class="section">
+      <h3 class="section-h3">5.1 First boot and testing</h3>
+      <ol>
+        <li>Connect the SDS011 and the ESP32 to the Pi's USB ports.</li>
+        <li>For the first tests, power the Raspberry Pi from <strong>mains power</strong>: it is more stable while you verify everything works.</li>
+        <li>Power on the Raspberry Pi and wait for the system to boot.</li>
+        <li>Start the server as shown in chapter 4.</li>
+        <li>Leave everything running for <strong>10–15 minutes</strong>: this is the warm-up time for the gas sensors.</li>
+        <li>Open the dashboard in a browser and check that values change over time.</li>
+        <li>Open <code>/api/status</code> to verify that both boards show as connected (<code>true</code>).</li>
+      </ol>
+      <div class="callout">
+        <div class="callout-label">How to tell if it is simulating</div>
+        <p>If <code>/api/status</code> shows a board as <code>false</code> but you still see values, those values are simulated. Check the USB connections and port names.</p>
+      </div>
+
+      <h3 class="section-h3">5.2 Warm-up</h3>
+      <p>The ESP32 sketch already waits 30 seconds on startup for the MiCS-6814 heaters. For truly reliable readings, however, it is best to leave the device powered on in clean air for at least <strong>10–15 minutes</strong> before recording serious data.</p>
+
+      <h3 class="section-h3">5.3 Basic calibration</h3>
+      <ul>
+        <li><strong>PM2.5 and PM10:</strong> the SDS011 already outputs µg/m³, so it is essentially ready to use.</li>
+        <li><strong>Gases (NH₃, CO, NO₂):</strong> in the sketch these values are the ADC reading as a percentage (0–100), not real concentrations. Note the values in clean air as a "baseline". Converting them to actual concentrations requires applying the MiCS-6814 manufacturer's curves.</li>
+        <li><strong>VOC (<code>gas_kohm</code>):</strong> this is a resistance in kΩ. In clean air the value is higher; it drops in the presence of vapours. Rather than the absolute number, what matters is how it varies relative to the baseline.</li>
+      </ul>
+      <div class="callout">
+        <div class="callout-label">Keep in mind</div>
+        <p>A hobbyist sensor indicates <strong>trends</strong> (whether air quality is improving or worsening) rather than laboratory-precision measurements. For home and educational use it is perfectly suitable.</p>
+      </div>
+
+      <h3 class="section-h3">5.4 Troubleshooting</h3>
+      <div class="table-wrap">
+        <table class="trouble-table">
+          <thead><tr><th>Problem</th><th>Possible cause</th><th>What to do</th></tr></thead>
+          <tbody>
+            <tr><td>"unavailable" on startup</td><td>Wrong USB port</td><td>Check port names with <code>ls /dev/ttyUSB* /dev/ttyACM*</code> and update the variables</td></tr>
+            <tr><td>Permission denied on serial</td><td>User not in the dialout group</td><td>Run <code>usermod -a -G dialout</code> and reboot</td></tr>
+            <tr><td>Data always identical</td><td>Sensors not warmed up or simulation active</td><td>Wait 10–15 min; check <code>/api/status</code></td></tr>
+            <tr><td>Dashboard does not open</td><td>Wrong IP or closed port</td><td>Verify IP with <code>hostname -I</code>; use port <code>:5050</code></td></tr>
+            <tr><td>ESP32 not recognised</td><td>Missing USB driver</td><td>Install CP210x/CH340 drivers on your system</td></tr>
+            <tr><td>JSON not read</td><td>Different baud rate or format</td><td>Make sure the sketch uses 115200 and the correct field names</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <nav class="chapter-nav" aria-label="Chapter navigation">
+        <a class="prev" href="#s4"><span class="cn-dir">← Previous</span><span class="cn-title">04 · Setting Up the Server</span></a>
+        <a class="next" href="#s6"><span class="cn-dir">Next →</span><span class="cn-title">06 · The DIY Enclosure</span></a>
+      </nav>
+    </div>
+
+    <!-- 6. THE ENCLOSURE -->
+    <div class="section-label" id="s6">
+      <span class="section-label-num">06</span>
+      <span class="section-label-text">The DIY Enclosure</span>
+    </div>
+    <div class="section">
+      <p>One of the core ideas behind "Aria Bene Comune" is that the sensor is truly accessible to everyone: open source and built with <strong>salvaged materials</strong>. There is no need for a bought or 3D-printed enclosure. Any waterproof container you already have at home will do: a biscuit tin, a food storage container, a plastic toolbox.</p>
+      <div class="callout">
+        <div class="callout-label">Guiding principle</div>
+        <p>The enclosure must <strong>protect the electronics from rain</strong> while also <strong>allowing air to flow freely</strong> to the sensors.</p>
+      </div>
+
+      <h3 class="section-h3">6.1 What you need for the enclosure</h3>
+      <ul>
+        <li>A waterproof container with a lid.</li>
+        <li>A tool for making holes: a bradawl, a drill, or a nail and hammer.</li>
+        <li>Strong adhesive tape or a hot glue gun to fix and seal.</li>
+        <li>Electrical insulating tape (useful if the box is metal).</li>
+        <li><em>Optional:</em> fine mesh (fly screen) to cover the air holes.</li>
+        <li><em>Optional:</em> cable ties to secure the box.</li>
+      </ul>
+
+      <h3 class="section-h3">6.2 Air holes</h3>
+      <ul>
+        <li>Make a cluster of holes <strong>near the sensors</strong> (SDS011 and BME680).</li>
+        <li>Put holes on the <strong>sides or bottom</strong>, never facing upward: they would collect rain.</li>
+        <li>A few holes a few millimetres wide are enough: many small holes are better than one large opening.</li>
+        <li>Cover the holes with fine mesh to keep out insects and dirt.</li>
+      </ul>
+      <div class="callout">
+        <div class="callout-label">Important for particulate sensing</div>
+        <p>The SDS011 sensor has its own air intake with a small fan. Position the box so that intake is as close as possible to a cluster of holes, and that neither mesh nor cables obstruct it.</p>
+      </div>
+
+      <h3 class="section-h3">6.3 The cable hole and drip loop</h3>
+      <ul>
+        <li>Make a single hole for the cables, as small as possible, on a side that faces downward.</li>
+        <li>Seal around it with hot glue or tape, leaving the cable free to move slightly.</li>
+        <li>Create an inverted-U loop in the cable just outside the hole (a loop pointing downward): rain drips off before reaching the hole. This technique is called a <strong>drip loop</strong>.</li>
+      </ul>
+
+      <h3 class="section-h3">6.4 Power: solar panel and power bank</h3>
+      <div class="schema-box">
+        <div class="ascii-diagram">[ Solar panel ]
+        |  (charging)
+        v
+[ Power bank ]  &lt;-- buffer battery
+        |  (USB)
+        v
+[ Raspberry Pi ] --&gt; ESP32 &amp; sensors</div>
+      </div>
+      <p>The solar panel charges the power bank, and the power bank powers the Raspberry Pi. The battery acts as a "reservoir": it accumulates energy when there is sun and continues to power the system when there is none.</p>
+      <div class="callout">
+        <div class="callout-label">Essential power bank requirement</div>
+        <p>It must support <strong>"passthrough charging"</strong>: the ability to charge from the panel while simultaneously powering the Pi. Many cheap power banks shut off when being charged — these <strong>will not work</strong>.</p>
+      </div>
+
+      <h3 class="section-h3">6.5 Arranging components inside the box</h3>
+      <ul>
+        <li>If the box is metal, <strong>line the inside with insulating tape</strong>: metal conducts electricity and accidental contact can cause a short circuit.</li>
+        <li>Place the Raspberry Pi and power bank in the most sheltered spot, away from the air holes.</li>
+        <li>Position the sensors (SDS011 and BME680) close to the air holes, without touching the walls.</li>
+        <li>Rest the electronics on a small support (a bottle cap, foam) to keep them off the bottom.</li>
+        <li>Put a <strong>silica gel sachet</strong> in the box to absorb excess moisture.</li>
+      </ul>
+
+      <h3 class="section-h3">6.6 Outdoor installation</h3>
+      <ul>
+        <li>Place the sensor in a well-ventilated spot, away from direct heat sources or smoke.</li>
+        <li>The typical height for comparable measurements is about <strong>1.5–3 metres above ground</strong>.</li>
+        <li>Avoid corners with no air circulation: air must be able to circulate around the box.</li>
+        <li>Secure the box firmly (cable ties to a railing) so the wind cannot move it.</li>
+        <li>Orient the solar panel facing south, tilted so it does not retain water.</li>
+      </ul>
+      <nav class="chapter-nav" aria-label="Chapter navigation">
+        <a class="prev" href="#s5"><span class="cn-dir">← Previous</span><span class="cn-title">05 · First Boot &amp; Troubleshooting</span></a>
+        <a class="next disabled" href="#" aria-hidden="true"></a>
+      </nav>
+    </div>
+
+    <div class="section" style="text-align:center;">
+      <p style="font-family: var(--font-title); font-size: 22px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary);">Happy building!</p>
+      <p style="max-width:520px;margin:14px auto 0;">You've reached the end. When your sensor is switched on, you've added a voice to a shared, living picture of the air. Build it, improve it, and pass the guide on.</p>
+      <div style="margin-top:18px;"><a class="btn btn-ghost" href="#" onclick="window.print();return false;">Print / save this guide as PDF</a></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- BACK TO TOP -->
+<button type="button" class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">Aria Bene Comune</span>
+  <p>Simulated data — Beginner's guide — Taranto, Italy</p>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- Text size control (persists in localStorage) ----
+  var root = document.documentElement;
+  var sizeButtons = Array.prototype.slice.call(document.querySelectorAll('.text-size button'));
+  function applySize(px, save) {
+    root.style.setProperty('--fs', px + 'px');
+    sizeButtons.forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.size === String(px)));
+    });
+    if (save) { try { localStorage.setItem('abc-fs', px); } catch (e) {} }
+  }
+  sizeButtons.forEach(function (b) {
+    b.addEventListener('click', function () { applySize(parseInt(b.dataset.size, 10), true); });
+  });
+  var savedSize = null;
+  try { savedSize = localStorage.getItem('abc-fs'); } catch (e) {}
+  applySize(savedSize ? parseInt(savedSize, 10) : 17, false);
+
+  // ---- Reading progress bar ----
+  var fill = document.getElementById('progressFill');
+  function onScroll() {
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    var pct = max > 0 ? (scrolled / max) * 100 : 0;
+    fill.style.width = pct + '%';
+
+    // back to top visibility
+    toTop.classList.toggle('show', scrolled > 600);
+  }
+
+  // ---- Scroll-spy: highlight current chapter in the TOC ----
+  var sections = ['s1','s2','s3','s4','s5','s6'].map(function (id) { return document.getElementById(id); });
+  var tocLinks = {};
+  document.querySelectorAll('.toc-list a').forEach(function (a) {
+    tocLinks[a.getAttribute('href').slice(1)] = a;
+  });
+  function spy() {
+    var pos = window.scrollY + 140;
+    var currentId = 's1';
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i] && sections[i].offsetTop <= pos) currentId = sections[i].id;
+    }
+    Object.keys(tocLinks).forEach(function (id) {
+      tocLinks[id].classList.toggle('active', id === currentId);
+    });
+  }
+
+  var ticking = false;
+  window.addEventListener('scroll', function () {
+    if (!ticking) {
+      window.requestAnimationFrame(function () { onScroll(); spy(); ticking = false; });
+      ticking = true;
+    }
+  }, { passive: true });
+
+  // ---- Back to top ----
+  var toTop = document.getElementById('toTop');
+  toTop.addEventListener('click', function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // ---- Copy buttons on code blocks ----
+  document.querySelectorAll('.code-copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      if (!pre) return;
+      var text = pre.innerText;
+      function done() {
+        var old = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(function () { btn.textContent = old; }, 1400);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {});
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+
+  // initial paint
+  onScroll(); spy();
+})();
+</script>
+
+</body>
+</html>
