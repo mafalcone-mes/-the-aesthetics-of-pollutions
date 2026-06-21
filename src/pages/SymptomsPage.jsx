@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
-import { SYMPTOMS, SUGGESTIONS } from '../data/symptoms';
+import { SYMPTOMS, ORGAN_SYMPTOMS, SUGGESTIONS } from '../data/symptoms';
 import { HOURLY_DATA } from '../data/timeseries';
 import { getPollLevel } from '../utils/aqi';
 
@@ -19,14 +19,6 @@ const CATS = [
   { key: 'gaseous',      it: 'Gas irritanti (NO₂/SO₂/O₃)', en: 'Gaseous (NO₂/SO₂/O₃)' },
   { key: 'systemic',     it: 'Sistemici (CO/NH₃/C₆H₆)',    en: 'Systemic (CO/NH₃/C₆H₆)' },
 ];
-
-const ZONE_Y = {
-  mind:    '17%',
-  eyes:    '25%',
-  throat:  '40%',
-  chest:   '53%',
-  stomach: '73%',
-};
 
 const SUB_LABEL = {
   fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700,
@@ -102,162 +94,109 @@ function toISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const SAGOME = Object.keys(import.meta.glob('/public/assets/sagome/*.png')).map(
-  p => p.replace('/public', '')
-);
+const panelW = 'calc(100vw / 6 * 1.5)';
+const BOX    = { background: 'var(--white)', padding: '12px 14px' };
+const PANEL  = { ...BOX, width: panelW, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, borderRight: '1px solid var(--gray)' };
 
-const panelW    = 'calc(100vw / 6 * 1.5)';
-const BOX       = { background: 'var(--white)', padding: '12px 14px', pointerEvents: 'auto' };
-const timelineH = 58;
-
-const ZONE_POS = {
-  mind:    { x: 38, y: 17 },
-  eyes:    { x: 38, y: 25 },
-  throat:  { x: 38, y: 40 },
-  chest:   { x: 38, y: 53 },
-  stomach: { x: 38, y: 73 },
-};
-
-function BodyBlobOverlay({ categoryLevels }) {
-  const entries = Object.entries(ZONE_CATS);
-
+function BodySvg() {
   return (
     <svg
-      style={{
-        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-        pointerEvents: 'none', overflow: 'hidden', mixBlendMode: 'multiply', zIndex: 5,
-      }}
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
+      viewBox="0 0 198.1 275.1"
+      preserveAspectRatio="xMidYMin meet"
+      style={{ height: '100%', width: 'auto', aspectRatio: '198.1 / 466.3', pointerEvents: 'none' }}
     >
-      <defs>
-        <filter id="blob-halo" x="-200%" y="-150%" width="500%" height="400%">
-          <feGaussianBlur stdDeviation="13" />
-        </filter>
-        <filter id="blob-mid" x="-100%" y="-80%" width="300%" height="260%">
-          <feGaussianBlur stdDeviation="5" />
-        </filter>
-        <filter id="blob-core" x="-60%" y="-40%" width="220%" height="180%">
-          <feGaussianBlur stdDeviation="2" />
-        </filter>
-      </defs>
-
-      {/* outer diffuse halo — 2 levels below */}
-      <g filter="url(#blob-halo)" opacity="0.28">
-        {entries.map(([zoneKey, zone]) => {
-          const lvIdx = categoryLevels[zone.primary];
-          const pos = ZONE_POS[zoneKey];
-          return <ellipse key={zoneKey} cx={pos.x} cy={pos.y} rx={30} ry={38} fill={LEVELS[Math.max(0, lvIdx - 2)].color} />;
-        })}
-      </g>
-
-      {/* warm mid ring — 1 level below */}
-      <g filter="url(#blob-mid)" opacity="0.6">
-        {entries.map(([zoneKey, zone]) => {
-          const lvIdx = categoryLevels[zone.primary];
-          const pos = ZONE_POS[zoneKey];
-          return <ellipse key={zoneKey} cx={pos.x} cy={pos.y} rx={16} ry={22} fill={LEVELS[Math.max(0, lvIdx - 1)].color} />;
-        })}
-      </g>
-
-      {/* hot core — current level */}
-      <g filter="url(#blob-core)" opacity="0.85">
-        {entries.map(([zoneKey, zone]) => {
-          const lvIdx = categoryLevels[zone.primary];
-          const pos = ZONE_POS[zoneKey];
-          return <ellipse key={zoneKey} cx={pos.x} cy={pos.y} rx={6} ry={8} fill={LEVELS[lvIdx].color} />;
-        })}
-      </g>
+      <path
+        d="M195.9,250.2c-2.7-1.3-5.4-4.4-6.5-6.3-1.1-1.9-1.9-2.3-1.9-2.3,0,0,1.5,12.3,1.9,16,.5,4.1,2,9.8-.1,10.4-2.4.7-3-2.5-3.4-4.9s-2.8-14.1-3.6-14.8c-1-.9-.5.5-.3,3.3,0,.9.4,5.7.9,8.8.5,3,2,9.9-1.2,9.5-3.3-.4-4.1-18.8-4.6-20.1s-1-.8-.7,2.5c.1,1,1.8,13.4,1.2,15.9s-3,2.1-3.8-1.1-1.6-16.2-2.1-17.1c-.5-.9-.7.8-.5,3.1.1,1.7,1.1,11.1-.8,11.5s-2.6-.8-3.2-7.6c-.5-6-.5-9.3-.8-13.2-.3-3.8-.7-15.1,1.2-18.5,0,0-2.3-11.6-7.2-21.6-4.8-10-12-27.5-11.7-36.1.3-7.1-5.7-32-8-40.3-.2,2.1-.5,4.3-1,6.6-2.2,11.2-5.5,24.9-5,33.3.5,8.4,1.4,21.3,2.3,26.3s6.6,24.4,6.4,48.3c0,11.1-.8,23.1-1.7,33.3h-38.2c-1.8-14.6-3.2-29.8-2.4-36.6l-1.7-.2-1.7.2c.8,6.8-.6,22-2.4,36.6h-38.2c-.9-10.3-1.7-22.3-1.7-33.3,0-23.9,5.5-43.3,6.4-48.3s1.9-17.8,2.3-26.3c.5-8.4-2.8-22-5-33.3-.4-2.3-.8-4.5-1-6.6-2.2,8.4-8.2,33.2-8,40.3.3,8.6-6.9,26.1-11.7,36.1-4.8,10-7.2,21.6-7.2,21.6,1.9,3.4,1.5,14.7,1.2,18.5s-.4,7.2-.8,13.2c-.5,6.9-1.3,8-3.2,7.6-1.9-.4-.9-9.8-.8-11.5.1-2.3,0-4.1-.5-3.1-.6.9-1.3,13.9-2.1,17.1-.8,3.2-3.2,3.6-3.8,1.1-.6-2.5,1.1-14.8,1.2-15.9.3-3.3-.2-3.8-.7-2.5s-1.3,19.7-4.6,20.1c-3.3.4-1.7-6.4-1.2-9.5.5-3,.8-7.8.9-8.8.2-2.8.6-4.2-.3-3.3-.8.7-3.2,12.3-3.6,14.8-.4,2.4-1,5.6-3.4,4.9-2.2-.6-.6-6.2-.1-10.4.4-3.7,1.9-16,1.9-16,0,0-.8.5-1.9,2.3-1.1,1.9-3.8,5-6.5,6.3C.2,251.5,0,248.7,1.5,246.9c1.3-1.6,3.9-7.7,5.1-9.8,1.2-2,5.5-8.9,8.9-12.1.8-.8,1.7-1.4,2.4-1.8,2.4-5.6,5.4-28,7.1-45.1,1.8-18,7.5-25.2,7.5-25.2-.8-14.8,4.1-30.1,3.9-33.8-.2-3.6,0-15,0-15,.9-18.6,10.7-22.2,21.4-25.6,10.7-3.4,23.8-10,25.7-11.7,1.9-1.7,1.9-4.5,2-9.1,0-4.5-1.8-9.2-3.4-14.6-4.1,0-6.6-12.5-4.5-13.7.7-.4,1.3-.4,1.7-.3-.7-6.3-.4-13.5,2.7-19C87.3-.4,98.6,0,98.6,0h1s11.2-.4,17,10.2c3,5.5,3.3,12.7,2.7,19,.4-.1,1-.1,1.7.3,2.1,1.1-.4,13.6-4.5,13.7-1.5,5.4-3.4,10.2-3.4,14.6s0,7.4,2,9.1,15,8.3,25.7,11.7c10.7,3.4,20.5,7,21.4,25.6,0,0,.2,11.3,0,15-.1,3.6,4.8,19,4,33.8,0,0,5.7,7.1,7.5,25.2,1.7,17.1,4.6,39.5,7,45.1.8.4,1.6,1,2.5,1.8,3.4,3.2,7.7,10.1,8.9,12.1s3.8,8.2,5.1,9.8h0c1.5,1.9,1.3,4.6-1.4,3.3h.1Z"
+        fill="var(--white)"
+        stroke="var(--primary)"
+        strokeWidth="3"
+      />
     </svg>
   );
 }
 
-function BodyFigure({ activeZone, onSelectZone, zoneColors, categoryLevels, lang, bodyImg }) {
+function SymptomCards({ categoryLevels, lang, embedded }) {
   const L = lang === 'it';
   return (
-    <div className="body-callout-wrap">
-      <img
-        src={bodyImg}
-        alt=""
-        style={{
-          position: 'absolute',
-          right: '18%',
-          left: 'auto',
-          transform: 'none',
-          height: '88%',
-          top: '8%',
-          width: 'auto',
-          zIndex: 1,
-          pointerEvents: 'none',
-          objectFit: 'contain',
-        }}
-      />
-
-      <BodyBlobOverlay categoryLevels={categoryLevels} />
-
+    <div style={embedded ? {
+      width: '100%', flexShrink: 1, display: 'flex', flexWrap: 'wrap', gap: 2,
+    } : {
+      width: 680, height: '90%', alignSelf: 'center', flexShrink: 0,
+      display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'repeat(3, 1fr)', gap: 2,
+    }}>
       {Object.entries(ZONE_CATS).map(([key, z]) => {
-        const isActive = activeZone === key;
-        const color = zoneColors[key];
+        const lv = LEVELS[categoryLevels[z.primary]];
+        const sym = ORGAN_SYMPTOMS[key][lv.key];
+        const noSym = !sym || (!sym.gen && !sym.sen);
         return (
-          <button
-            key={key}
-            onClick={(e) => { e.stopPropagation(); onSelectZone(key); }}
-            aria-label={L ? z.label_it : z.label_en}
-            style={{
-              position: 'absolute',
-              left: '36vw',
-              right: '42%',
-              top: ZONE_Y[key],
-              transform: 'translateY(-50%)',
-              display: 'flex',
-              alignItems: 'center',
-              background: 'none',
-              border: 'none',
-              padding: '10px 0',
-              cursor: 'pointer',
-              zIndex: 10,
-            }}
-          >
-            <div style={{
-              width: isActive ? 20 : 14,
-              height: isActive ? 20 : 14,
-              borderRadius: '50%',
-              background: color,
-              flexShrink: 0,
-              transition: 'all 0.15s',
-              boxShadow: isActive ? `0 0 0 3px rgba(255,255,255,0.5)` : 'none',
-            }} />
-            <div style={{
-              flex: 1,
-              height: 1.5,
-              background: color,
-              opacity: isActive ? 1 : 0.7,
-              transition: 'opacity 0.15s',
-            }} />
-          </button>
+          <div key={key} style={embedded
+            ? { flex: '1 1 200px', minWidth: 200, minHeight: 220, overflow: 'hidden', background: lv.color, padding: '20px 24px' }
+            : { minHeight: 0, overflow: 'hidden', background: lv.color, padding: '14px 18px' }
+          }>
+            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', marginBottom: 3 }}>
+              {L ? 'SINTOMI' : 'SYMPTOMS'} — {L ? lv.it : lv.en}
+            </div>
+            <div style={{ fontFamily: 'var(--font-title)', fontSize: embedded ? 22 : 'clamp(13px, 1.4vw, 20px)', fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 6 }}>
+              {L ? z.label_it : z.label_en}
+            </div>
+            {noSym ? (
+              <div style={{ fontFamily: 'var(--font-title)', fontSize: 12, lineHeight: 1.5, color: 'rgba(255,255,255,0.85)' }}>
+                {L ? 'Nessun sintomo atteso a questo livello.' : 'No symptoms expected at this level.'}
+              </div>
+            ) : (
+              [
+                { who: L ? 'Popolazione generale' : 'General population', text: L ? sym.gen?.it : sym.gen?.en },
+                { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: L ? sym.sen?.it : sym.sen?.en },
+              ].filter(s => s.text).map((s, i) => (
+                <div key={i} style={{ marginBottom: i === 0 ? 5 : 0 }}>
+                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>{s.who}</div>
+                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 12, lineHeight: 1.45, color: '#fff' }}>{s.text}</div>
+                </div>
+              ))
+            )}
+          </div>
         );
       })}
     </div>
   );
 }
 
-export default function SymptomsPage({ lang, liveRows }) {
-  const [activeZone, setActiveZone] = useState(null);
-  const [activeSensor, setActiveSensor] = useState('all');
+export default function SymptomsPage({ lang, liveRows, timeControl, sensorControl, embedded, hideHero, hideMatrixReport, hideReport }) {
+  // When `sensorControl` is passed (e.g. embedded under MapPage), the sensor
+  // command is shared with the parent instead of duplicating its own control.
+  const [activeSensorInt, setActiveSensorInt] = useState('all');
+  const activeSensor    = sensorControl ? sensorControl.selectedSensorId : activeSensorInt;
+  const setActiveSensor = sensorControl ? sensorControl.setSelectedSensorId : setActiveSensorInt;
   const L = lang === 'it';
-  const bodyImg = useMemo(() => SAGOME[Math.floor(Math.random() * SAGOME.length)], []);
 
   const availableDays = [...new Set(HOURLY_DATA.map(r => toISO(r.dateObj)))].sort();
   const latestDay = availableDays[availableDays.length - 1] ?? '';
   const firstDay  = availableDays[0] ?? '';
 
-  const [timeMode,       setTimeMode]       = useState('single');
-  const [selectedDate,   setSelectedDate]   = useState(latestDay);
-  const [selectedHour,   setSelectedHour]   = useState(23);
-  const [rangeDateStart, setRangeDateStart] = useState(firstDay);
-  const [rangeDateEnd,   setRangeDateEnd]   = useState(latestDay);
-  const [playhead,       setPlayhead]       = useState(0);
-  const [isPlaying,      setIsPlaying]      = useState(false);
+  // When `timeControl` is passed (e.g. embedded under MapPage), the time/date
+  // command is shared with the parent instead of duplicating its own control.
+  const [timeModeInt,       setTimeModeInt]       = useState('single');
+  const [selectedDateInt,   setSelectedDateInt]   = useState(latestDay);
+  const [selectedHourInt,   setSelectedHourInt]   = useState(23);
+  const [rangeDateStartInt, setRangeDateStartInt] = useState(firstDay);
+  const [rangeDateEndInt,   setRangeDateEndInt]   = useState(latestDay);
+  const [playheadInt,       setPlayheadInt]       = useState(0);
+  const [isPlayingInt,      setIsPlayingInt]      = useState(false);
+
+  const timeMode         = timeControl ? timeControl.timeMode         : timeModeInt;
+  const setTimeMode      = timeControl ? timeControl.setTimeMode      : setTimeModeInt;
+  const selectedDate     = timeControl ? timeControl.selectedDate     : selectedDateInt;
+  const setSelectedDate  = timeControl ? timeControl.setSelectedDate  : setSelectedDateInt;
+  const selectedHour     = timeControl ? timeControl.selectedHour     : selectedHourInt;
+  const setSelectedHour  = timeControl ? timeControl.setSelectedHour  : setSelectedHourInt;
+  const rangeDateStart    = timeControl ? timeControl.rangeDateStart    : rangeDateStartInt;
+  const setRangeDateStart = timeControl ? timeControl.setRangeDateStart : setRangeDateStartInt;
+  const rangeDateEnd      = timeControl ? timeControl.rangeDateEnd      : rangeDateEndInt;
+  const setRangeDateEnd   = timeControl ? timeControl.setRangeDateEnd   : setRangeDateEndInt;
+  const playhead          = timeControl ? timeControl.playhead          : playheadInt;
+  const setPlayhead       = timeControl ? timeControl.setPlayhead       : setPlayheadInt;
+  const isPlaying         = timeControl ? timeControl.isPlaying         : isPlayingInt;
+  const setIsPlaying      = timeControl ? timeControl.setIsPlaying      : setIsPlayingInt;
 
   const rangeDates = availableDays.filter(d => d >= rangeDateStart && d <= rangeDateEnd);
   const displayDate = timeMode === 'range' ? (rangeDates[playhead] ?? rangeDateStart) : selectedDate;
@@ -283,7 +222,7 @@ export default function SymptomsPage({ lang, liveRows }) {
     const hourRows = HOURLY_DATA.filter(r => toISO(r.dateObj) === displayDate && r.hour === displayHour);
     const scopedRows = activeSensor === 'all'
       ? hourRows
-      : hourRows.filter(r => r.sensorId === Number(activeSensor));
+      : hourRows.filter(r => r.sensorId === activeSensor);
     return scopedRows.length ? scopedRows : hourRows;
   }, [liveRows, displayDate, displayHour, activeSensor]);
 
@@ -302,17 +241,9 @@ export default function SymptomsPage({ lang, liveRows }) {
     systemic:     getCategoryLevel('systemic'),
   };
 
-  const zoneColors = Object.fromEntries(
-    Object.entries(ZONE_CATS).map(([zoneKey, zone]) => [
-      zoneKey,
-      LEVELS[categoryLevels[zone.primary]].color,
-    ])
-  );
-
   const overallLevelIndex = Math.max(...Object.values(categoryLevels));
   const lvSuggestion = LEVELS[overallLevelIndex];
 
-  const handleSelectZone = (key) => setActiveZone(prev => prev === key ? null : key);
   const fmtHour = h => `${String(h).padStart(2, '0')}:00`;
 
   /* report form */
@@ -340,258 +271,187 @@ export default function SymptomsPage({ lang, liveRows }) {
   return (
     <div className="symptoms-page">
 
-      {/* BODY FIGURE — full viewport */}
-      <div style={{ position: 'relative', height: '95vh', overflow: 'hidden', background: 'var(--white)' }} onClick={() => setActiveZone(null)}>
-
-        {/* Floating title */}
-        <div style={{ position: 'absolute', top: 48, left: 12, zIndex: 21, pointerEvents: 'none' }}>
-          <div style={{
-            fontFamily: 'var(--font-title)',
-            fontSize: 'clamp(28px, 3.5vw, 56px)',
-            fontWeight: 400,
-            textTransform: 'uppercase',
-            lineHeight: 0.92,
-            letterSpacing: '-0.02em',
-            color: 'var(--white)',
-          }}>
-            {L ? 'Mappa Sintomi' : 'Symptoms Map'}
+      {!hideHero && (
+      <>
+      {/* Standalone: title + body-zone row share a fixed viewport height
+          (same fit mechanism as RecordPage's standalone layout — see
+          App.jsx's fitHeight on RecordPage) so the row gets a real, stable
+          height instead of a guessed vh, and the cards size like Record
+          page's. Matrix + Report render after this, in normal scrolling flow. */}
+      <div style={embedded ? undefined : {
+        height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
+        {!embedded && (
+          <div style={{ flexShrink: 0, padding: '24px 24px 0 24px' }}>
+            <div style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(40px, 5.5vw, 88px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em', color: 'var(--black)' }}>
+              {L ? 'Sintomi' : 'Symptoms'}
+            </div>
           </div>
-        </div>
-
-        {/* Hint — top right */}
-        <div style={{
-          position: 'absolute', top: 48, right: 28, zIndex: 21,
-          fontFamily: 'var(--font-display)', fontSize: 'clamp(22px, 2.5vw, 40px)', fontWeight: 400,
-          letterSpacing: '-0.02em', textTransform: 'uppercase', lineHeight: 1.4,
-          color: 'var(--white)', opacity: 1,
-          textAlign: 'left', pointerEvents: 'none', maxWidth: '18vw',
+        )}
+        {/* SYMPTOMS BY BODY ZONE — tight bordered row, same PANEL+CONTENT rules
+            as RecordPage/ArchivePage. Hidden when embedded: MapPage's own panel
+            (Time/Sensor/Health rec, shared via timeControl/sensorControl)
+            already covers this. */}
+        <div style={embedded ? {
+          display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--gray)',
+        } : {
+          display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--gray)',
+          flex: 1, minHeight: 0, overflow: 'hidden',
         }}>
-          {L ? 'Premi su un pallino per scoprire i sintomi' : 'Press a dot to discover the symptoms'}
-        </div>
 
-        <BodyFigure activeZone={activeZone} onSelectZone={handleSelectZone} zoneColors={zoneColors} categoryLevels={categoryLevels} lang={lang} bodyImg={bodyImg} />
+        {!embedded && (
+          <div style={PANEL}>
+            <div style={{ ...SUB_LABEL, color: 'var(--black)', marginBottom: 0 }}>{L ? 'Sintomi' : 'Symptoms'}</div>
 
-        {/* LEFT COLUMN — stacked floating boxes, MapPage style */}
-        <div
-          style={{
-            position: 'absolute', top: 0, left: 0, bottom: 0, zIndex: 20,
-            width: panelW, display: 'flex', flexDirection: 'column',
-            gap: 8, padding: 12, paddingTop: 120, overflowY: 'auto', pointerEvents: 'none',
-          }}
-          onClick={e => e.stopPropagation()}
-        >
-          {/* BOX 1 — Live indicator (Pi mode) or time controls */}
-          {liveRows && (
-            <div style={BOX}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                <span style={{ ...SUB_LABEL, color: '#22c55e' }}>
-                  {L ? 'DATI IN TEMPO REALE' : 'LIVE DATA'}
-                </span>
-              </div>
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--gray2)', lineHeight: 1.5 }}>
-                {L ? 'Sensore Raspberry Pi · aggiornamento ogni 30 s' : 'Raspberry Pi sensor · updates every 30 s'}
-              </div>
-            </div>
-          )}
-          {!liveRows && <div style={BOX}>
-            <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
-              {L ? 'Tempo' : 'Time'}
-            </div>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-              {['single', 'range'].map(m => (
-                <span key={m}
-                  style={{ ...pillStyleWhite(timeMode === m), flex: 1, textAlign: 'center', display: 'block' }}
-                  onClick={() => { setTimeMode(m); setIsPlaying(false); }}>
-                  {m === 'single' ? (L ? 'Giorno' : 'Day') : (L ? 'Intervallo' : 'Range')}
-                </span>
-              ))}
-            </div>
-            {timeMode === 'single' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <select value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={SEL_STYLE}>
-                  {availableDays.map(d => (
-                    <option key={d} value={d}>
-                      {new Date(d + 'T12:00:00').toLocaleDateString(L ? 'it-IT' : 'en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
-                    </option>
-                  ))}
-                </select>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L ? 'Ora' : 'Hour'}</div>
-                  <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{fmtHour(selectedHour)}</div>
+            {liveRows ? (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                  <span style={{ ...SUB_LABEL, color: '#22c55e' }}>{L ? 'DATI IN TEMPO REALE' : 'LIVE DATA'}</span>
                 </div>
-                <input type="range" min={0} max={23} value={selectedHour}
-                  onChange={e => setSelectedHour(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'rgba(0,0,0,0.35)', fontFamily: 'Epilogue', fontSize: 9 }}>00:00</span>
-                  <span style={{ color: 'rgba(0,0,0,0.35)', fontFamily: 'Epilogue', fontSize: 9 }}>23:00</span>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--gray2)', lineHeight: 1.5 }}>
+                  {L ? 'Sensore Raspberry Pi · aggiornamento ogni 30 s' : 'Raspberry Pi sensor · updates every 30 s'}
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>{L ? 'Da' : 'From'}</div>
-                    <select value={rangeDateStart} onChange={e => setRangeDateStart(e.target.value)} style={SEL_STYLE}>
-                      {availableDays.filter(d => d <= rangeDateEnd).map(d => (
-                        <option key={d} value={d}>
-                          {new Date(d + 'T12:00:00').toLocaleDateString(L ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
-                        </option>
-                      ))}
-                    </select>
+              <>
+                <div>
+                  <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>{L ? 'Tempo' : 'Time'}</div>
+                  <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+                    {['single', 'range'].map(m => (
+                      <span key={m}
+                        style={{ ...pillStyleWhite(timeMode === m), flex: 1, textAlign: 'center', display: 'block' }}
+                        onClick={() => { setTimeMode(m); setIsPlaying(false); }}>
+                        {m === 'single' ? (L ? 'Giorno' : 'Day') : (L ? 'Intervallo' : 'Range')}
+                      </span>
+                    ))}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>{L ? 'A' : 'To'}</div>
-                    <select value={rangeDateEnd} onChange={e => setRangeDateEnd(e.target.value)} style={SEL_STYLE}>
-                      {availableDays.filter(d => d >= rangeDateStart).map(d => (
-                        <option key={d} value={d}>
-                          {new Date(d + 'T12:00:00').toLocaleDateString(L ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L ? 'Ora fissa' : 'Fixed hour'}</div>
-                  <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{fmtHour(selectedHour)}</div>
-                </div>
-                <input type="range" min={0} max={23} value={selectedHour}
-                  onChange={e => setSelectedHour(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
-              </div>
-            )}
-          </div>}
-
-          {/* BOX 2 — Sensor (hidden in live mode) */}
-          {!liveRows && <div style={BOX}>
-            <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
-              {L ? 'Sensore' : 'Sensor'}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              <span style={pillStyleWhite(activeSensor === 'all')} onClick={() => setActiveSensor('all')}>
-                {L ? 'Tutti' : 'All'}
-              </span>
-              {SENSORS.map(s => (
-                <span key={s.id} style={pillStyleWhite(activeSensor === String(s.id))}
-                  onClick={() => setActiveSensor(String(s.id))}>
-                  {s.name.replace('Taranto - ', '')}
-                </span>
-              ))}
-            </div>
-          </div>}
-
-          {/* BOX 3 — Health recommendation */}
-          <div style={{ ...BOX, background: lvSuggestion.color }}>
-            <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
-              {L ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'}
-            </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 10 }}>
-              {L ? lvSuggestion.it : lvSuggestion.en}
-            </div>
-            {[
-              { who: L ? 'Popolazione generale' : 'General population', text: SUGGESTIONS[lvSuggestion.key]?.gen },
-              { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: SUGGESTIONS[lvSuggestion.key]?.sen },
-            ].map((s, i) => (
-              <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
-                <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
-              </div>
-            ))}
-          </div>
-
-          {activeZone && (() => {
-            const zone = ZONE_CATS[activeZone];
-            const catKey = zone.primary;
-            const levelIndex = categoryLevels[catKey];
-            const lv = LEVELS[levelIndex];
-            const sym = SYMPTOMS[catKey][lv.key];
-            const noSym = !sym || (!sym.gen && !sym.sen);
-            return (
-              <div style={{ ...BOX, background: lv.color }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)' }}>
-                    {L ? 'SINTOMI' : 'SYMPTOMS'} — {L ? lv.it : lv.en}
-                  </div>
-                  <button onClick={() => setActiveZone(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
-                </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 12 }}>
-                  {L ? zone.label_it : zone.label_en}
-                </div>
-                {noSym ? (
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.85)' }}>
-                    {L ? 'Nessun sintomo atteso a questo livello.' : 'No symptoms expected at this level.'}
-                  </div>
-                ) : (
-                  [
-                    { who: L ? 'Popolazione generale' : 'General population', text: L ? sym.gen?.it : sym.gen?.en },
-                    { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: L ? sym.sen?.it : sym.sen?.en },
-                  ].filter(s => s.text).map((s, i) => (
-                    <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
-                      <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
-                      <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+                  {timeMode === 'single' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <select value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={SEL_STYLE}>
+                        {availableDays.map(d => (
+                          <option key={d} value={d}>
+                            {new Date(d + 'T12:00:00').toLocaleDateString(L ? 'it-IT' : 'en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
+                          </option>
+                        ))}
+                      </select>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L ? 'Ora' : 'Hour'}</div>
+                        <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{fmtHour(selectedHour)}</div>
+                      </div>
+                      <input type="range" min={0} max={23} value={selectedHour}
+                        onChange={e => setSelectedHour(Number(e.target.value))}
+                        style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
                     </div>
-                  ))
-                )}
-                <button
-                  style={{ marginTop: 12, width: '100%', padding: '7px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff', fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}
-                  onClick={() => document.getElementById('report-section')?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  {L ? 'SEGNALA UN SINTOMO →' : 'REPORT A SYMPTOM →'}
-                </button>
-              </div>
-            );
-          })()}
-        </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>{L ? 'Da' : 'From'}</div>
+                          <select value={rangeDateStart} onChange={e => setRangeDateStart(e.target.value)} style={SEL_STYLE}>
+                            {availableDays.filter(d => d <= rangeDateEnd).map(d => (
+                              <option key={d} value={d}>
+                                {new Date(d + 'T12:00:00').toLocaleDateString(L ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>{L ? 'A' : 'To'}</div>
+                          <select value={rangeDateEnd} onChange={e => setRangeDateEnd(e.target.value)} style={SEL_STYLE}>
+                            {availableDays.filter(d => d >= rangeDateStart).map(d => (
+                              <option key={d} value={d}>
+                                {new Date(d + 'T12:00:00').toLocaleDateString(L ? 'it-IT' : 'en-GB', { day: '2-digit', month: 'short' })}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L ? 'Ora fissa' : 'Fixed hour'}</div>
+                        <div style={{ ...SUB_LABEL, color: 'var(--black)' }}>{fmtHour(selectedHour)}</div>
+                      </div>
+                      <input type="range" min={0} max={23} value={selectedHour}
+                        onChange={e => setSelectedHour(Number(e.target.value))}
+                        style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
 
-        {/* BOTTOM TIMELINE — range mode only, hidden in live mode */}
-        {!liveRows && timeMode === 'range' && (
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-            height: timelineH, background: 'var(--white)',
-            padding: '10px 16px 12px', boxSizing: 'border-box',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: '100%' }}>
-              <button onClick={() => setIsPlaying(p => !p)} style={{
-                background: 'none', border: '1.5px solid rgba(0,0,0,0.3)',
-                color: 'var(--black)', width: 28, height: 28, cursor: 'pointer',
-                fontFamily: 'Epilogue', fontSize: 12, flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {isPlaying ? '⏸' : '▶'}
-              </button>
-              <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
-                {rangeDateStart}
-              </span>
-              <div style={{ flex: 1, position: 'relative' }}>
-                <input type="range" min={0} max={Math.max(0, rangeDates.length - 1)} value={playhead}
-                  onChange={e => { setIsPlaying(false); setPlayhead(Number(e.target.value)); }}
-                  style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, pointerEvents: 'none' }}>
-                  {rangeDates.map((d, i) => (
-                    <div key={d} style={{
-                      width: 1, height: i === playhead ? 8 : 4,
-                      background: i === playhead ? 'var(--black)' : 'rgba(0,0,0,0.2)', flexShrink: 0,
-                    }} />
-                  ))}
+                      <div style={SUB_LABEL}>{L ? 'Timeline' : 'Timeline'}</div>
+                      <input type="range" min={0} max={Math.max(0, rangeDates.length - 1)} value={playhead}
+                        onChange={e => { setIsPlaying(false); setPlayhead(Number(e.target.value)); }}
+                        style={{ width: '100%', accentColor: 'var(--primary)', margin: 0, cursor: 'pointer' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateStart}</span>
+                        <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateEnd}</span>
+                      </div>
+                      <div style={{
+                        background: 'var(--primary)', color: '#fff', fontFamily: 'Epilogue',
+                        fontSize: 11, fontWeight: 700, padding: '4px 10px', letterSpacing: '0.05em',
+                        textAlign: 'center',
+                      }}>
+                        {displayDate}
+                      </div>
+
+                      <button onClick={() => setIsPlaying(p => !p)} style={{ ...pillStyleWhite(isPlaying), width: '100%', textAlign: 'center' }}>
+                        {isPlaying ? (L ? '⏸ Pausa' : '⏸ Pause') : (L ? '▶ Anima' : '▶ Play')}
+                      </button>
+                    </div>
+                  )}
                 </div>
+
+                <div>
+                  <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>{L ? 'Sensore' : 'Sensor'}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    <span style={pillStyleWhite(activeSensor === 'all')} onClick={() => setActiveSensor('all')}>
+                      {L ? 'Tutti' : 'All'}
+                    </span>
+                    {SENSORS.map(s => (
+                      <span key={s.id} style={pillStyleWhite(activeSensor === s.id)}
+                        onClick={() => setActiveSensor(s.id)}>
+                        {s.name.replace('Taranto - ', '')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div style={{ background: lvSuggestion.color, padding: '12px 14px', margin: '0 -14px -14px' }}>
+              <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
+                {L ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'}
               </div>
-              <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
-                {rangeDateEnd}
-              </span>
-              <div style={{
-                background: 'var(--primary)', color: '#fff', fontFamily: 'Epilogue',
-                fontSize: 11, fontWeight: 700, padding: '3px 10px', flexShrink: 0,
-                letterSpacing: '0.05em',
-              }}>
-                {displayDate}
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 8 }}>
+                {L ? lvSuggestion.it : lvSuggestion.en}
               </div>
+              {[
+                { who: L ? 'Popolazione generale' : 'General population', text: L ? SUGGESTIONS[lvSuggestion.key]?.gen?.it : SUGGESTIONS[lvSuggestion.key]?.gen?.en },
+                { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: L ? SUGGESTIONS[lvSuggestion.key]?.sen?.it : SUGGESTIONS[lvSuggestion.key]?.sen?.en },
+              ].map((s, i) => (
+                <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
+                  <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-      </div>
+        {!embedded && (
+          <div style={{ flex: 1, height: '90%', alignSelf: 'center', position: 'relative', overflow: 'hidden', background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BodySvg />
+          </div>
+        )}
 
+        <SymptomCards categoryLevels={categoryLevels} lang={lang} embedded={embedded} />
+        </div>
+      </div>
+      </>
+      )}
+
+      {!hideMatrixReport && (
+      <>
+      <div style={{ padding: '40px 24px 0', ...SUB_LABEL, color: 'var(--gray2)' }}>
+        {L ? 'Matrice dei sintomi per livello' : 'Symptom matrix by level'}
+      </div>
 
       {/* SYMPTOMS MATRIX */}
       <div className="symptoms-matrix-section">
@@ -654,6 +514,7 @@ export default function SymptomsPage({ lang, liveRows }) {
       </div>
 
       {/* REPORT SECTION */}
+      {!hideReport && (
       <div id="report-section" style={{ borderTop: '1px solid var(--gray)' }}>
 
         <div style={{ padding: '24px 28px 16px', borderBottom: '1px solid var(--gray)' }}>
@@ -754,6 +615,9 @@ export default function SymptomsPage({ lang, liveRows }) {
 
         </div>
       </div>
+      )}
+      </>
+      )}
     </div>
   );
 }

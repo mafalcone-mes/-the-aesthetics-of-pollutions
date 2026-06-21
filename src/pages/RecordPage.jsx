@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import QRCode from 'react-qr-code';
 import { MapContainer, TileLayer, CircleMarker, ZoomControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
 import { HOURLY_DATA } from '../data/timeseries';
-import { SYMPTOMS, SUGGESTIONS } from '../data/symptoms';
+import { ORGAN_SYMPTOMS, SUGGESTIONS } from '../data/symptoms';
 import { getSensorAQI, getPollLevel } from '../utils/aqi';
 import MultiLineChart from '../components/charts/MultiLineChart';
 import HeatMap from '../components/charts/HeatMap';
@@ -41,6 +42,7 @@ const INSTALL_DATES = {
   22: { it: 'Aprile 2023',    en: 'April 2023' },
   37: { it: 'Settembre 2023', en: 'September 2023' },
   38: { it: 'Febbraio 2024',  en: 'February 2024' },
+  999: { it: '28 Maggio 2026', en: 'May 28, 2026' },
 };
 
 function MapillaryPhoto({ lat, lon, imgStyle }) {
@@ -78,6 +80,7 @@ function MapillaryPhoto({ lat, lon, imgStyle }) {
 }
 
 const REC_BODY_IMG = '/assets/sagome/DSC01848.png';
+const SENSOR_GUIDE_URL = 'https://abcsensorguide.netlify.app/';
 const REC_ZONE_CATS = {
   mind:    { primary: 'systemic',     label_it: 'Testa / Mente', label_en: 'Head / Mind' },
   eyes:    { primary: 'gaseous',      label_it: 'Occhi',         label_en: 'Eyes' },
@@ -123,9 +126,18 @@ function RecordBlobOverlay({ categoryLevels }) {
   );
 }
 
-export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hideAqiRow, hideMap, titleStyle }) {
+export default function RecordPage({ lang, sensor, liveHistory, hideAqiRow, hideMap, titleStyle, fitViewport, fitHeight }) {
+  // `hideAqiRow` picks this layout's shape (info + body figure + symptom grid
+  // merged into one row); `fit` separately controls whether that row is
+  // squeezed to fit a fixed, non-scrolling viewport so everything is visible
+  // without scrolling. PiApp's kiosk shell already gives this a definite
+  // 100%-resolvable height, so it keeps the '100%' default; the standalone
+  // site has a TopBar + footer around it, so it passes an explicit
+  // viewport-relative `fitHeight` instead.
+  const fit = fitViewport ?? hideAqiRow;
+  const fitHeightValue = fitHeight ?? '100%';
   const [activePollutant, setActivePollutant] = useState('pm25');
-  const [chartView, setChartView]             = useState('line');
+  const [chartView, setChartView]             = useState(hideAqiRow ? 'multi' : 'line');
   const [activeZone, setActiveZone]           = useState(null);
 
   if (!sensor) {
@@ -162,6 +174,10 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
     { key: 'multi', label: L ? 'Confronto' : 'Compare' },
   ];
 
+  const displayPollutantKeys = hideAqiRow
+    ? Object.keys(POLLUTANTS).filter(k => !['o3', 'so2', 'c6h6'].includes(k))
+    : Object.keys(POLLUTANTS);
+
   const metaItems = [
     { label: L ? 'Sensore'        : 'Sensor',    value: sensor.name },
     { label: L ? 'Posizione'      : 'Location',  value: sensor.location },
@@ -170,15 +186,14 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
   ];
 
   return (
-    <div className="record-page">
+    <div className="record-page" style={fit ? { height: fitHeightValue, display: 'flex', flexDirection: 'column', overflow: 'hidden' } : undefined}>
 
       {/* TITLE */}
-      <div style={{ padding: hideAqiRow ? '10px 32px' : '36px 36px', borderBottom: afterTitle ? 'none' : '1px solid var(--gray)', textAlign: 'left' }}>
-        <span style={{ fontFamily: 'var(--font-title)', fontSize: hideAqiRow ? 'clamp(64px, 8vw, 128px)' : 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em', ...titleStyle }}>
+      <div style={{ flexShrink: 0, padding: hideAqiRow ? '10px 32px' : '36px 36px', borderBottom: '1px solid var(--gray)', textAlign: 'left' }}>
+        <span style={{ fontFamily: 'var(--font-title)', fontSize: hideAqiRow ? 'clamp(48px, 6vw, 96px)' : 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em', ...titleStyle }}>
           {sensor.name}
         </span>
       </div>
-      {afterTitle}
 
       {/* PI-STYLE: MAP + INFO + HEALTH REC */}
       {!hideAqiRow && !hideMap && (
@@ -228,7 +243,7 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
                 </div>
                 {SUGGESTIONS[lv.key]?.gen && (
                   <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.5, color: '#fff' }}>
-                    {SUGGESTIONS[lv.key].gen}
+                    {L ? SUGGESTIONS[lv.key].gen.it : SUGGESTIONS[lv.key].gen.en}
                   </div>
                 )}
               </div>
@@ -238,7 +253,7 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
                 </div>
                 {SUGGESTIONS[lv.key]?.sen && (
                   <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.5, color: '#fff' }}>
-                    {SUGGESTIONS[lv.key].sen}
+                    {L ? SUGGESTIONS[lv.key].sen.it : SUGGESTIONS[lv.key].sen.en}
                   </div>
                 )}
               </div>
@@ -295,7 +310,7 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
             {Object.entries(REC_ZONE_CATS).map(([key, zone]) => {
               const levelIndex = recCatLevels[zone.primary];
               const zlv = LEVELS[levelIndex];
-              const sym = SYMPTOMS[zone.primary][zlv.key];
+              const sym = ORGAN_SYMPTOMS[key][zlv.key];
               const noSym = !sym || (!sym.gen && !sym.sen);
               return (
                 <div key={key} style={{ minHeight: '10vh', overflow: 'hidden', background: zlv.color, padding: '14px 18px' }}>
@@ -348,38 +363,92 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
         </div>
       )}
 
-      {/* Pi-mode body figure (kept for Pi compatibility) */}
+      {/* PI LAYOUT: info/AQI/health-rec + symptom cards + body figure, merged into a single row */}
       {hideAqiRow && (
-        <div style={{ position: 'relative', height: '35vh', overflow: 'hidden', background: 'var(--white)', borderBottom: '1px solid var(--gray)' }}
-          onClick={() => setActiveZone(null)}>
-          <img src={REC_BODY_IMG} alt=""
-            style={{ position: 'absolute', left: '4%', top: '7%', height: '90%', width: 'auto', zIndex: 1, pointerEvents: 'none', objectFit: 'contain' }} />
-          <RecordBlobOverlay categoryLevels={recCatLevels} />
-          {Object.entries(REC_ZONE_CATS).map(([key, zone]) => {
-            const color = recZoneColors[key];
-            return (
-              <div key={key} style={{ position: 'absolute', left: '30%', right: '48vw', top: REC_ZONE_Y[key], transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', flexDirection: 'row-reverse', pointerEvents: 'none', zIndex: 10 }}>
-                <div style={{ width: 14, height: 14, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                <div style={{ flex: 1, height: 1.5, background: color, opacity: 0.7 }} />
+        <div style={{
+          display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--gray)', padding: 24,
+          ...(fit ? { flex: 1, minHeight: 0, overflow: 'hidden' } : { height: '75vh' }),
+        }}>
+
+          {/* Info + AQI scale + health rec — content height, not stretched */}
+          <div style={{ width: 460, flexShrink: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--gray)', paddingRight: 24, marginRight: 24 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {metaItems.map((item, i) => (
+                <div key={i}>
+                  <div style={LABEL}>{item.label}</div>
+                  <div style={VALUE}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 20, marginBottom: 20 }}>
+              <div style={{ ...LABEL, marginBottom: 6 }}>{L ? 'Scala AQI' : 'AQI Scale'}</div>
+              <div style={{ display: 'flex', gap: 3, marginBottom: 5 }}>
+                {LEVELS.map(l => (
+                  <div key={l.key} style={{
+                    flex: 1, height: 8, background: l.color,
+                    outline: l.key === lv.key ? `2px solid ${l.color}` : 'none',
+                    outlineOffset: 2, opacity: l.key === lv.key ? 1 : 0.4,
+                  }} />
+                ))}
               </div>
-            );
-          })}
-          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, zIndex: 20, width: 'calc(100vw / 6 * 1.5)', display: 'flex', flexDirection: 'column', justifyContent: 'stretch', gap: 4, padding: 8, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', ...LABEL, marginBottom: 0 }}>
+                <span>1 — {L ? 'Buono' : 'Good'}</span>
+                <span>6 — {L ? 'Estremo' : 'Extreme'}</span>
+              </div>
+            </div>
+
+            <div style={{ background: lv.color, padding: '20px 24px' }}>
+              <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>
+                {L ? `Qualità dell'aria — ${lv.it}` : `Air Quality — ${lv.en}`}
+              </div>
+              <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 5 }}>
+                {L ? 'Popolazione generale' : 'General population'}
+              </div>
+              {SUGGESTIONS[lv.key]?.gen && (
+                <div style={{ fontFamily: 'var(--font-title)', fontSize: 13, lineHeight: 1.5, color: '#fff', marginBottom: 12 }}>
+                  {L ? SUGGESTIONS[lv.key].gen.it : SUGGESTIONS[lv.key].gen.en}
+                </div>
+              )}
+              <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 5 }}>
+                {L ? 'Popolazione sensibile' : 'Sensitive population'}
+              </div>
+              {SUGGESTIONS[lv.key]?.sen && (
+                <div style={{ fontFamily: 'var(--font-title)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>
+                  {L ? SUGGESTIONS[lv.key].sen.it : SUGGESTIONS[lv.key].sen.en}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Body figure */}
+          <div
+            style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'var(--white)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}
+            onClick={() => setActiveZone(null)}
+          >
+            <img
+              src={REC_BODY_IMG} alt=""
+              style={{ marginTop: '-3%', height: '105%', width: 'auto', zIndex: 1, pointerEvents: 'none', objectFit: 'contain' }}
+            />
+          </div>
+
+          {/* Symptom cards — two columns so each card gets more height */}
+          <div style={{ width: 680, flexShrink: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridAutoRows: '1fr', gap: 2 }}>
             {Object.entries(REC_ZONE_CATS).map(([key, zone]) => {
               const levelIndex = recCatLevels[zone.primary];
               const zlv = LEVELS[levelIndex];
-              const sym = SYMPTOMS[zone.primary][zlv.key];
+              const sym = ORGAN_SYMPTOMS[key][zlv.key];
               const noSym = !sym || (!sym.gen && !sym.sen);
               return (
-                <div key={key} style={{ flex: 1, minHeight: 0, overflow: 'hidden', background: zlv.color, padding: '8px 12px' }}>
-                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.75)', marginBottom: 6 }}>
+                <div key={key} style={{ minHeight: 0, overflow: 'hidden', background: zlv.color, padding: '14px 18px' }}>
+                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', marginBottom: 3 }}>
                     {L ? 'SINTOMI' : 'SYMPTOMS'} — {L ? zlv.it : zlv.en}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(16px, 2vw, 26px)', fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 8 }}>
+                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(13px, 1.4vw, 20px)', fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 6 }}>
                     {L ? zone.label_it : zone.label_en}
                   </div>
                   {noSym ? (
-                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.85)' }}>
+                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 12, lineHeight: 1.5, color: 'rgba(255,255,255,0.85)' }}>
                       {L ? 'Nessun sintomo atteso a questo livello.' : 'No symptoms expected at this level.'}
                     </div>
                   ) : (
@@ -387,21 +456,32 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
                       { who: L ? 'Popolazione generale' : 'General population', text: L ? sym.gen?.it : sym.gen?.en },
                       { who: L ? 'Popolazione sensibile' : 'Sensitive population', text: L ? sym.sen?.it : sym.sen?.en },
                     ].filter(s => s.text).map((s, i) => (
-                      <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
-                        <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+                      <div key={i} style={{ marginBottom: i === 0 ? 5 : 0 }}>
+                        <div style={{ fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>{s.who}</div>
+                        <div style={{ fontFamily: 'var(--font-title)', fontSize: 12, lineHeight: 1.45, color: '#fff' }}>{s.text}</div>
                       </div>
                     ))
                   )}
                 </div>
               );
             })}
+
+            {/* 6th grid cell — 5 symptom cards leave this one empty, use it as a CTA */}
+            <div style={{ minHeight: 0, overflow: 'hidden', padding: '14px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <div style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(13px, 1.4vw, 20px)', fontWeight: 400, textTransform: 'uppercase', color: 'var(--black)', lineHeight: 1.0, textAlign: 'center' }}>
+                {L ? 'Crea il tuo sensore' : 'Create your sensor'}
+              </div>
+              <div style={{ background: '#fff', padding: 8, lineHeight: 0, flexShrink: 0, border: '1px solid var(--gray)' }}>
+                <QRCode value={SENSOR_GUIDE_URL} size={96} style={{ display: 'block', width: 96, height: 96 }} />
+              </div>
+            </div>
           </div>
+
         </div>
       )}
 
       {/* CHART + TABLE side by side */}
-      <div style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--gray)', padding: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--gray)', flexShrink: 0, padding: 24 }}>
 
         {/* POLLUTANT TABLE */}
         <div style={{ width: 460, flexShrink: 0, overflowX: 'auto', borderRight: '1px solid var(--gray)' }}>
@@ -415,20 +495,21 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
               </tr>
             </thead>
             <tbody>
-              {Object.entries(POLLUTANTS).map(([key, p]) => {
+              {displayPollutantKeys.map(key => {
+                const p = POLLUTANTS[key];
                 const val = sensor[key] || 0;
                 const li  = getPollLevel(key, val);
                 const lvc = LEVELS[li];
-                const isActive = key === activePollutant;
+                const isActive = !hideAqiRow && key === activePollutant;
                 return (
-                  <tr key={key} onClick={() => setActivePollutant(key)} style={{ background: isActive ? lvc.color : undefined, cursor: 'pointer' }}>
+                  <tr key={key} onClick={hideAqiRow ? undefined : () => setActivePollutant(key)} style={{ background: isActive ? lvc.color : undefined, cursor: hideAqiRow ? 'default' : 'pointer' }}>
                     <td style={{ fontFamily: 'var(--font-title)', fontSize: 11, fontWeight: 400, letterSpacing: '0.06em', textTransform: 'uppercase', color: isActive ? '#fff' : 'var(--black)' }}>
                       {p.name}
                     </td>
                     <td style={{ textAlign: 'right', fontFamily: 'var(--font-title)', fontWeight: 700, fontSize: 13, color: isActive ? '#fff' : lvc.color }}>
                       {val}
                     </td>
-                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-body)', fontSize: 11, color: isActive ? 'rgba(255,255,255,0.65)' : 'var(--black)' }}>
+                    <td style={{ textAlign: 'right', fontFamily: hideAqiRow ? 'var(--font-title)' : 'var(--font-body)', fontSize: 11, color: isActive ? 'rgba(255,255,255,0.65)' : 'var(--black)' }}>
                       {p.unit}
                     </td>
                     <td>
@@ -445,27 +526,30 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
 
         {/* CHART */}
         <div className="chart-area" style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 16, borderBottom: '1px solid var(--gray)', paddingBottom: 16 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {Object.entries(POLLUTANTS).map(([key, p]) => {
-                const val = sensor[key] || 0;
-                const li  = getPollLevel(key, val);
-                const lvc = LEVELS[li];
-                return (
-                  <button key={key} onClick={() => setActivePollutant(key)} style={pill(key === activePollutant, lvc.color)}>
-                    {p.name}
+          {!hideAqiRow && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 16, borderBottom: '1px solid var(--gray)', paddingBottom: 16 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {displayPollutantKeys.map(key => {
+                  const p = POLLUTANTS[key];
+                  const val = sensor[key] || 0;
+                  const li  = getPollLevel(key, val);
+                  const lvc = LEVELS[li];
+                  return (
+                    <button key={key} onClick={() => setActivePollutant(key)} style={pill(key === activePollutant, lvc.color)}>
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {chartViews.map(({ key, label }) => (
+                  <button key={key} onClick={() => setChartView(key)} style={pill(chartView === key, 'var(--primary)')}>
+                    {label}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {chartViews.map(({ key, label }) => (
-                <button key={key} onClick={() => setChartView(key)} style={pill(chartView === key, 'var(--primary)')}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
+          )}
 
           {chartView === 'line' && (
             <>
@@ -482,7 +566,7 @@ export default function RecordPage({ lang, sensor, liveHistory, afterTitle, hide
           {chartView === 'multi' && (
             <>
               <div className="chart-title">{L ? `Confronto inquinanti — ${chartTimeLabel}` : `Pollutant comparison — ${chartTimeLabel}`}</div>
-              <MultiLineChart data={histRows} pollutants={Object.keys(POLLUTANTS)} mode="pollutant" width={900} height={hideAqiRow ? 130 : 280} />
+              <MultiLineChart data={histRows} pollutants={displayPollutantKeys} mode="pollutant" width={900} height={hideAqiRow ? 130 : 280} dotRadius={hideAqiRow ? 1.5 : undefined} dotStroke={!hideAqiRow} />
             </>
           )}
         </div>

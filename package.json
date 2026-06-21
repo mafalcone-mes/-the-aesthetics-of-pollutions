@@ -17,6 +17,8 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-leaflet": "^4.2.1",
+    "react-qr-code": "^2.2.0",
+    "serial": "^0.0.9",
     "vite": "^6.0.0"
   }
 }

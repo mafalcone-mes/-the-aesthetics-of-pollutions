@@ -16,7 +16,7 @@ const PAD_COMPACT = { top:  8, right:  8, bottom: 18, left: 28 };
 // mode='sensor':    data = { sensorId, sensorName, rows: Row[] }[], draws one line
 //                   per sensor where Y = max getPollLevel across selected pollutants
 // compact: smaller padding, no legend, 1px dots
-export default function MultiLineChart({ data, pollutants, mode = 'pollutant', width = 800, height = 220, pollutantColors = {}, compact = false }) {
+export default function MultiLineChart({ data, pollutants, mode = 'pollutant', width = 800, height = 220, pollutantColors = {}, compact = false, dotRadius, dotStroke = true }) {
   const PAD = compact ? PAD_COMPACT : PAD_FULL;
   const [tooltip, setTooltip] = useState(null);
 
@@ -172,9 +172,11 @@ export default function MultiLineChart({ data, pollutants, mode = 'pollutant', w
           const cx = xScale(i);
           const cy = yScale(p, r[p]);
           const seriesColor = pollutantColors[p] || POLL_COLORS[p] || '#111';
+          const r_ = dotRadius ?? (compact ? 1 : 3);
+          const hasStroke = dotStroke && !compact;
           return (
-            <circle key={`${p}-${i}`} cx={cx} cy={cy} r={compact ? 1 : 3}
-              fill={seriesColor} stroke="var(--white)" strokeWidth={compact ? 0 : 1}
+            <circle key={`${p}-${i}`} cx={cx} cy={cy} r={r_}
+              fill={seriesColor} stroke={hasStroke ? 'var(--white)' : 'none'} strokeWidth={hasStroke ? 1 : 0}
               style={{ cursor: 'pointer' }}
               onMouseEnter={() => setTooltip({ cx, cy, pollutant: p, value: r[p], dateStr: r.dateStr, hourStr: r.hourStr })}
               onMouseLeave={() => setTooltip(null)}

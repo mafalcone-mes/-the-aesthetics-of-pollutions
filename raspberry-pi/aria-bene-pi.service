@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=__INSTALL_DIR__
-ExecStart=/usr/bin/python3 __INSTALL_DIR__/server.py
+ExecStart=__INSTALL_DIR__/venv/bin/python3 __INSTALL_DIR__/server.py
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guida Sensore — Aria Bene Comune</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;600;700;800;900&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:   #1A1A1A;
+      --white:   #FAF8F7;
+      --gray:    #DDDAD3;
+      --gray2:   #9B9790;
+      --primary: #B7410E;
+
+      --c-buono:        #77BF85;
+      --c-sufficiente:  #318665;
+      --c-mediocre:     #F0A500;
+      --c-scarso:       #EA5154;
+      --c-molto-scarso: #951635;
+      --c-estremo:      #7C2181;
+
+      --font-body:  'Epilogue', sans-serif;
+      --font-title: 'Epilogue', sans-serif;
+    }
+
+    html { overflow-x: hidden; }
+    html, body { background: var(--white); color: var(--black); font-family: var(--font-body); }
+    body {
+      width: 100%; max-width: 100vw;
+      background-image: url('assets/cielo.png');
+      background-size: cover; background-position: center top;
+      background-repeat: no-repeat; background-attachment: fixed;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--gray); }
+    ::-webkit-scrollbar-thumb { background: var(--gray2); }
+
+    /* ── TOPBAR — matches PiNav ── */
+    .topbar {
+      display: flex; align-items: center;
+      height: 52px; padding: 0 18px; gap: 12px;
+      border-bottom: 1px solid var(--gray);
+      background: var(--white);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-logo {
+      font-family: var(--font-title); font-weight: 700; font-size: 11px;
+      letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap;
+    }
+    .topbar-logo span { display: inline; }
+    .topbar-divider { width: 1px; height: 18px; background: var(--gray); flex-shrink: 0; }
+    .topbar-center {
+      flex: 1;
+      font-family: var(--font-title); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--gray2);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .topbar-tag {
+      font-family: var(--font-title); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray2);
+      flex-shrink: 0;
+    }
+
+    /* ── HERO — compact white block like record-header ── */
+    .hero {
+      padding: 28px 28px 24px;
+      border-bottom: 1px solid var(--gray);
+    }
+    .hero-eyebrow {
+      font-family: var(--font-title); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--gray2); margin-bottom: 8px;
+    }
+    .hero-title {
+      font-family: var(--font-title);
+      font-size: clamp(64px, 12vw, 160px);
+      font-weight: 800; line-height: 0.95;
+      letter-spacing: -0.02em; text-transform: uppercase;
+      color: var(--black); margin-bottom: 10px;
+    }
+    .hero-subtitle {
+      font-family: var(--font-body); font-size: 13px; line-height: 1.6;
+      color: var(--gray2); max-width: 580px; margin-bottom: 14px;
+    }
+    .hero-params { display: flex; flex-wrap: wrap; gap: 5px; }
+    .hero-param {
+      padding: 3px 9px; border: 1px solid var(--gray);
+      font-family: var(--font-title); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--black);
+    }
+
+    /* ── TOC ── */
+    .toc-wrap {
+      display: grid; grid-template-columns: 220px 1fr;
+      min-width: 0; max-width: 100%;
+    }
+    .toc {
+      border-right: 1px solid var(--gray);
+      position: sticky; top: 52px;
+      height: calc(100vh - 52px);
+      overflow-y: auto; min-width: 0;
+    }
+    .toc-header {
+      padding: 12px 16px 10px;
+      font-family: var(--font-title); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gray2); border-bottom: 1px solid var(--gray);
+    }
+    .toc-list { list-style: none; }
+    .toc-list li a {
+      display: block; padding: 10px 16px;
+      font-family: var(--font-title); font-size: 13px; font-weight: 600;
+      letter-spacing: 0.03em; text-decoration: none;
+      color: var(--black); border-bottom: 1px solid var(--gray);
+      transition: background 0.12s, color 0.12s; line-height: 1.3;
+    }
+    .toc-list li a:hover { background: var(--gray); color: var(--primary); }
+    .toc-num {
+      font-family: var(--font-title); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; color: var(--gray2); display: block; margin-bottom: 1px;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .content { padding: 0; min-width: 0; }
+
+    .section {
+      padding: 22px 28px 26px;
+      border-bottom: 1px solid var(--gray);
+      min-width: 0;
+    }
+    .section:last-child { border-bottom: none; }
+
+    /* Section label */
+    .section-label {
+      display: flex; align-items: center; gap: 14px;
+      padding: 11px 18px; border-bottom: 1px solid var(--gray);
+      background: var(--primary); color: var(--white);
+    }
+    .section-label-accent { display: none; }
+    .section-label-num {
+      font-family: var(--font-title); font-size: 17px; font-weight: 400;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--white);
+    }
+    .section-label-text {
+      font-family: var(--font-title); font-size: 17px; font-weight: 400;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--white);
+    }
+
+    /* Typography */
+    h3.section-h3 {
+      font-family: var(--font-title); font-size: 13px; font-weight: 400;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--primary);
+      margin: 40px 0 10px;
+    }
+    h3.section-h3:first-child { margin-top: 0; }
+
+    p { font-size: 15px; line-height: 1.72; margin-bottom: 14px; color: var(--black); }
+    p:last-child { margin-bottom: 0; }
+    ul, ol { padding-left: 20px; margin-bottom: 14px; }
+    li { font-size: 15px; line-height: 1.68; margin-bottom: 6px; }
+    li:last-child { margin-bottom: 0; }
+
+    /* ── CALLOUT ── */
+    .callout {
+      padding: 12px 16px; margin: 14px 0;
+      background: color-mix(in srgb, var(--primary) 9%, var(--white));
+    }
+    .callout-label {
+      font-family: var(--font-title); font-size: 12px; font-weight: 400;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--primary); margin-bottom: 6px;
+    }
+    .callout p { font-size: 14px; margin-bottom: 0; line-height: 1.65; color: var(--black); }
+    .callout-warn { background: color-mix(in srgb, var(--primary) 9%, var(--white)); }
+    .callout-warn .callout-label { color: var(--primary); }
+
+    /* ── TABLES ── */
+    .table-wrap { overflow-x: auto; margin: 14px 0; -webkit-overflow-scrolling: touch; max-width: 100%; }
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-title); font-weight: 400; font-size: 14px; min-width: 480px; }
+    thead th {
+      text-align: left; padding: 9px 13px;
+      font-family: var(--font-title); font-size: 9px; font-weight: 400;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gray2); background: var(--gray);
+      border-right: 1px solid var(--white); border-bottom: 1px solid var(--gray);
+    }
+    thead th:last-child { border-right: none; }
+    tbody td {
+      padding: 11px 13px; border-bottom: 1px solid var(--gray);
+      border-right: 1px solid var(--gray); vertical-align: top; line-height: 1.58;
+    }
+    tbody td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: color-mix(in srgb, var(--white) 85%, var(--gray)); }
+    td strong { font-family: var(--font-title); font-size: 13px; font-weight: 400; letter-spacing: 0.02em; }
+
+    /* level dot */
+    .lvl-cell { display: flex; align-items: center; gap: 8px; }
+    .lvl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── AQI LEVEL GRID ── */
+    .levels-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0; margin: 14px 0; border: 1px solid var(--gray);
+    }
+    .level-cell {
+      padding: 14px 16px;
+      border-right: 1px solid var(--gray); border-bottom: 1px solid var(--gray);
+    }
+    .level-cell:nth-child(3n) { border-right: none; }
+    .level-cell:nth-last-child(-n+3) { border-bottom: none; }
+    .level-name {
+      font-family: var(--font-title); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--white); padding: 3px 9px; display: inline-block; margin-bottom: 7px;
+    }
+    .level-desc { font-size: 14px; line-height: 1.6; color: var(--black); }
+
+    /* ── CODE BLOCKS ── */
+    pre {
+      background: var(--black); color: #E8E4DC;
+      padding: 16px 20px; margin: 14px 0;
+      overflow-x: auto; font-size: 13px; line-height: 1.7;
+      font-family: 'Courier New', Courier, monospace;
+      border-left: 3px solid var(--primary);
+      max-width: 100%; -webkit-overflow-scrolling: touch;
+      word-break: normal; white-space: pre;
+    }
+    code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px; background: var(--gray); padding: 1px 5px; color: var(--black);
+      word-break: break-all;
+    }
+    pre code { background: transparent; color: inherit; padding: 0; word-break: normal; }
+
+    /* ── ASCII DIAGRAM ── */
+    .ascii-diagram {
+      background: var(--gray); padding: 16px 20px; margin: 14px 0;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px; line-height: 1.7; overflow-x: auto;
+      border-left: 3px solid var(--gray2);
+      white-space: pre; max-width: 100%; -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── PIN TABLE ── */
+    .pin-table thead th:first-child { width: 180px; }
+
+    /* ── TROUBLESHOOT TABLE ── */
+    .trouble-table tbody td:first-child {
+      font-family: var(--font-title); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.02em; width: 180px;
+    }
+
+    /* ── DIVIDER LABEL ── */
+    .sub-label {
+      display: block;
+      font-family: var(--font-title); font-size: 13px; font-weight: 400;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--primary); margin: 40px 0 10px;
+    }
+
+    /* ── SCHEMA BOX ── */
+    .schema-box {
+      border: 1px solid var(--gray); padding: 16px 20px;
+      margin: 14px 0; background: var(--gray);
+    }
+    .schema-box .ascii-diagram { background: transparent; border: none; padding: 0; margin: 0; }
+
+    /* ── FIGURE / PHOTO ── */
+    .figure-block { padding: 24px 28px 0; }
+    .figure { text-align: center; }
+    .figure img { max-width: 100%; max-height: 560px; height: auto; display: block; margin: 0 auto; }
+
+    /* ── COMPONENT GRID ── */
+    .component-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin: 14px 0;
+    }
+    .component-card {
+      padding: 20px 16px; text-align: center; background: var(--white);
+      border: 1px solid var(--gray);
+    }
+    .component-card img {
+      width: 100%; max-height: 100px; object-fit: contain; margin-bottom: 14px;
+    }
+    .component-name {
+      font-family: var(--font-title); font-size: 13px; font-weight: 400;
+      text-transform: uppercase; letter-spacing: 0.04em; color: var(--black);
+      margin-bottom: 4px;
+    }
+    .component-role {
+      font-family: var(--font-title); font-size: 10px; font-weight: 400;
+      text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary);
+      margin-bottom: 8px;
+    }
+    .component-detail {
+      font-family: var(--font-body); font-size: 13px; line-height: 1.55; color: var(--gray2);
+    }
+
+    /* ── ENDPOINT TABLE ── */
+    .endpoint-row td:first-child {
+      font-family: 'Courier New', monospace; font-size: 11.5px;
+      color: var(--primary); font-weight: 700;
+    }
+
+    /* ── SYMPTOMS MATRIX ── */
+    .sym-matrix { border-top: 1px solid var(--gray); margin: 24px 0; }
+    .sym-cat { border-bottom: 1px solid var(--gray); }
+    .sym-cat:last-child { border-bottom: none; }
+    .sym-cat-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0 10px; border-bottom: 1px solid var(--gray);
+      flex-wrap: wrap;
+    }
+    .sym-cat-title {
+      font-family: var(--font-title); font-size: 13px; font-weight: 400;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .sym-cat-sub {
+      font-family: var(--font-title); font-size: 10px; font-weight: 400;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray2);
+    }
+    .sym-levels-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sym-levels {
+      display: grid; grid-template-columns: repeat(6, 1fr);
+      min-width: 680px;
+    }
+    .sym-cell {
+      padding: 12px 12px; border-right: 1px solid var(--gray);
+      display: flex; flex-direction: column; gap: 8px;
+      background: var(--gray); min-width: 0;
+    }
+    .sym-cell:last-child { border-right: none; }
+    .sym-badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px; color: #fff;
+      font-family: var(--font-title); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      align-self: flex-start; flex-shrink: 0;
+      line-height: 1.4;
+    }
+    .sym-badge.dark { color: var(--black); }
+    .sym-none {
+      font-family: var(--font-title); font-size: 18px; color: var(--gray);
+      padding: 4px 0; line-height: 1;
+    }
+    .sym-row { display: flex; flex-direction: column; gap: 2px; }
+    .sym-who {
+      font-family: var(--font-title); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray2);
+    }
+    .sym-text {
+      font-family: var(--font-body); font-size: 15px; line-height: 1.55; color: var(--black);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--gray); padding: 14px 22px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--white);
+    }
+    footer p {
+      font-family: var(--font-body); font-size: 11px; color: var(--gray2);
+      margin: 0;
+    }
+    .footer-logo {
+      font-family: var(--font-title); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--black);
+    }
+
+    /* ── RESPONSIVE ── */
+
+    /* Tablet: collapse sidebar */
+    @media (max-width: 900px) {
+      .toc-wrap { grid-template-columns: 1fr; }
+      .toc {
+        position: static; height: auto;
+        border-right: none; border-bottom: 1px solid var(--gray);
+      }
+      .toc-list { display: grid; grid-template-columns: 1fr 1fr; }
+      .section { padding: 20px 22px 24px; }
+      .hero { padding: 22px 22px 20px; }
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      /* Topbar: hide center text on mobile */
+      .topbar-center { display: none; }
+      .topbar-divider { display: none; }
+
+      /* TOC: single column list, smaller text */
+      .toc-list { display: block; }
+      .toc-list li a { padding: 10px 16px; font-size: 13px; }
+
+      /* Hero */
+      .hero { padding: 28px 16px 26px; }
+      .hero-title { font-size: clamp(52px, 20vw, 96px); margin-bottom: 14px; }
+      .hero-subtitle { font-size: 13px; }
+      .hero-params { gap: 6px; }
+      .hero-param { font-size: 9px; padding: 4px 10px; }
+
+      /* Section labels */
+      .section-label { padding: 10px 16px; gap: 10px; }
+      .section-label-num, .section-label-text { font-size: 14px; letter-spacing: 0.05em; }
+
+      /* Section body */
+      .section { padding: 20px 16px 24px; }
+      h3.section-h3 { font-size: 12px; margin: 20px 0 8px; }
+
+      /* Code blocks: slightly smaller on mobile, ensure they scroll */
+      pre {
+        font-size: 12px;
+        padding: 14px 16px;
+        margin: 16px 0;
+        max-width: calc(100vw - 32px);
+      }
+      .figure-block { padding: 20px 16px 0; }
+      .figure img { max-height: 380px; }
+
+      /* Component grid: 2 columns on mobile */
+      .component-grid { grid-template-columns: 1fr 1fr; }
+
+      .schema-box { padding: 14px 12px; }
+      .ascii-diagram {
+        font-size: 12px;
+        padding: 14px 16px;
+        max-width: calc(100vw - 60px);
+      }
+      .schema-box .ascii-diagram {
+        max-width: calc(100vw - 88px);
+      }
+
+      /* Tables: scroll within wrapper */
+      .table-wrap { margin: 14px 0; }
+      table { font-size: 13px; min-width: 440px; }
+      thead th { padding: 8px 10px; font-size: 9px; }
+      tbody td { padding: 9px 10px; }
+
+      /* Fixed column widths → auto on mobile */
+      .pin-table thead th:first-child { width: auto; min-width: 130px; }
+      .trouble-table tbody td:first-child { width: auto; min-width: 130px; }
+
+      /* Levels grid: 2 columns on mobile */
+      .levels-grid { grid-template-columns: 1fr 1fr; }
+      /* Reset nth-child border logic for 2-column grid */
+      .level-cell { border-right: 1px solid var(--gray); border-bottom: 1px solid var(--gray); }
+      .level-cell:nth-child(3n) { border-right: 1px solid var(--gray); }
+      .level-cell:nth-last-child(-n+3) { border-bottom: 1px solid var(--gray); }
+      .level-cell:nth-child(2n) { border-right: none; }
+      .level-cell:nth-last-child(-n+2) { border-bottom: none; }
+
+      /* Callout */
+      .callout { padding: 12px 14px; }
+
+      /* Footer */
+      footer { flex-direction: column; gap: 5px; text-align: center; padding: 12px 16px; }
+
+      /* Sub label */
+      .sub-label { font-size: 12px; }
+    }
+
+    /* Very small phones */
+    @media (max-width: 380px) {
+      .levels-grid { grid-template-columns: 1fr; }
+      .level-cell { border-right: none !important; }
+      .level-cell:nth-last-child(-n+1) { border-bottom: none; }
+      .level-cell:nth-last-child(-n+2) { border-bottom: 1px solid var(--gray) !important; }
+
+      .component-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-logo">Aria Bene Comune</div>
+  <div class="topbar-divider"></div>
+  <div class="topbar-center">Guida al Sensore</div>
+  <div class="topbar-tag">Guida tecnica</div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Nodo ESP32 + Server Raspberry Pi</div>
+  <h1 class="hero-title">Guida alla<br>Costruzione<br>del Sensore</h1>
+  <p class="hero-subtitle">
+    Un nodo della rete comunitaria — passo per passo, per principianti assoluti.
+    Non serve esperienza di elettronica o programmazione.
+  </p>
+  <div class="hero-params">
+    <span class="hero-param">PM2.5</span>
+    <span class="hero-param">PM10</span>
+    <span class="hero-param">NH₃</span>
+    <span class="hero-param">CO</span>
+    <span class="hero-param">NO₂</span>
+    <span class="hero-param">Temperatura</span>
+    <span class="hero-param">Umidità</span>
+    <span class="hero-param">Pressione</span>
+    <span class="hero-param">VOC</span>
+  </div>
+</div>
+
+<!-- LAYOUT: TOC + CONTENT -->
+<div class="toc-wrap">
+
+  <!-- TABLE OF CONTENTS -->
+  <nav class="toc">
+    <div class="toc-header">Indice</div>
+    <ol class="toc-list">
+      <li><a href="#s1"><span class="toc-num">01</span>Introduzione</a></li>
+      <li><a href="#s2"><span class="toc-num">02</span>I componenti</a></li>
+      <li><a href="#s3"><span class="toc-num">03</span>Un sensore nella rete</a></li>
+      <li><a href="#s4"><span class="toc-num">04</span>Cosa ti serve</a></li>
+      <li><a href="#s5"><span class="toc-num">05</span>Costruire il nodo (ESP32)</a></li>
+      <li><a href="#s6"><span class="toc-num">06</span>Configurare il server (Raspberry Pi)</a></li>
+      <li><a href="#s7"><span class="toc-num">07</span>La custodia fai-da-te</a></li>
+      <li><a href="#s8"><span class="toc-num">08</span>Prima accensione e collaudo</a></li>
+      <li><a href="#s9"><span class="toc-num">09</span>Capire e calibrare le letture</a></li>
+      <li><a href="#s10"><span class="toc-num">10</span>Risoluzione dei problemi</a></li>
+      <li><a href="#s11"><span class="toc-num">11</span>Sicurezza e prossimi passi</a></li>
+    </ol>
+  </nav>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- SENSOR PHOTO -->
+    <div class="figure-block">
+      <div class="figure">
+        <img src="assets/Sensore.png" alt="Il sensore assemblato dentro la custodia" />
+      </div>
+    </div>
+
+    <!-- 1. INTRODUZIONE -->
+    <div class="section-label" id="s1">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">01</span>
+      <span class="section-label-text">Introduzione</span>
+    </div>
+    <div class="section">
+      <h3 class="section-h3">1.1 Perché monitorare dal basso</h3>
+      <p>
+        Questa è una guida per costruire un sensore di qualità dell'aria che monitora i livelli di
+        inquinamento. È stata scritta per creare una rete di sensori di proprietà della comunità a
+        Taranto, ma può essere usata da chiunque senta il bisogno di adottare metodologie di
+        citizen science per monitorare lo spazio in cui vive. È pensata in particolare per chi
+        resiste nelle <strong>Sacrifice Zones</strong> del mondo, come strumento per contrastare
+        la recinzione dell'informazione.
+      </p>
+      <p>
+        Questa guida ti accompagna passo per passo nella costruzione del sensore per la qualità
+        dell'aria <strong>"Aria Bene Comune"</strong>. È pensata per chi parte da zero: non serve
+        esperienza di elettronica o programmazione. Useremo materiali semplici, codice aperto e un
+        linguaggio chiaro, perché lo strumento per conoscere la propria aria dovrebbe essere
+        accessibile a tutti, non riservato a chi possiede competenze specialistiche. Questa non è
+        la guida definitiva a un sensore di qualità dell'aria: discussioni e modifiche sono
+        benvenute e supportate. Sperimentiamo e impariamo insieme!
+      </p>
+      <p>
+        Chi controlla i sensori controlla anche il racconto della realtà. Quando le uniche
+        misurazioni "ufficiali" appartengono a chi ha interesse a minimizzare l'inquinamento, la
+        voce di chi vive in quei luoghi diventa "aneddoto", mentre il silenzio istituzionale si
+        traveste da "scienza". Una rete di sensori costruita dalle persone esiste proprio per
+        rovesciare questo squilibrio, e offre:
+      </p>
+      <ul>
+        <li><strong>Una mappa distribuita</strong> — puoi vedere come la qualità dell'aria varia tra zone diverse, non solo in un punto.</li>
+        <li><strong>Una memoria condivisa</strong> — l'andamento nel tempo diventa una risorsa comune, utile per capire pattern e momenti critici.</li>
+        <li><strong>Dati dal basso</strong> — le misurazioni provengono da chi vive in quei luoghi, integrando il monitoraggio ufficiale.</li>
+        <li><strong>Consapevolezza e partecipazione</strong> — costruire un sensore significa contribuire direttamente alla conoscenza ambientale condivisa del luogo in cui vivi.</li>
+      </ul>
+
+      <h3 class="section-h3">1.2 Il tuo ruolo nella rete</h3>
+      <p>
+        Costruendo e attivando questo sensore, diventi uno dei nodi della rete. Ogni nodo ha un
+        proprio identificativo (nello sketch è il campo <strong>sensor_id</strong>, ad es. "S1"):
+        è ciò che permette di distinguere i dati provenienti dai diversi sensori della comunità.
+      </p>
+      <p>
+        Oggi il programma del Raspberry Pi raccoglie le letture, le unisce in snapshot e le mostra
+        su una dashboard accessibile dalla rete locale, mantenendo anche un archivio storico. La
+        piattaforma comunitaria "Aria Bene Comune", che riunirà i dati di tutti i nodi in un'unica
+        visualizzazione, è attualmente in fase di sviluppo.
+      </p>
+      <p>Il dispositivo misura le principali grandezze legate all'aria che respiriamo:</p>
+      <ul>
+        <li><strong>Particolato PM2.5 e PM10</strong> — le polveri sottili sospese nell'aria.</li>
+        <li><strong>Ammoniaca (NH₃), monossido di carbonio (CO) e biossido di azoto (NO₂)</strong> — gas legati a traffico, combustioni e attività agricole.</li>
+        <li><strong>Composti organici volatili (VOC)</strong> — vapori di vernici, solventi, detergenti; espressi come resistenza del gas in kΩ.</li>
+        <li><strong>Temperatura, umidità e pressione atmosferica</strong> — le condizioni ambientali di base.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="callout-label">In breve</div>
+        <p>
+          Il tuo sensore funziona perfettamente anche da solo, ma è pensato per contribuire,
+          insieme a molti altri, a un quadro condiviso e continuamente aggiornato dell'aria che
+          respiriamo.
+        </p>
+      </div>
+    </div>
+
+    <!-- 2. I COMPONENTI -->
+    <div class="section-label" id="s2">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">02</span>
+      <span class="section-label-text">I componenti</span>
+    </div>
+    <div class="section">
+      <div class="component-grid">
+        <div class="component-card">
+          <img src="assets/components/RaspberryPi.png" alt="Raspberry Pi" />
+          <div class="component-name">Raspberry Pi</div>
+          <div class="component-role">Server + dashboard</div>
+          <div class="component-detail">Pi 4 o Pi Zero 2 W con Raspberry Pi OS</div>
+        </div>
+        <div class="component-card">
+          <img src="assets/components/ESP32-DevKit.png" alt="ESP32 DevKit" />
+          <div class="component-name">ESP32 DevKit</div>
+          <div class="component-role">Nodo sensore</div>
+          <div class="component-detail">Legge gas e ambiente, invia JSON via USB</div>
+        </div>
+        <div class="component-card">
+          <img src="assets/components/SDS011.png" alt="SDS011" />
+          <div class="component-name">SDS011</div>
+          <div class="component-role">Particolato</div>
+          <div class="component-detail">PM2.5 e PM10, collegato al Pi via adattatore USB</div>
+        </div>
+        <div class="component-card">
+          <img src="assets/components/MiCS-6814.png" alt="MiCS-6814" />
+          <div class="component-name">MiCS-6814</div>
+          <div class="component-role">Gas multipli</div>
+          <div class="component-detail">NH₃, CO, NO₂ — uscite analogiche all'ESP32</div>
+        </div>
+        <div class="component-card">
+          <img src="assets/components/BME680.png" alt="BME680" />
+          <div class="component-name">BME680</div>
+          <div class="component-role">Ambiente + VOC</div>
+          <div class="component-detail">Temperatura, umidità, pressione, gas (kΩ) via I²C</div>
+        </div>
+        <div class="component-card">
+          <img src="assets/components/USBcable.png" alt="2 cavi USB" />
+          <div class="component-name">2 cavi USB</div>
+          <div class="component-role">Collegamenti dati</div>
+          <div class="component-detail">ESP32→Pi e SDS011→Pi</div>
+        </div>
+        <div class="component-card">
+          <img src="assets/components/Breadboard.png" alt="Breadboard" />
+          <div class="component-name">Breadboard + jumper</div>
+          <div class="component-role">Cablaggio</div>
+          <div class="component-detail">Per collegare MiCS-6814 e BME680 all'ESP32</div>
+        </div>
+        <div class="component-card">
+          <img src="assets/components/PowerSupply.png" alt="Alimentatore" />
+          <div class="component-name">Alimentatore</div>
+          <div class="component-role">Alimentazione</div>
+          <div class="component-detail">Alimentatore ufficiale del Raspberry Pi</div>
+        </div>
+      </div>
+
+      <p>
+        Se non hai mai usato una breadboard, questa parte è per te. Andremo con calma, perché
+        una volta capita un'idea semplice, tutto il resto diventa facile. Prenditi il tuo tempo:
+        è la parte che all'inizio sembra misteriosa e dopo sembrerà ovvia.
+      </p>
+
+      <span class="sub-label">Cos'è una breadboard</span>
+      <p>
+        Una breadboard è una basetta di plastica piena di piccoli foretti che permette di
+        collegare tra loro componenti elettronici senza saldare. Basta inserire fili e piedini
+        nei foretti. La parte intelligente è che molti di quei foretti sono già collegati tra
+        loro all'interno della basetta, tramite striscioline metalliche nascoste. Quindi, quando
+        inserisci due fili in due foretti collegati internamente, quei due fili risultano
+        elettricamente connessi — come se li avessi attorcigliati insieme.
+      </p>
+    </div>
+
+    <!-- 3. UN SENSORE NELLA RETE -->
+    <div class="section-label" id="s3">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">03</span>
+      <span class="section-label-text">Un sensore che fa parte di una rete</span>
+    </div>
+    <div class="section">
+      <p>
+        Il sensore che stai per costruire non è un dispositivo isolato. È un <strong>nodo di "Aria
+        Bene Comune"</strong>, una rete comunitaria per il monitoraggio della qualità dell'aria.
+        L'idea è semplice: tante persone costruiscono e mettono in funzione il proprio sensore,
+        e i dati di tutti vengono raccolti insieme in un'unica piattaforma condivisa.
+      </p>
+
+      <h3 class="section-h3">3.1 Perché un monitoraggio collettivo</h3>
+      <p>
+        Un singolo sensore racconta com'è l'aria in un punto e in un momento. Ma la qualità
+        dell'aria è un fenomeno che riguarda interi quartieri e città, e cambia da via a via.
+        Mettendo in rete molti sensori si ottiene qualcosa che nessun apparecchio da solo può dare:
+      </p>
+      <ul>
+        <li><strong>Una mappa diffusa:</strong> si vede come varia l'aria tra zone diverse, non solo in un punto.</li>
+        <li><strong>Una memoria condivisa:</strong> l'andamento nel tempo diventa un patrimonio comune, utile per capire tendenze e momenti critici.</li>
+        <li><strong>Un dato dal basso:</strong> le misure nascono dalle persone che vivono quei luoghi, a complemento delle centraline ufficiali.</li>
+        <li><strong>Consapevolezza e partecipazione:</strong> chi costruisce un sensore contribuisce in prima persona a una conoscenza collettiva dell'ambiente in cui vive.</li>
+      </ul>
+
+      <h3 class="section-h3">3.2 Il tuo ruolo nella rete</h3>
+      <p>
+        Costruendo e attivando questo sensore diventi uno dei nodi della rete. Ogni nodo ha un
+        proprio identificativo (nello sketch è il campo <code>sensor_id</code>, ad esempio
+        <code>"S1"</code>): è ciò che permette di distinguere i dati che arrivano dai diversi
+        sensori della comunità.
+      </p>
+
+      <h3 class="section-h3">3.3 Come i dati raggiungono la piattaforma</h3>
+      <p>
+        Oggi il programma del Raspberry Pi raccoglie le letture, le unisce in istantanee e le mostra
+        in una dashboard accessibile sulla rete locale, conservando anche lo storico. La piattaforma
+        comunitaria di "Aria Bene Comune", che riunirà i dati di tutti i nodi in un'unica vista,
+        è attualmente in sviluppo.
+      </p>
+      <div class="callout">
+        <div class="callout-label">In sintesi</div>
+        <p>
+          Il tuo sensore funziona benissimo da solo, ma è progettato per fare qualcosa di più
+          grande: contribuire, insieme a tanti altri, a una fotografia condivisa e in continuo
+          aggiornamento dell'aria che respiriamo.
+        </p>
+      </div>
+
+      <h3 class="section-h3">3.4 Come la piattaforma interpreta i dati</h3>
+      <p>
+        La piattaforma "Aria Bene Comune" parte dalla <strong>media oraria</strong> di ogni
+        inquinante e la traduce in un giudizio sulla qualità dell'aria e nei suoi possibili effetti
+        sulla salute. Le soglie usate sono ispirate alle linee guida OMS / WHO Air Quality
+        Guidelines, adattate alle esigenze della rete.
+      </p>
+
+      <h3 class="section-h3">Consigli pratici per livello</h3>
+      <div class="sym-matrix" style="margin-top: 0;">
+        <div class="sym-cat">
+          <div class="sym-levels-wrap">
+            <div class="sym-levels">
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-buono)">1 Buono</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">L'aria è buona: goditi le attività all'aperto.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">L'aria è buona: goditi le attività all'aperto.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-sufficiente)">2 Sufficiente</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Goditi le tue consuete attività all'aperto.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Goditi le tue consuete attività all'aperto.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge dark" style="background:var(--c-mediocre)">3 Mediocre</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Goditi le tue attività all'aperto.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Valuta di ridurre le attività intense all'aperto in presenza di sintomi.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-scarso)">4 Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Valuta di ridurre le attività intense all'aperto se compaiono sintomi.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Valuta di ridurre l'attività fisica, soprattutto all'aperto, in presenza di sintomi.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-molto-scarso)">5 Molto Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Valuta di ridurre le attività intense all'aperto.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Riduci l'attività fisica, in particolare all'aperto.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-estremo)">6 Estr. Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Riduci l'attività fisica all'aperto.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Evita l'attività fisica all'aperto.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="section-h3">Tre famiglie di inquinanti</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Famiglia</th><th>Inquinanti</th><th>Effetti principali</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Particolato</strong></td><td>PM2.5, PM10</td><td>Agiscono soprattutto su polmoni e cuore.</td></tr>
+            <tr><td><strong>Gassosi</strong></td><td>NO₂ e altri gas irritanti</td><td>Agiscono sulle vie respiratorie e sulle mucose.</td></tr>
+            <tr><td><strong>Sistemici</strong></td><td>CO, NH₃</td><td>Possono avere effetti sull'intero organismo: mal di testa, nausea, confusione.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <span class="sub-label">Effetti per categoria di inquinante</span>
+
+      <div class="sym-matrix">
+
+        <!-- PARTICOLATO -->
+        <div class="sym-cat">
+          <div class="sym-cat-header">
+            <span class="sym-cat-title">Particolato</span>
+            <span class="sym-cat-sub">PM2.5 · PM10</span>
+          </div>
+          <div class="sym-levels-wrap">
+            <div class="sym-levels">
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-buono)">1 Buono</span>
+                <span class="sym-none">—</span>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-sufficiente)">2 Sufficiente</span>
+                <span class="sym-none">—</span>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge dark" style="background:var(--c-mediocre)">3 Mediocre</span>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Lieve tosse o leggera mancanza di respiro sotto sforzo.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-scarso)">4 Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Tosse, sensazione di "peso" al petto.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Respiro sibilante, aumento dell'uso dell'inalatore, riduzione della resistenza fisica.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-molto-scarso)">5 Molto Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Tosse intensa, costrizione toracica, affaticamento.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Alto rischio di crisi asmatica o palpitazioni cardiache.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-estremo)">6 Estr. Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Grave mancanza di respiro, stress cardiaco.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Possibili eventi cardiaci o respiratori acuti.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GAS IRRITANTI -->
+        <div class="sym-cat">
+          <div class="sym-cat-header">
+            <span class="sym-cat-title">Gas Irritanti</span>
+            <span class="sym-cat-sub">NO₂ · SO₂ · O₃</span>
+          </div>
+          <div class="sym-levels-wrap">
+            <div class="sym-levels">
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-buono)">1 Buono</span>
+                <span class="sym-none">—</span>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-sufficiente)">2 Sufficiente</span>
+                <span class="sym-none">—</span>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge dark" style="background:var(--c-mediocre)">3 Mediocre</span>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Leggera secchezza alla gola o bruciore agli occhi nei soggetti più sensibili.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-scarso)">4 Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Gola irritata, tosse secca, occhi brucianti.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Dolore acuto nella respirazione profonda, crisi asmatiche.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-molto-scarso)">5 Molto Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Intensa irritazione alla gola, bruciore al petto, tosse secca persistente.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Grave distress respiratorio; difficoltà respiratorie.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-estremo)">6 Estr. Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Grave infiammazione delle vie aeree, sensazione di soffocamento.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Grave rischio di danni polmonari.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SISTEMICI -->
+        <div class="sym-cat">
+          <div class="sym-cat-header">
+            <span class="sym-cat-title">Sostanze Chimiche e Sistemiche</span>
+            <span class="sym-cat-sub">CO · NH₃</span>
+          </div>
+          <div class="sym-levels-wrap">
+            <div class="sym-levels">
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-buono)">1 Buono</span>
+                <span class="sym-none">—</span>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-sufficiente)">2 Sufficiente</span>
+                <span class="sym-none">—</span>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge dark" style="background:var(--c-mediocre)">3 Mediocre</span>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Possibile lieve mal di testa (CO) o debole odore chimico.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-scarso)">4 Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Lieve mal di testa, affaticamento o nausea.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Aumento delle vertigini o irritazione di naso e gola.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-molto-scarso)">5 Molto Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Forte mal di testa pulsante, confusione, nausea, odore pungente (NH₃).</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Significativa perdita di coordinazione o bruciore alle vie respiratorie.</span>
+                </div>
+              </div>
+              <div class="sym-cell">
+                <span class="sym-badge" style="background:var(--c-estremo)">6 Estr. Scarso</span>
+                <div class="sym-row">
+                  <span class="sym-who">GEN</span>
+                  <span class="sym-text">Vomito, vertigini, confusione mentale, svenimento.</span>
+                </div>
+                <div class="sym-row">
+                  <span class="sym-who">SEN</span>
+                  <span class="sym-text">Avvelenamento da CO o gravi ustioni chimiche alle mucose.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="callout callout-warn">
+        <div class="callout-label">Avvertenza</div>
+        <p>
+          Queste indicazioni hanno scopo informativo e di sensibilizzazione e <strong>non sostituiscono
+          il parere di un medico</strong>. Le persone con patologie respiratorie o cardiache dovrebbero
+          sempre seguire le indicazioni del proprio specialista.
+        </p>
+      </div>
+    </div>
+
+    <!-- 4. COSA TI SERVE -->
+    <div class="section-label" id="s4">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">04</span>
+      <span class="section-label-text">Cosa ti serve</span>
+    </div>
+    <div class="section">
+
+      <h3 class="section-h3">4.1 Glossario rapido</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Termine</th><th>Significato</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Nodo sensore</strong></td><td>La scheda che legge i sensori (qui l'ESP32).</td></tr>
+            <tr><td><strong>Server</strong></td><td>La scheda che raccoglie e mostra i dati (qui il Raspberry Pi).</td></tr>
+            <tr><td><strong>JSON</strong></td><td>Un formato di testo per scambiare dati, es. <code>{"co": 1.2, "no2": 30}</code>.</td></tr>
+            <tr><td><strong>Baud rate</strong></td><td>La velocità della comunicazione seriale; qui 115200.</td></tr>
+            <tr><td><strong>GPIO</strong></td><td>I pin programmabili della scheda.</td></tr>
+            <tr><td><strong>I²C</strong></td><td>Una "lingua" a due fili (SDA, SCL) usata dal BME680.</td></tr>
+            <tr><td><strong>ADC</strong></td><td>Convertitore analogico-digitale: legge tensioni come numeri (l'ESP32 lo ha già).</td></tr>
+            <tr><td><strong>Endpoint API</strong></td><td>Un indirizzo web (es. <code>/api/live</code>) che restituisce dati.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="section-h3">4.2 Lista dei componenti</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Componente</th><th>Ruolo</th><th>Dettaglio</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Raspberry Pi</strong></td><td>Server + dashboard</td><td>Pi 4 o Pi Zero 2 W con Raspberry Pi OS</td></tr>
+            <tr><td><strong>ESP32 DevKit</strong></td><td>Nodo sensore</td><td>Legge gas e ambiente, invia JSON via USB</td></tr>
+            <tr><td><strong>SDS011</strong></td><td>Particolato</td><td>PM2.5 e PM10, collegato al Pi via adattatore USB</td></tr>
+            <tr><td><strong>MiCS-6814</strong></td><td>Gas multipli</td><td>NH₃, CO, NO₂ — uscite analogiche all'ESP32</td></tr>
+            <tr><td><strong>BME680</strong></td><td>Ambiente + VOC</td><td>Temperatura, umidità, pressione, gas (kΩ) via I²C</td></tr>
+            <tr><td><strong>2 cavi USB</strong></td><td>Collegamenti dati</td><td>ESP32→Pi e SDS011→Pi</td></tr>
+            <tr><td><strong>Breadboard + jumper</strong></td><td>Cablaggio</td><td>Per collegare MiCS-6814 e BME680 all'ESP32</td></tr>
+            <tr><td><strong>Alimentatore Pi</strong></td><td>Alimentazione</td><td>Alimentatore ufficiale del Raspberry Pi</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout callout-warn">
+        <div class="callout-label">Importante — riscaldamento</div>
+        <p>
+          Il MiCS-6814 ha bisogno di alcuni minuti di riscaldamento prima di fornire letture
+          stabili. È normale: lascialo acceso un po' prima di fidarti dei valori dei gas.
+        </p>
+      </div>
+    </div>
+
+    <!-- 5. COSTRUIRE IL NODO SENSORE -->
+    <div class="section-label" id="s5">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">05</span>
+      <span class="section-label-text">Costruire il nodo sensore (ESP32)</span>
+    </div>
+    <div class="section">
+
+      <h3 class="section-h3">5.1 Collegamenti</h3>
+      <div class="callout callout-warn">
+        <div class="callout-label">Sicurezza</div>
+        <p>Spegni sempre l'ESP32 (scollega l'USB) mentre cabli. Il BME680 va a 3,3 V; il MiCS-6814 a 5 V. Tutte le masse (GND) devono essere in comune.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="pin-table">
+          <thead><tr><th>Sensore (pin)</th><th>Pin ESP32</th><th>Note</th></tr></thead>
+          <tbody>
+            <tr><td>BME680 – VCC</td><td><code>3V3</code></td><td>Alimentazione 3,3 V</td></tr>
+            <tr><td>BME680 – GND</td><td><code>GND</code></td><td>Massa comune</td></tr>
+            <tr><td>BME680 – SDA</td><td><code>GPIO12</code></td><td>Linea dati I²C (<code>Wire.begin(12, 13)</code>)</td></tr>
+            <tr><td>BME680 – SCL</td><td><code>GPIO13</code></td><td>Linea clock I²C</td></tr>
+            <tr><td>MiCS-6814 – VCC</td><td><code>5V (VIN)</code></td><td>Alimentazione 5 V</td></tr>
+            <tr><td>MiCS-6814 – GND</td><td><code>GND</code></td><td>Massa comune</td></tr>
+            <tr><td>MiCS-6814 – NH₃</td><td><code>GPIO1</code></td><td>Ingresso analogico (PIN_NH3)</td></tr>
+            <tr><td>MiCS-6814 – NO₂</td><td><code>GPIO2</code></td><td>Ingresso analogico (PIN_NO2)</td></tr>
+            <tr><td>MiCS-6814 – CO</td><td><code>GPIO3</code></td><td>Ingresso analogico (PIN_CO)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <div class="callout-label">Tipo di scheda</div>
+        <p>
+          I pin GPIO1, 2, 3 per gli ingressi analogici e GPIO12/13 per l'I²C sono tipici delle
+          schede <strong>ESP32-S3 / S2 / C3</strong>. Sui vecchi ESP32 classici gli ingressi
+          analogici hanno numeri diversi (es. 34, 35, 32). Usa la numerazione che corrisponde
+          alla tua scheda, mantenendola coerente con lo sketch.
+        </p>
+      </div>
+      <div class="callout">
+        <div class="callout-label">Indirizzo I²C</div>
+        <p>
+          Lo sketch cerca il BME680 all'indirizzo <code>0x76</code>. Alcuni moduli usano invece
+          <code>0x77</code>. Se la scheda stampa "BME680 not found", prova a cambiare
+          l'indirizzo in <code>bme.begin(0x77, &Wire)</code>.
+        </p>
+      </div>
+
+      <h3 class="section-h3">5.2 Preparare l'Arduino IDE</h3>
+      <ol>
+        <li>Scarica e installa l'Arduino IDE da <strong>arduino.cc</strong>.</li>
+        <li>In <em>File → Impostazioni</em>, aggiungi l'URL del pacchetto schede ESP32 nel campo "URL aggiuntive per il Gestore schede".</li>
+        <li>In <em>Strumenti → Scheda → Gestore schede</em>, cerca "esp32" e installa il pacchetto.</li>
+        <li>Seleziona <em>Strumenti → Scheda → ESP32 Dev Module</em>.</li>
+        <li>Dal Gestore librerie installa: <strong>Adafruit BME680</strong>, <strong>Adafruit Unified Sensor</strong> e <strong>ArduinoJson</strong> (di Benoit Blanchon).</li>
+      </ol>
+
+      <h3 class="section-h3">5.3 Lo sketch dell'ESP32</h3>
+      <p>
+        Ogni 5 minuti esegue una raffica di 5 letture ravvicinate, ne calcola la media e invia
+        un solo valore in formato JSON sulla porta USB a 115200 baud.
+        All'avvio attende 30 secondi per il riscaldamento dei sensori di gas.
+      </p>
+<pre><code>#include &lt;Wire.h&gt;
+#include &lt;ArduinoJson.h&gt;
+#include &lt;Adafruit_Sensor.h&gt;
+#include &lt;Adafruit_BME680.h&gt;
+
+const char* SENSOR_ID = "S1";
+const int PIN_NH3 = 1;
+const int PIN_NO2 = 2;
+const int PIN_CO  = 3;
+
+// Campionamento: 5 letture ravvicinate, una raffica ogni 5 minuti
+const int  BURST_SAMPLES   = 5;       // letture per raffica
+const long SAMPLE_GAP_MS   = 2000;   // pausa fra le letture (2 s)
+const long CYCLE_PERIOD_MS = 300000; // intervallo fra le raffiche (5 min)
+
+Adafruit_BME680 bme;
+bool bmeFound = false;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  Wire.begin(12, 13);
+  if (bme.begin(0x76, &Wire)) {
+    bme.setTemperatureOversampling(BME680_OS_8X);
+    bme.setHumidityOversampling(BME680_OS_2X);
+    bme.setPressureOversampling(BME680_OS_4X);
+    bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
+    bme.setGasHeater(320, 150);
+    bmeFound = true;
+    Serial.println("BME680 OK.");
+  } else {
+    Serial.println("BME680 not found - sending gas sensors only.");
+  }
+  Serial.println("Waiting 30s for MICS-6814 heaters...");
+  delay(30000);
+  Serial.println("Starting.");
+}
+
+void loop() {
+  double nh3Sum=0, no2Sum=0, coSum=0;
+  double tSum=0, hSum=0, pSum=0, gSum=0;
+  int gasCount=0, bmeCount=0;
+
+  for (int i = 0; i &lt; BURST_SAMPLES; i++) {
+    nh3Sum += (analogRead(PIN_NH3) / 4095.0) * 100.0;
+    no2Sum += (analogRead(PIN_NO2) / 4095.0) * 100.0;
+    coSum  += (analogRead(PIN_CO)  / 4095.0) * 100.0;
+    gasCount++;
+    if (bmeFound &amp;&amp; bme.performReading()) {
+      tSum += bme.temperature;
+      hSum += bme.humidity;
+      pSum += bme.pressure / 100.0;
+      gSum += bme.gas_resistance / 1000.0;
+      bmeCount++;
+    }
+    if (i &lt; BURST_SAMPLES - 1) delay(SAMPLE_GAP_MS);
+  }
+
+  StaticJsonDocument&lt;300&gt; doc;
+  doc["sensor_id"] = SENSOR_ID;
+  doc["samples"]   = gasCount;
+  doc["nh3"] = nh3Sum / gasCount;
+  doc["no2"] = no2Sum / gasCount;
+  doc["co"]  = coSum  / gasCount;
+  if (bmeCount &gt; 0) {
+    doc["temperature"] = tSum / bmeCount;
+    doc["humidity"]    = hSum / bmeCount;
+    doc["pressure"]    = pSum / bmeCount;
+    doc["gas_kohm"]    = gSum / bmeCount;
+  }
+
+  String payload;
+  serializeJson(doc, payload);
+  Serial.println(payload);
+
+  long burstElapsed = (long)(BURST_SAMPLES - 1) * SAMPLE_GAP_MS;
+  long wait = CYCLE_PERIOD_MS - burstElapsed;
+  if (wait &lt; 0) wait = 0;
+  delay(wait);
+}</code></pre>
+
+      <h3 class="section-h3">Note sul codice</h3>
+      <ul>
+        <li><strong>Riscaldamento integrato:</strong> il <code>delay(30000)</code> nel setup attende 30 secondi per stabilizzare i riscaldatori del MiCS-6814.</li>
+        <li><strong>Raffica di 5 letture:</strong> mediare più letture riduce il "rumore" tipico dei sensori di gas, dando un valore più stabile.</li>
+        <li><strong>Un invio ogni 5 minuti:</strong> il campo <code>samples</code> nel JSON indica quante letture compongono la media (normalmente 5).</li>
+        <li><strong>Valori dei gas:</strong> <code>nh3</code>, <code>no2</code> e <code>co</code> sono la lettura ADC in percentuale (0–100), non ancora concentrazioni reali.</li>
+        <li><strong>Robustezza:</strong> se il BME680 non viene trovato, lo sketch continua a inviare i soli gas.</li>
+      </ul>
+      <div class="callout">
+        <div class="callout-label">Verifica veloce</div>
+        <p>
+          Dopo aver caricato lo sketch, apri il Monitor seriale a 115200 baud: vedrai i messaggi
+          di avvio, poi una riga ogni 5 minuti come<br>
+          <code>{"sensor_id":"S1","samples":5,"nh3":21.3,...}</code><br>
+          Per le prime prove abbassa temporaneamente <code>CYCLE_PERIOD_MS</code> a 15000 (15 s).
+        </p>
+      </div>
+    </div>
+
+    <!-- 6. CONFIGURARE IL SERVER -->
+    <div class="section-label" id="s6">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">06</span>
+      <span class="section-label-text">Configurare il server (Raspberry Pi)</span>
+    </div>
+    <div class="section">
+
+      <h3 class="section-h3">6.1 Collegamenti USB</h3>
+      <p>Sul Raspberry Pi non si cabla nulla su breadboard: si collegano due dispositivi via USB.</p>
+      <ul>
+        <li>Il sensore <strong>SDS011</strong>, tramite il suo adattatore USB, compare di solito come <code>/dev/ttyUSB0</code>.</li>
+        <li>L'<strong>ESP32</strong>, collegato con il cavo USB, compare di solito come <code>/dev/ttyACM0</code>.</li>
+      </ul>
+      <p>Se i nomi non corrispondono, esegui nel Terminale:</p>
+      <pre><code>ls /dev/ttyUSB* /dev/ttyACM*</code></pre>
+      <p>e aggiorna le variabili <code>SDS011_PORT</code> ed <code>ESP_PORT</code> all'inizio del programma.</p>
+
+      <h3 class="section-h3">6.2 Installare il software</h3>
+      <p>Installa Raspberry Pi OS sulla microSD con Raspberry Pi Imager, poi apri un Terminale e:</p>
+      <pre><code>sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3-pip
+pip3 install flask flask-cors pyserial</code></pre>
+      <p>Copia sul Pi il file del server e, se presente, la cartella <code>dist/</code> con la dashboard React. Poi aggiungi il tuo utente al gruppo delle porte seriali:</p>
+      <pre><code>sudo usermod -a -G dialout $USER
+sudo reboot</code></pre>
+
+      <h3 class="section-h3">6.3 Come funziona il programma del Pi</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Parte del programma</th><th>Cosa fa</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Lettore SDS011</strong></td><td>Legge i pacchetti del sensore di particolato e ne ricava PM2.5 e PM10.</td></tr>
+            <tr><td><strong>Lettore ESP32</strong></td><td>Legge le righe JSON dall'ESP32 e ne estrae gas e dati ambientali.</td></tr>
+            <tr><td><strong>Ciclo di unione</strong></td><td>Ogni 30 secondi unisce le ultime letture in un'unica "istantanea".</td></tr>
+            <tr><td><strong>Media oraria</strong></td><td>Accumula le istantanee dell'ora in corso e, allo scoccare dell'ora, ne calcola e archivia la media.</td></tr>
+            <tr><td><strong>Salvataggio</strong></td><td>Scrive i dati in file CSV e lo storico in <code>history.json</code> e <code>hourly.json</code>.</td></tr>
+            <tr><td><strong>Simulazione</strong></td><td>Se manca una scheda, genera dati realistici al suo posto.</td></tr>
+            <tr><td><strong>Server web (Flask)</strong></td><td>Pubblica gli endpoint API e serve la dashboard sulla porta 5050.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="section-h3">Gli endpoint disponibili</h3>
+      <div class="table-wrap">
+        <table class="endpoint-row">
+          <thead><tr><th>Indirizzo</th><th>Cosa restituisce</th></tr></thead>
+          <tbody>
+            <tr><td>/api/live</td><td>L'ultima istantanea unita di tutti i valori.</td></tr>
+            <tr><td>/api/history</td><td>Lo storico delle ultime 24 ore.</td></tr>
+            <tr><td>/api/hourly</td><td>Le medie orarie (è il dato mostrato dalla piattaforma).</td></tr>
+            <tr><td>/api/status</td><td>Stato di connessione delle due schede.</td></tr>
+            <tr><td>/api/pm</td><td>Le ultime 50 letture del particolato.</td></tr>
+            <tr><td>/api/mean</td><td>Le ultime 50 letture ESP32, mediate per sensore.</td></tr>
+            <tr><td>/data (POST)</td><td>Permette a un ESP32 di inviare dati via Wi-Fi invece che via USB.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="section-h3">Dal campione alla media oraria</h3>
+      <ol>
+        <li>L'ESP32 effettua 5 letture ravvicinate e ne invia la media: <strong>un valore ogni 5 minuti</strong> (circa 12 valori l'ora).</li>
+        <li>Il Raspberry Pi riceve questi valori e, insieme al particolato dell'SDS011, li accumula per l'ora in corso.</li>
+        <li>Allo scoccare di ogni nuova ora, il server calcola la media di tutti i valori raccolti nell'ora appena conclusa e la archivia in <code>hourly.json</code>.</li>
+        <li>La <strong>media oraria</strong> è il dato esposto su <code>/api/hourly</code> — ciò che la piattaforma comunitaria mostra ai cittadini.</li>
+      </ol>
+
+      <h3 class="section-h3">Avviare il server</h3>
+      <pre><code>cd ~/aria-bene-comune     # la cartella dove hai messo il file
+python3 server.py          # usa il nome reale del tuo file</code></pre>
+      <p>Trova l'indirizzo IP del Pi con:</p>
+      <pre><code>hostname -I</code></pre>
+      <p>Da qualsiasi dispositivo sulla stessa rete, apri il browser su <code>http://INDIRIZZO-IP:5050</code> per vedere la dashboard.</p>
+    </div>
+
+    <!-- 7. LA CUSTODIA -->
+    <div class="section-label" id="s7">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">07</span>
+      <span class="section-label-text">La custodia (fai-da-te)</span>
+    </div>
+    <div class="section">
+      <p>
+        Una delle idee alla base di "Aria Bene Comune" è che il sensore sia davvero alla portata di
+        tutti: open source e costruito con <strong>materiali di recupero</strong>. Non serve una
+        custodia comprata o stampata in 3D. Va benissimo qualsiasi contenitore resistente all'acqua
+        che hai già in casa: una scatola di latta dei biscotti, un contenitore per alimenti, una
+        scatola degli attrezzi di plastica.
+      </p>
+      <div class="callout">
+        <div class="callout-label">Principio guida</div>
+        <p>
+          La custodia deve <strong>proteggere l'elettronica dalla pioggia</strong>, ma allo stesso
+          tempo <strong>lasciar passare liberamente l'aria</strong> fino ai sensori.
+        </p>
+      </div>
+
+      <h3 class="section-h3">7.1 Cosa ti serve per la custodia</h3>
+      <ul>
+        <li>Un contenitore resistente all'acqua con coperchio.</li>
+        <li>Un attrezzo per fare i fori: punteruolo, trapano, o un chiodo e un martello.</li>
+        <li>Nastro adesivo resistente o colla a caldo per fissare e sigillare.</li>
+        <li>Nastro adesivo isolante (utile se la scatola è di metallo).</li>
+        <li><em>Facoltativo:</em> rete a maglia fine (zanzariera) per coprire i fori dell'aria.</li>
+        <li><em>Facoltativo:</em> fascette da elettricista per fissare la scatola.</li>
+      </ul>
+
+      <h3 class="section-h3">7.2 I fori per l'aria</h3>
+      <ul>
+        <li>Pratica un gruppo di fori <strong>vicino ai sensori</strong> (SDS011 e BME680).</li>
+        <li>Fai i fori sui <strong>lati o sul fondo</strong>, mai rivolti verso l'alto: raccoglierebbero pioggia.</li>
+        <li>Bastano alcuni fori di pochi millimetri: meglio tanti piccoli che un grande buco aperto.</li>
+        <li>Copri i fori con rete a maglia fine per tenere fuori insetti e sporco.</li>
+      </ul>
+      <div class="callout callout-warn">
+        <div class="callout-label">Importante per il particolato</div>
+        <p>
+          Il sensore SDS011 ha una sua presa d'aria con una piccola ventola. Posiziona la scatola
+          in modo che quella presa sia il più possibile vicina a un gruppo di fori, e che né la
+          rete né i cavi la ostruiscano.
+        </p>
+      </div>
+
+      <h3 class="section-h3">7.3 Il foro per i cavi e la goccia di sgocciolamento</h3>
+      <ul>
+        <li>Pratica un solo foro per i cavi, della misura più piccola possibile, su un lato che guarda verso il basso.</li>
+        <li>Sigilla attorno con colla a caldo o nastro, lasciando il cavo libero di muoversi un minimo.</li>
+        <li>Crea una piega del cavo a "U" rovesciata appena fuori dal foro (un cappio verso il basso): la pioggia gocciola via prima di raggiungere il foro. Questo accorgimento si chiama <strong>goccia di sgocciolamento</strong>.</li>
+      </ul>
+
+      <h3 class="section-h3">7.4 Alimentazione: pannello solare e power bank</h3>
+      <div class="schema-box">
+        <div class="ascii-diagram">[ Pannello solare ]
+        |  (ricarica)
+        v
+[ Power bank ]  &lt;-- batteria tampone
+        |  (USB)
+        v
+[ Raspberry Pi ] --&gt; ESP32 e sensori</div>
+      </div>
+      <p>
+        Il pannello solare ricarica il power bank, e il power bank alimenta il Raspberry Pi.
+        La batteria fa da "serbatoio": accumula energia quando c'è sole e continua ad alimentare
+        il sistema quando il sole manca.
+      </p>
+      <div class="callout callout-warn">
+        <div class="callout-label">Requisito fondamentale del power bank</div>
+        <p>
+          Deve supportare la <strong>"ricarica passthrough"</strong>: essere in grado di ricaricarsi
+          dal pannello e contemporaneamente alimentare il Pi. Molti power bank economici si spengono
+          quando vengono caricati — questi <strong>non vanno bene</strong>.
+        </p>
+      </div>
+
+      <h3 class="section-h3">7.5 Disporre i componenti nella scatola</h3>
+      <ul>
+        <li>Se la scatola è di metallo, <strong>rivesti l'interno con nastro adesivo isolante</strong>: il metallo conduce elettricità e un contatto accidentale può causare un cortocircuito.</li>
+        <li>Sistema il Raspberry Pi e il power bank nella parte più riparata, lontano dai fori dell'aria.</li>
+        <li>Avvicina i sensori (SDS011 e BME680) ai fori dell'aria, ma senza che tocchino le pareti.</li>
+        <li>Appoggia l'elettronica su un piccolo supporto (tappo, gommapiuma) per tenerla sollevata dal fondo.</li>
+        <li>Metti nella scatola una <strong>bustina di gel di silice</strong> per assorbire l'umidità in eccesso.</li>
+      </ul>
+
+      <h3 class="section-h3">7.6 Montaggio all'esterno</h3>
+      <ul>
+        <li>Posiziona il sensore in un punto arieggiato, lontano da fonti di calore o di fumo dirette.</li>
+        <li>L'altezza tipica per misure confrontabili è circa <strong>1,5–3 metri da terra</strong>.</li>
+        <li>Evita angoli senza ricircolo d'aria: l'aria deve poter circolare attorno alla scatola.</li>
+        <li>Fissa bene la scatola (fascette a una ringhiera) perché il vento non la sposti.</li>
+        <li>Orienta il pannello solare verso sud, inclinandolo perché non trattenga l'acqua.</li>
+      </ul>
+    </div>
+
+    <!-- 8. PRIMA ACCENSIONE -->
+    <div class="section-label" id="s8">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">08</span>
+      <span class="section-label-text">Prima accensione e collaudo</span>
+    </div>
+    <div class="section">
+      <ol>
+        <li>Collega l'SDS011 e l'ESP32 alle porte USB del Pi.</li>
+        <li>Per le prime prove, alimenta il Raspberry Pi dalla <strong>rete elettrica</strong>: è più stabile mentre verifichi che tutto funzioni.</li>
+        <li>Alimenta il Raspberry Pi e attendi che il sistema sia avviato.</li>
+        <li>Avvia il server come visto nel capitolo 6.</li>
+        <li>Lascia tutto acceso <strong>10–15 minuti</strong>: è il tempo di riscaldamento dei sensori di gas.</li>
+        <li>Apri la dashboard nel browser e controlla che i valori cambino nel tempo.</li>
+        <li>Apri <code>/api/status</code> per verificare che entrambe le schede risultino connesse (<code>true</code>).</li>
+      </ol>
+      <div class="callout">
+        <div class="callout-label">Come capire se sta simulando</div>
+        <p>
+          Se in <code>/api/status</code> una scheda risulta <code>false</code> ma vedi comunque
+          dei valori, quei valori sono simulati. Controlla i collegamenti USB e i nomi delle porte.
+        </p>
+      </div>
+    </div>
+
+    <!-- 9. CALIBRARE LE LETTURE -->
+    <div class="section-label" id="s9">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">09</span>
+      <span class="section-label-text">Capire e calibrare le letture</span>
+    </div>
+    <div class="section">
+
+      <h3 class="section-h3">9.1 Riscaldamento</h3>
+      <p>
+        Lo sketch dell'ESP32 attende già 30 secondi all'avvio per i riscaldatori del MiCS-6814.
+        Per letture davvero affidabili, però, conviene lasciare il dispositivo acceso in aria
+        pulita per almeno <strong>10–15 minuti</strong> prima di registrare dati seri.
+      </p>
+
+      <h3 class="section-h3">9.2 Calibrazione di base</h3>
+      <ul>
+        <li>
+          <strong>PM2.5 e PM10:</strong> l'SDS011 fornisce già µg/m³, quindi è praticamente
+          pronto all'uso.
+        </li>
+        <li>
+          <strong>Gas (NH₃, CO, NO₂):</strong> nello sketch questi valori sono la lettura ADC
+          in percentuale (0–100), non concentrazioni reali. Annota i valori in aria pulita come
+          "linea di base". Per convertirli in concentrazioni effettive serve applicare le curve
+          del produttore del MiCS-6814.
+        </li>
+        <li>
+          <strong>VOC (<code>gas_kohm</code>):</strong> è una resistenza in kΩ. In aria pulita
+          il valore è più alto; cala in presenza di vapori. Più che il numero assoluto, conta
+          come varia rispetto alla linea di base.
+        </li>
+      </ul>
+      <div class="callout">
+        <div class="callout-label">Tieni presente</div>
+        <p>
+          Un sensore hobbistico indica <strong>tendenze</strong> (l'aria migliora o peggiora)
+          più che misure di precisione da laboratorio. Per uso domestico e didattico va benissimo.
+        </p>
+      </div>
+    </div>
+
+    <!-- 10. RISOLUZIONE DEI PROBLEMI -->
+    <div class="section-label" id="s10">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">10</span>
+      <span class="section-label-text">Risoluzione dei problemi</span>
+    </div>
+    <div class="section">
+      <div class="table-wrap">
+        <table class="trouble-table">
+          <thead><tr><th>Problema</th><th>Possibile causa</th><th>Cosa fare</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>"unavailable" all'avvio</td>
+              <td>Porta USB sbagliata</td>
+              <td>Controlla i nomi con <code>ls /dev/ttyUSB* /dev/ttyACM*</code> e aggiorna le variabili</td>
+            </tr>
+            <tr>
+              <td>Permesso negato sulla seriale</td>
+              <td>Utente non nel gruppo dialout</td>
+              <td>Esegui <code>usermod -a -G dialout</code> e riavvia</td>
+            </tr>
+            <tr>
+              <td>Dati sempre identici</td>
+              <td>Sensori non riscaldati o simulazione attiva</td>
+              <td>Attendi 10–15 min; controlla <code>/api/status</code></td>
+            </tr>
+            <tr>
+              <td>Dashboard non si apre</td>
+              <td>IP sbagliato o porta chiusa</td>
+              <td>Verifica IP con <code>hostname -I</code>; usa la porta <code>:5050</code></td>
+            </tr>
+            <tr>
+              <td>ESP32 non riconosciuto</td>
+              <td>Driver USB mancante</td>
+              <td>Installa i driver CP210x/CH340 sul sistema</td>
+            </tr>
+            <tr>
+              <td>JSON non letto</td>
+              <td>Baud rate o formato diverso</td>
+              <td>Assicurati che lo sketch usi 115200 e i campi corretti</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 11. SICUREZZA E PROSSIMI PASSI -->
+    <div class="section-label" id="s11">
+      <div class="section-label-accent"></div>
+      <span class="section-label-num">11</span>
+      <span class="section-label-text">Sicurezza e prossimi passi</span>
+    </div>
+    <div class="section">
+
+      <h3 class="section-h3">11.1 Sicurezza</h3>
+      <ul>
+        <li>Stacca l'alimentazione prima di modificare i collegamenti dell'ESP32.</li>
+        <li>Rispetta le tensioni: <strong>BME680 a 3,3 V</strong>, <strong>MiCS-6814 a 5 V</strong>.</li>
+        <li>Questo dispositivo è didattico e <strong>non sostituisce</strong> un rilevatore di CO certificato per la sicurezza domestica.</li>
+      </ul>
+
+      <h3 class="section-h3">11.2 Idee per migliorarlo</h3>
+      <ul>
+        <li>Collegare il sensore alla piattaforma comunitaria "Aria Bene Comune" (in sviluppo).</li>
+        <li>Usare l'endpoint <code>/data</code> per inviare i dati dell'ESP32 via Wi-Fi invece che via cavo USB.</li>
+        <li>Configurare l'avvio automatico del server con <code>systemd</code>.</li>
+        <li>Aggiungere più nodi ESP32 con <code>sensor_id</code> diversi (S1, S2…): il server li media già con <code>/api/mean</code>.</li>
+        <li>Stampare in 3D una custodia ventilata per proteggere l'elettronica.</li>
+      </ul>
+
+      <p style="margin-top: 32px; font-family: var(--font-title); font-size: 20px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase;">
+        Buona costruzione!
+      </p>
+    </div>
+
+  </main>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">Aria Bene Comune</span>
+  <p>Dati simulati — Guida per principianti assoluti — Taranto, Italia</p>
+</footer>
+
+</body>
+</html>

@@ -33,7 +33,7 @@ There is no router library. Navigation is managed by a `page` state string in `A
 - `timeseries.js` — thin re-export: `export { HOURLY_DATA } from './loader'`
 - `pollutants.js` — `POLLUTANTS` map defining name, unit, category (`particulates | gaseous | systemic`), and 6-level threshold `ranges` for each of the 8 pollutants
 - `levels.js` — `LEVELS` array of 6 AQI quality levels (index 0–5) with Italian/English labels and hex colors
-- `symptoms.js` — `SYMPTOMS` and `SUGGESTIONS` keyed by pollutant category and AQI level key
+- `symptoms.js` — `SYMPTOMS` (keyed by pollutant category + AQI level, used by the category-based Symptoms Matrix table), `ORGAN_SYMPTOMS` (keyed by body zone — mind/eyes/throat/chest/stomach — + AQI level, used by the per-organ body-figure callouts so e.g. eyes and throat don't show each other's symptom text even though both derive their severity from the `gaseous` category), and `SUGGESTIONS` keyed by AQI level key
 
 All "current" sensor readings (home cards, map, record header) = latest row per sensor in the CSV. All sparklines and heatmaps pull from `HOURLY_DATA` — nothing generates its own numbers.
 

@@ -7,8 +7,10 @@ echo "=== Aria Bene Comune Pi Setup ==="
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "[1/3] Installing Python dependencies..."
-python3 -m pip install --upgrade pip --quiet
-python3 -m pip install -r "$SCRIPT_DIR/requirements.txt" --quiet
+sudo apt-get install -y python3-venv --quiet
+python3 -m venv "$SCRIPT_DIR/venv"
+"$SCRIPT_DIR/venv/bin/pip" install --upgrade pip --quiet
+"$SCRIPT_DIR/venv/bin/pip" install -r "$SCRIPT_DIR/requirements.txt" --quiet
 
 echo "[2/3] Installing systemd service..."
 sed "s|__INSTALL_DIR__|$SCRIPT_DIR|g" "$SCRIPT_DIR/aria-bene-pi.service" \

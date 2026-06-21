@@ -7,8 +7,17 @@ import { SENSORS } from '../data/sensors';
 import { HOURLY_DATA } from '../data/timeseries';
 import { WIND_DAILY } from '../data/loader';
 import { getSensorAQI, getPollLevel } from '../utils/aqi';
+import { SUGGESTIONS } from '../data/symptoms';
+import SymptomsPage from './SymptomsPage';
 
 const TARANTO_CENTER = [40.4760, 17.2270];
+
+// Same sensor photos used on the Home page sensor cards
+const SENSOR_PHOTOS = [
+  '/assets/DSC01743.jpg',
+  '/assets/Piazza-Fontana-1.jpg',
+  '/assets/DSC01848.jpg',
+];
 
 const SUB_LABEL = {
   fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700,
@@ -242,7 +251,7 @@ function FlyTo({ sensor }) {
 }
 
 export default function MapPage({ lang, setPage, setSelectedSensor }) {
-  const [selected, setSelected] = useState(null);
+  const [selectedSensorId, setSelectedSensorId] = useState('all');
   const [activePollutant, setActivePollutant] = useState(null);
   const markerRefs = useRef({});
   const L_lang = lang === 'it';
@@ -311,7 +320,7 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
   }, [isPlaying, timeMode, rangeDates.length]);
 
   // ── popup management ───────────────────────────────────────────────────────
-  const selectedSensor = selected != null ? SENSORS.find(s => s.id === selected) : null;
+  const selectedSensor = selectedSensorId !== 'all' ? SENSORS.find(s => s.id === selectedSensorId) : null;
 
   const getDotLevel = (s) => activePollutant
     ? getPollLevel(activePollutant, s[activePollutant] || 0)
@@ -320,128 +329,70 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
   useEffect(() => {
     Object.entries(markerRefs.current).forEach(([id, marker]) => {
       if (!marker) return;
-      if (selected != null && String(id) === String(selected)) marker.openPopup();
+      if (selectedSensorId !== 'all' && String(id) === String(selectedSensorId)) marker.openPopup();
       else marker.closePopup();
     });
-  }, [selected]);
+  }, [selectedSensorId]);
+
+  // ── shared health recommendation (same data source as the embedded Symptoms section) ──
+  const rowsForHealthCalc = useMemo(() => {
+    const hourRows = HOURLY_DATA.filter(r => toISO(r.dateObj) === displayDate && r.hour === displayHour);
+    const scopedRows = selectedSensorId === 'all'
+      ? hourRows
+      : hourRows.filter(r => r.sensorId === selectedSensorId);
+    return scopedRows.length ? scopedRows : hourRows;
+  }, [displayDate, displayHour, selectedSensorId]);
+
+  const getCategoryLevel = (catKey) => {
+    const keys = Object.keys(POLLUTANTS).filter(k => POLLUTANTS[k].category === catKey);
+    if (!keys.length) return 0;
+    return Math.max(...keys.map(pollutantKey => {
+      const peak = Math.max(...rowsForHealthCalc.map(row => row[pollutantKey] || 0));
+      return getPollLevel(pollutantKey, peak);
+    }));
+  };
+
+  const categoryLevels = {
+    particulates: getCategoryLevel('particulates'),
+    gaseous:      getCategoryLevel('gaseous'),
+    systemic:     getCategoryLevel('systemic'),
+  };
+
+  const overallLevelIndex = Math.max(...Object.values(categoryLevels));
+  const lvSuggestion = LEVELS[overallLevelIndex];
 
   const fmtHour = h => `${String(h).padStart(2, '0')}:00`;
 
-  const timelineH = 58;
   const panelW = 'calc(100vw / 6 * 1.5)';
-  const BOX = { background: 'var(--white)', padding: '12px 14px', pointerEvents: 'auto' };
+  const BOX = { background: 'var(--white)', padding: '12px 14px' };
+  const PANEL = { ...BOX, width: panelW, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, borderRight: '1px solid var(--gray)' };
+
+  const sharedTimeControl = {
+    timeMode, setTimeMode,
+    selectedDate, setSelectedDate,
+    selectedHour, setSelectedHour,
+    rangeDateStart, setRangeDateStart,
+    rangeDateEnd, setRangeDateEnd,
+    playhead, setPlayhead,
+    isPlaying, setIsPlaying,
+  };
+  const sharedSensorControl = { selectedSensorId, setSelectedSensorId };
 
   return (
     <div>
       <div style={{ padding: '24px 24px 0 24px' }}>
-        <span style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(48px, 6vw, 96px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em' }}>
-          {L_lang ? 'Mappa Sensori' : 'Sensor Map'}
-        </span>
+        <div style={{ fontFamily: 'var(--font-title)', fontSize: 'clamp(40px, 5.5vw, 88px)', fontWeight: 400, textTransform: 'uppercase', lineHeight: 0.92, letterSpacing: '-0.02em', color: 'var(--black)' }}>
+          {L_lang ? 'Aria e Salute' : 'Air & Health'}
+        </div>
       </div>
 
-      {/* MAP — full width, floating boxes inside */}
-      <div style={{ height: 'calc(100vh - 160px)', position: 'relative' }}>
+      {/* MAP — tight bordered row, same PANEL + CONTENT rules as RecordPage/ArchivePage */}
+      <div style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--gray)' }}>
 
-        {/* MAP CANVAS */}
-        <div style={{ position: 'absolute', inset: 0 }}>
-          <MapContainer
-            center={TARANTO_CENTER}
-            zoom={13}
-            style={{ height: '100%', width: '100%' }}
-            zoomControl={false}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-            />
-            <ZoomControl position="bottomright" />
-            <FlyTo sensor={selectedSensor} />
-            <BlobOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
-            <WindParticleOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
-            {displaySensors.map((s) => {
-              const dotLv = getDotLevel(s);
-              const dotColor = LEVELS[dotLv].color;
-              const popupLv = LEVELS[getSensorAQI(s)];
-              const isSel = selected === s.id;
-              return (
-                <CircleMarker
-                  key={s.id}
-                  ref={(el) => { if (el) markerRefs.current[s.id] = el; }}
-                  center={[s.lat, s.lon]}
-                  radius={isSel ? 14 : 9}
-                  pathOptions={{
-                    fillColor: dotColor,
-                    fillOpacity: 0.85,
-                    color: '#111010',
-                    weight: isSel ? 2.5 : 1.5,
-                  }}
-                  eventHandlers={{ click: () => setSelected(prev => prev === s.id ? null : s.id) }}
-                >
-                  <Popup
-                    closeButton={false}
-                    className="map-popup"
-                    eventHandlers={{ remove: () => setSelected((prev) => (prev === s.id ? null : prev)) }}
-                  >
-                    <div style={{ minWidth: 210 }}>
-                      <div style={{ background: popupLv.color, padding: '12px 14px' }}>
-                        <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 6 }}>
-                          {L_lang ? popupLv.it : popupLv.en}
-                        </div>
-                        <div style={{ fontFamily: 'Epilogue', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1, marginBottom: 4 }}>
-                          {s.name}
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>
-                          {displayDate} — {fmtHour(displayHour)}
-                        </div>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-                        {Object.keys(POLLUTANTS).map((k, idx) => {
-                          const li = getPollLevel(k, s[k] || 0);
-                          const isOdd = idx % 2 === 0;
-                          const isBottomRow = idx >= Object.keys(POLLUTANTS).length - 2;
-                          return (
-                            <div key={k} style={{
-                              padding: '8px 10px',
-                              borderRight: isOdd ? '1px solid var(--gray)' : 'none',
-                              borderBottom: isBottomRow ? 'none' : '1px solid var(--gray)',
-                            }}>
-                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gray2)' }}>
-                                {POLLUTANTS[k].name}
-                              </div>
-                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 800, color: LEVELS[li].color, lineHeight: 1.2 }}>
-                                {s[k] ?? '—'} <span style={{ fontSize: 9, fontWeight: 400, color: 'var(--gray2)' }}>{POLLUTANTS[k].unit}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <button
-                        onClick={() => { setSelectedSensor(s); setPage('record'); }}
-                        style={{
-                          width: '100%', padding: '8px', background: popupLv.color, color: '#fff',
-                          border: 'none', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 10,
-                          cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase',
-                        }}
-                      >
-                        {L_lang ? 'Apri record →' : 'Open record →'}
-                      </button>
-                    </div>
-                  </Popup>
-                </CircleMarker>
-              );
-            })}
-          </MapContainer>
-        </div>
+        <div style={PANEL}>
+          <div style={{ ...SUB_LABEL, color: 'var(--black)', marginBottom: 0 }}>{L_lang ? 'Mappa' : 'Map'}</div>
 
-        {/* LEFT COLUMN — stacked floating boxes */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, bottom: 0, zIndex: 1000,
-          width: panelW, display: 'flex', flexDirection: 'column',
-          gap: 8, padding: 12, overflowY: 'auto', pointerEvents: 'none',
-        }}>
-
-          {/* BOX 1 — Time controls */}
-          <div style={BOX}>
+          <div>
             <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
               {L_lang ? 'Tempo' : 'Time'}
             </div>
@@ -470,10 +421,6 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
                 <input type="range" min={0} max={23} value={selectedHour}
                   onChange={e => setSelectedHour(Number(e.target.value))}
                   style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'rgba(0,0,0,0.35)', fontFamily: 'Epilogue', fontSize: 9 }}>00:00</span>
-                  <span style={{ color: 'rgba(0,0,0,0.35)', fontFamily: 'Epilogue', fontSize: 9 }}>23:00</span>
-                </div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -506,12 +453,48 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
                 <input type="range" min={0} max={23} value={selectedHour}
                   onChange={e => setSelectedHour(Number(e.target.value))}
                   style={{ width: '100%', accentColor: 'var(--primary)', margin: 0 }} />
+
+                <div style={{ ...SUB_LABEL, color: 'var(--gray2)' }}>{L_lang ? 'Timeline' : 'Timeline'}</div>
+                <input type="range" min={0} max={Math.max(0, rangeDates.length - 1)} value={playhead}
+                  onChange={e => { setIsPlaying(false); setPlayhead(Number(e.target.value)); }}
+                  style={{ width: '100%', accentColor: 'var(--primary)', margin: 0, cursor: 'pointer' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateStart}</span>
+                  <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateEnd}</span>
+                </div>
+                <div style={{
+                  background: 'var(--primary)', color: '#fff', fontFamily: 'Epilogue',
+                  fontSize: 11, fontWeight: 700, padding: '4px 10px', letterSpacing: '0.05em',
+                  textAlign: 'center',
+                }}>
+                  {displayDate}
+                </div>
+
+                <button onClick={() => setIsPlaying(p => !p)} style={{ ...pillStyleWhite(isPlaying), width: '100%', textAlign: 'center' }}>
+                  {isPlaying ? (L_lang ? '⏸ Pausa' : '⏸ Pause') : (L_lang ? '▶ Anima' : '▶ Play')}
+                </button>
               </div>
             )}
           </div>
 
-          {/* BOX 2 — Pollutant */}
-          <div style={BOX}>
+          <div>
+            <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
+              {L_lang ? 'Sensore' : 'Sensor'}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              <span style={pillStyleWhite(selectedSensorId === 'all')} onClick={() => setSelectedSensorId('all')}>
+                {L_lang ? 'Tutti' : 'All'}
+              </span>
+              {SENSORS.map(s => (
+                <span key={s.id} style={pillStyleWhite(selectedSensorId === s.id)}
+                  onClick={() => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id)}>
+                  {s.name}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div>
             <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
               {L_lang ? 'Inquinante' : 'Pollutant'}
             </div>
@@ -526,104 +509,189 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
             </div>
           </div>
 
-          {/* BOX 3 — Sensors */}
-          <div style={BOX}>
-            <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
-              {L_lang ? 'Sensori' : 'Sensors'}
+          <div style={{ background: lvSuggestion.color, padding: '12px 14px', margin: '0 -14px -14px' }}>
+            <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
+              {L_lang ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {SENSORS.map(s => (
-                <span key={s.id} style={pillStyleWhite(selected === s.id)}
-                  onClick={() => setSelected(prev => prev === s.id ? null : s.id)}>
-                  {s.name}
-                </span>
-              ))}
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 8 }}>
+              {L_lang ? lvSuggestion.it : lvSuggestion.en}
             </div>
+            {[
+              { who: L_lang ? 'Popolazione generale' : 'General population', text: L_lang ? SUGGESTIONS[lvSuggestion.key]?.gen?.it : SUGGESTIONS[lvSuggestion.key]?.gen?.en },
+              { who: L_lang ? 'Popolazione sensibile' : 'Sensitive population', text: L_lang ? SUGGESTIONS[lvSuggestion.key]?.sen?.it : SUGGESTIONS[lvSuggestion.key]?.sen?.en },
+            ].map((s, i) => (
+              <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
+                <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+              </div>
+            ))}
           </div>
-
         </div>
 
-        {/* FLOATING BOX — Wind (top-right) */}
-        {wind && (() => {
-          const mathAngle = Math.atan2(-wind.v, wind.u) * 180 / Math.PI;
-          const arrowRot = 90 - mathAngle;
-          const pts = ['N','NE','E','SE','S','SW','W','NW'];
-          const compassPt = pts[Math.round(((wind.dir + 180) % 360) / 45) % 8];
-          return (
-            <div style={{
-              position: 'absolute', top: 12, right: 12, zIndex: 1000,
-              background: 'var(--white)', padding: '10px 14px',
-              display: 'flex', alignItems: 'center', gap: 12, pointerEvents: 'none',
-            }}>
-              <svg width="32" height="32" viewBox="-16 -16 32 32" style={{ flexShrink: 0 }}>
-                <circle r="14" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
-                <g transform={`rotate(${arrowRot})`}>
-                  <line x1="0" y1="10" x2="0" y2="-8" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
-                  <polygon points="0,-13 -4,-5 4,-5" fill="var(--primary)" />
-                </g>
-              </svg>
-              <div>
-                <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>
-                  {L_lang ? 'Vento' : 'Wind'}
-                </div>
-                <div style={{ fontFamily: 'Epilogue', fontSize: 18, fontWeight: 700, color: 'var(--black)', lineHeight: 1 }}>
-                  {wind.spd.toFixed(1)} <span style={{ fontSize: 10, fontWeight: 400 }}>m/s</span>
-                </div>
-                <div style={{ fontFamily: 'Epilogue', fontSize: 11, color: 'var(--gray2)', marginTop: 2 }}>
-                  {compassPt} · {Math.round(wind.dir)}°
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {/* MAP CANVAS */}
+        <div style={{ flex: 1, minHeight: '70vh', position: 'relative' }}>
+          <MapContainer
+            center={TARANTO_CENTER}
+            zoom={13}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={false}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            />
+            <ZoomControl position="bottomright" />
+            <FlyTo sensor={selectedSensor} />
+            <BlobOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
+            <WindParticleOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
+            {displaySensors.map((s, sensorIdx) => {
+              const dotLv = getDotLevel(s);
+              const dotColor = LEVELS[dotLv].color;
+              const popupLv = LEVELS[getSensorAQI(s)];
+              const isSel = selectedSensorId === s.id;
+              return (
+                <CircleMarker
+                  key={s.id}
+                  ref={(el) => { if (el) markerRefs.current[s.id] = el; }}
+                  center={[s.lat, s.lon]}
+                  radius={isSel ? 14 : 9}
+                  pathOptions={{
+                    fillColor: dotColor,
+                    fillOpacity: 0.85,
+                    color: '#111010',
+                    weight: isSel ? 2.5 : 1.5,
+                  }}
+                  eventHandlers={{ click: () => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id) }}
+                >
+                  <Popup
+                    closeButton={false}
+                    className="map-popup"
+                    eventHandlers={{ remove: () => setSelectedSensorId((prev) => (prev === s.id ? 'all' : prev)) }}
+                  >
+                    <div style={{ width: 280 }}>
+                      {/* Meta + pollutants + AQI scale — same composition as the Home page sensor cards */}
+                      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gray)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {[
+                            { label: L_lang ? 'Sensore' : 'Sensor',     value: s.name },
+                            { label: L_lang ? 'Posizione' : 'Location', value: s.location },
+                          ].map((item, idx) => (
+                            <div key={idx}>
+                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
+                                {item.label}
+                              </div>
+                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.01em', color: 'var(--black)' }}>
+                                {item.value}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
 
-        {/* TIMELINE — range mode only (bottom full-width) */}
-        {timeMode === 'range' && (
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000,
-            height: timelineH, background: 'var(--white)',
-            padding: '10px 16px 12px', boxSizing: 'border-box',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: '100%' }}>
-              <button onClick={() => setIsPlaying(p => !p)} style={{
-                background: 'none', border: '1.5px solid rgba(0,0,0,0.3)',
-                color: 'var(--black)', width: 28, height: 28, cursor: 'pointer',
-                fontFamily: 'Epilogue', fontSize: 12, flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {isPlaying ? '⏸' : '▶'}
-              </button>
-              <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
-                {rangeDateStart}
-              </span>
-              <div style={{ flex: 1, position: 'relative' }}>
-                <input type="range" min={0} max={Math.max(0, rangeDates.length - 1)} value={playhead}
-                  onChange={e => { setIsPlaying(false); setPlayhead(Number(e.target.value)); }}
-                  style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, pointerEvents: 'none' }}>
-                  {rangeDates.map((d, i) => (
-                    <div key={d} style={{
-                      width: 1, height: i === playhead ? 8 : 4,
-                      background: i === playhead ? 'var(--black)' : 'rgba(0,0,0,0.2)', flexShrink: 0,
-                    }} />
-                  ))}
-                </div>
-              </div>
-              <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 10, flexShrink: 0 }}>
-                {rangeDateEnd}
-              </span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: 12 }}>
+                          {Object.keys(POLLUTANTS).map(k => (
+                            <div key={k}>
+                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
+                                {POLLUTANTS[k].name}
+                              </div>
+                              <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--black)' }}>
+                                {s[k] != null ? Number(s[k]).toFixed(1) : '—'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div style={{ marginTop: 12 }}>
+                          <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 5 }}>
+                            {L_lang ? 'Scala AQI' : 'AQI Scale'}
+                          </div>
+                          <div style={{ display: 'flex', gap: 2, marginBottom: 4 }}>
+                            {LEVELS.map(l => (
+                              <div key={l.key} style={{
+                                flex: 1, height: 6, background: l.color,
+                                outline: l.key === popupLv.key ? `2px solid ${l.color}` : 'none',
+                                outlineOffset: 1,
+                                opacity: l.key === popupLv.key ? 1 : 0.4,
+                              }} />
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.35)' }}>
+                            <span>1 — {L_lang ? 'Buono' : 'Good'}</span>
+                            <span>6 — {L_lang ? 'Estremo' : 'Extreme'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sensor photo, same images used on the Home page sensor cards */}
+                      <div style={{ height: 140, overflow: 'hidden' }}>
+                        <img
+                          src={SENSOR_PHOTOS[sensorIdx % SENSOR_PHOTOS.length]}
+                          alt=""
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                      </div>
+
+                      <button
+                        onClick={() => { setSelectedSensor(s); setPage('record'); }}
+                        style={{
+                          width: '100%', padding: '8px', background: 'var(--black)', color: '#fff',
+                          border: 'none', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 10,
+                          cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase',
+                        }}
+                      >
+                        {L_lang ? 'Apri record →' : 'Open record →'}
+                      </button>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
+          </MapContainer>
+
+          {/* Wind — floating top-right, map chrome like the zoom control */}
+          {wind && (() => {
+            const mathAngle = Math.atan2(-wind.v, wind.u) * 180 / Math.PI;
+            const arrowRot = 90 - mathAngle;
+            const pts = ['N','NE','E','SE','S','SW','W','NW'];
+            const compassPt = pts[Math.round(((wind.dir + 180) % 360) / 45) % 8];
+            return (
               <div style={{
-                background: 'var(--primary)', color: '#fff', fontFamily: 'Epilogue',
-                fontSize: 11, fontWeight: 700, padding: '3px 10px', flexShrink: 0,
-                letterSpacing: '0.05em',
+                position: 'absolute', top: 12, right: 12, zIndex: 1000,
+                background: 'var(--white)', padding: '10px 14px',
+                display: 'flex', alignItems: 'center', gap: 12, pointerEvents: 'none',
               }}>
-                {displayDate}
+                <svg width="32" height="32" viewBox="-16 -16 32 32" style={{ flexShrink: 0 }}>
+                  <circle r="14" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+                  <g transform={`rotate(${arrowRot})`}>
+                    <line x1="0" y1="10" x2="0" y2="-8" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+                    <polygon points="0,-13 -4,-5 4,-5" fill="var(--primary)" />
+                  </g>
+                </svg>
+                <div>
+                  <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>
+                    {L_lang ? 'Vento' : 'Wind'}
+                  </div>
+                  <div style={{ fontFamily: 'Epilogue', fontSize: 18, fontWeight: 700, color: 'var(--black)', lineHeight: 1 }}>
+                    {wind.spd.toFixed(1)} <span style={{ fontSize: 10, fontWeight: 400 }}>m/s</span>
+                  </div>
+                  <div style={{ fontFamily: 'Epilogue', fontSize: 11, color: 'var(--gray2)', marginTop: 2 }}>
+                    {compassPt} · {Math.round(wind.dir)}°
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
-
+            );
+          })()}
+        </div>
       </div>
+
+      {/* Symptom Matrix only — full width */}
+      <SymptomsPage
+        lang={lang}
+        embedded
+        hideHero
+        hideReport
+        timeControl={sharedTimeControl}
+        sensorControl={sharedSensorControl}
+      />
     </div>
   );
 }

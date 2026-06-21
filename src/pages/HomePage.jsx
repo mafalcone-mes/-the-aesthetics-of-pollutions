@@ -38,6 +38,8 @@ const POLLUTANT_DESCS = {
 
 const fRange = ([lo, hi]) => `${lo}–${hi >= 999 ? '∞' : hi}`;
 
+const SENSOR_GUIDE_URL = 'https://abcsensorguide.netlify.app/';
+
 export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisible }) {
   const L = lang === 'it';
   const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
@@ -62,6 +64,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
   }, []);
 
   const currentHour = new Date().getHours();
+  const currentAQI = hourlyAQI[currentHour] ?? globalAQI;
 
   // Per-sensor readings for the current hour of the latest day
   const currentHourSensors = useMemo(() => {
@@ -121,13 +124,15 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
           padding: '40px 40px 40px',
         }}>
           <div style={{
-            fontFamily: 'var(--font-title)',
+            fontFamily: "'Ronzino Variable', sans-serif",
+            fontVariationSettings: `"BLND" ${Math.max(50, currentAQI * 200)}`,
             fontSize: 'clamp(56px, 11vw, 160px)',
-            fontWeight: 400,
             textTransform: 'uppercase',
             lineHeight: 0.88,
             letterSpacing: '-0.02em',
             color: 'var(--white)',
+            WebkitTextStroke: '6px var(--primary)',
+            paintOrder: 'stroke fill',
           }}>
             ARIA BENE COMUNE
           </div>
@@ -186,9 +191,10 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
 
           {/* Health recommendation circle — current hour AQI */}
           {(() => {
-            const currentAQI = hourlyAQI[currentHour] ?? globalAQI;
             const lv = LEVELS[currentAQI];
             const sug = SUGGESTIONS[lv.key];
+            const sugGenText = L ? sug?.gen?.it : sug?.gen?.en;
+            const sugSenText = L ? sug?.sen?.it : sug?.sen?.en;
             return (
               <div style={{
                 position: 'absolute',
@@ -217,23 +223,23 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
                   {L ? lv.it : lv.en}
                 </div>
                 <div style={{ width: '80%', height: 1, background: 'rgba(255,255,255,0.25)', margin: '2px 0' }} />
-                {sug?.gen && (
+                {sugGenText && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
                       {L ? 'Tutti' : 'Everyone'}
                     </div>
                     <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.9)' }}>
-                      {sug.gen}
+                      {sugGenText}
                     </div>
                   </div>
                 )}
-                {sug?.sen && sug.sen !== sug.gen && (
+                {sugSenText && sugSenText !== sugGenText && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
                       {L ? 'Soggetti sensibili' : 'Sensitive groups'}
                     </div>
                     <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.9)' }}>
-                      {sug.sen}
+                      {sugSenText}
                     </div>
                   </div>
                 )}
@@ -245,22 +251,47 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
       </div>
 
       {/* STATEMENT */}
-      <div style={{ background: 'var(--white)', padding: '100px 48px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ background: 'var(--white)', padding: '100px 48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 64 }}>
         <div style={{
           fontFamily: 'var(--font-body)',
-          fontSize: 'clamp(36px, 5.5vw, 88px)',
+          fontSize: 'clamp(30px, 4.5vw, 72px)',
           lineHeight: 1.15,
           color: 'var(--black)',
-          maxWidth: '16em',
+          maxWidth: '23em',
           textAlign: 'center',
         }}>
           {L
             ? "Aria Bene Comune è una piattaforma per il libero accesso ai dati sulla qualità dell'aria a Taranto. I dati sono prodotti da una rete di sensori di proprietà dei cittadini tarantini."
             : 'Aria Bene Comune is a platform for the free access to Air Quality data in Taranto. Data is produced by a community owned network of air quality sensors.'}
         </div>
+        <a
+          href={SENSOR_GUIDE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '22px 48px',
+            background: 'var(--primary)',
+            color: 'var(--white)',
+            fontFamily: 'var(--font-title)',
+            fontSize: 16,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            textDecoration: 'none',
+          }}
+        >
+          {L ? 'Crea il tuo sensore' : 'Create your sensor'}
+        </a>
       </div>
 
-      {/* SENSOR GRID */}
+      {/* SENSOR GRID + VIDEO — share one continuous cielo.png background */}
+      <div style={{
+        backgroundImage: "url('/assets/cielo.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}>
       {(() => {
         const SENSOR_PHOTOS = [
           '/assets/DSC01743.jpg',
@@ -281,7 +312,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
         const POLL_KEYS = ['pm25', 'pm10', 'no2', 'o3', 'so2', 'co'];
         const POLL_LABELS = { pm25: 'PM2.5', pm10: 'PM10', no2: 'NO₂', o3: 'O₃', so2: 'SO₂', co: 'CO' };
         return (
-          <div style={{ background: 'var(--white)', borderTop: '1px solid var(--gray)' }}>
+          <div style={{ borderTop: '1px solid var(--gray)' }}>
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(2, 1fr)',
@@ -397,7 +428,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
                           </div>
                           {SUGGESTIONS[lv.key]?.gen && (
                             <div style={{ fontFamily: 'var(--font-body)', fontSize: 17, fontWeight: 400, lineHeight: 1.4, color: '#fff' }}>
-                              {SUGGESTIONS[lv.key].gen}
+                              {L ? SUGGESTIONS[lv.key].gen.it : SUGGESTIONS[lv.key].gen.en}
                             </div>
                           )}
                         </div>
@@ -407,7 +438,7 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
                           </div>
                           {SUGGESTIONS[lv.key]?.sen && (
                             <div style={{ fontFamily: 'var(--font-body)', fontSize: 17, fontWeight: 400, lineHeight: 1.4, color: '#fff' }}>
-                              {SUGGESTIONS[lv.key].sen}
+                              {L ? SUGGESTIONS[lv.key].sen.it : SUGGESTIONS[lv.key].sen.en}
                             </div>
                           )}
                         </div>
@@ -423,13 +454,14 @@ export default function HomePage({ lang, setPage, setSelectedSensor, onHeroVisib
       })()}
 
       {/* VIDEO */}
-      <div style={{ background: 'var(--white)', padding: '48px 40px' }}>
+      <div style={{ padding: '48px 40px' }}>
         <video
           src="/assets/Video_PreAudio.mov"
           controls
           playsInline
           style={{ width: '100%', display: 'block' }}
         />
+      </div>
       </div>
 
       {/* THRESHOLD LIMITS */}

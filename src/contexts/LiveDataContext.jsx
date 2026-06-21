@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react';
 const PI_SENSOR_META = {
   id:       999,
   name:     'Sensore di Tonio',
-  location: 'Locale',
+  location: 'Piazza Fontana',
   district: 'Locale',
   lat:      40.4760,
   lon:      17.2270,

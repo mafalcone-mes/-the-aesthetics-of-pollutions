@@ -58,7 +58,7 @@ export default function App() {
   }, [tweaks.fontScale]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-display', "'Source Serif 4', Georgia, serif");
+    document.documentElement.style.setProperty('--font-display', "'Epilogue', sans-serif");
     document.documentElement.style.setProperty('--font-blend', '0');
   }, []);
 
@@ -70,7 +70,7 @@ export default function App() {
         {page === 'home'     && <HomePage     lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} hoveredNav={hoveredNav} onHeroVisible={setHeroVisible} />}
         {page === 'map'      && <MapPage      lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} />}
         {page === 'archive'  && <ArchivePage  lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} />}
-        {page === 'record'   && <RecordPage   lang={lang} sensor={selectedSensor} />}
+        {page === 'record'   && <RecordPage   lang={lang} sensor={selectedSensor} hideAqiRow hideMap fitHeight="calc(100vh - 64px)" />}
         {page === 'symptoms' && <SymptomsPage lang={lang} setPage={navigate} />}
       </main>
       <footer className="footer">

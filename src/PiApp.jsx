@@ -1,137 +1,7 @@
 import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, CircleMarker, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import { LiveDataProvider, useLiveData } from './contexts/LiveDataContext';
 import RecordPage from './pages/RecordPage';
-import { LEVELS } from './data/levels';
-import { SUGGESTIONS } from './data/symptoms';
 import { getSensorAQI } from './utils/aqi';
-import { SENSORS } from './data/sensors';
-
-function GrayscaleTiles() {
-  const map = useMap();
-  useEffect(() => {
-    const pane = map.getPanes().tilePane;
-    pane.style.filter = 'grayscale(1) contrast(1.15) brightness(0.96)';
-  }, [map]);
-  return null;
-}
-
-const SENSOR_META = {
-  street:    'Piazza Fontana',
-  owner:     'Tonio Baghdad',
-  installed: '28.05.2026',
-};
-
-function SensorCard({ sensor, lang }) {
-  const L = lang === 'it';
-
-  const ai = sensor ? getSensorAQI(sensor) : 0;
-  const lv = LEVELS[ai];
-  const suggestions = SUGGESTIONS[lv.key];
-
-  const LABEL = {
-    fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700,
-    letterSpacing: '0.12em', textTransform: 'uppercase',
-    color: 'rgba(0,0,0,0.4)', marginBottom: 3,
-  };
-  const VALUE = {
-    fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 400,
-    textTransform: 'uppercase', lineHeight: 1.05, letterSpacing: '-0.01em',
-    color: 'var(--black)',
-  };
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--gray)' }}>
-
-      {/* Col 1 — Map */}
-      <div style={{ flex: 1, borderRight: '1px solid var(--gray)' }}>
-        <MapContainer
-          center={[40.4760, 17.2270]}
-          zoom={14}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-          attributionControl={false}
-        >
-          <TileLayer url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png" />
-          <GrayscaleTiles />
-          {SENSORS.map(s => (
-            <CircleMarker key={s.id} center={[s.lat, s.lon]} radius={5}
-              pathOptions={{ fillColor: '#111', fillOpacity: 0.18, color: '#111', weight: 1 }} />
-          ))}
-          <CircleMarker center={[40.4760, 17.2270]} radius={11}
-            pathOptions={{ fillColor: lv.color, fillOpacity: 0.9, color: '#111', weight: 2 }} />
-        </MapContainer>
-      </div>
-
-      {/* Col 3 — Labels on top, health rec below */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-
-        {/* Labels + AQI scale */}
-        <div style={{
-          flex: 1, padding: '14px 18px', borderBottom: '1px solid var(--gray)',
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[
-              { label: L ? 'Sensore' : 'Sensor', value: sensor?.name ?? '—' },
-              { label: L ? 'Strada' : 'Street', value: SENSOR_META.street },
-              { label: L ? 'Proprietario' : 'Owner', value: SENSOR_META.owner },
-              { label: L ? 'Installazione' : 'Installed', value: SENSOR_META.installed },
-            ].map((item, i) => (
-              <div key={i}>
-                <div style={LABEL}>{item.label}</div>
-                <div style={VALUE}>{item.value}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <div style={{ ...LABEL, marginBottom: 5 }}>{L ? 'Scala AQI' : 'AQI Scale'}</div>
-            <div style={{ display: 'flex', gap: 3, marginBottom: 4 }}>
-              {LEVELS.map(l => (
-                <div key={l.key} style={{
-                  flex: 1, height: 8, background: l.color,
-                  outline: l.key === lv.key ? `2px solid ${l.color}` : 'none',
-                  outlineOffset: 2, opacity: l.key === lv.key ? 1 : 0.45,
-                }} />
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.35)' }}>
-              <span>1 — {L ? 'Buono' : 'Good'}</span>
-              <span>6 — {L ? 'Estremo' : 'Extreme'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Health rec — general pop top, sensitive pop bottom */}
-        <div style={{ flex: 1, background: lv.color, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, padding: '10px 18px', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>
-              {L ? "Qualità dell'aria" : 'Air Quality'} — {L ? lv.it : lv.en}
-            </div>
-            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 3 }}>
-              {L ? 'Popolazione generale' : 'General population'}
-            </div>
-            {suggestions?.gen && (
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.5, color: '#fff' }}>{suggestions.gen}</div>
-            )}
-          </div>
-          <div style={{ flex: 1, padding: '10px 18px' }}>
-            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 3 }}>
-              {L ? 'Popolazione sensibile' : 'Sensitive population'}
-            </div>
-            {suggestions?.sen && (
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, lineHeight: 1.5, color: '#fff' }}>{suggestions.sen}</div>
-            )}
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-  );
-}
-
 
 function LiveBadge({ liveAge }) {
   const isLive = liveAge !== null && liveAge < 90;
@@ -197,7 +67,7 @@ function PiDashboard() {
   }, [ai]);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--white)', color: 'var(--black)' }}>
+    <div style={{ height: '100vh', overflow: 'hidden', background: 'var(--white)', color: 'var(--black)', display: 'flex', flexDirection: 'column' }}>
       <style>{`
         @keyframes pi-pulse {
           0%, 100% { opacity: 1; }
@@ -207,15 +77,16 @@ function PiDashboard() {
 
       <PiNav page="record" setPage={() => {}} lang={lang} setLang={setLang} liveAge={liveAge} />
 
-      <RecordPage
-        lang={lang}
-        sensor={liveSensor}
-        liveHistory={liveHistory.length > 0 ? liveHistory : undefined}
-        afterTitle={<SensorCard sensor={liveSensor} lang={lang} />}
-        hideAqiRow
-        hideMap
-        titleStyle={{ fontFamily: "'Ronzino Variable', sans-serif", fontVariationSettings: `"BLND" ${Math.max(50, ai * 200)}` }}
-      />
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <RecordPage
+          lang={lang}
+          sensor={liveSensor}
+          liveHistory={liveHistory.length > 0 ? liveHistory : undefined}
+          hideAqiRow
+          hideMap
+          titleStyle={{ fontFamily: "'Ronzino Variable', sans-serif", fontVariationSettings: `"BLND" ${Math.max(50, ai * 200)}` }}
+        />
+      </div>
     </div>
   );
 }

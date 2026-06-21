@@ -23,7 +23,7 @@
   --primary: #B7410E;
   
 
-  --font-body:    'Source Serif 4', Georgia, serif;
+  --font-body:    'Epilogue', sans-serif;
   --font-title:   'Epilogue', sans-serif;
   --font-display: 'Epilogue', sans-serif;
   --font-blend: 0;
@@ -1073,7 +1073,6 @@ body { font-family: var(--font-body); overflow-x: hidden; }
 /* LEAFLET MAP POPUP */
 .map-popup .leaflet-popup-content-wrapper {
   border-radius: 0; padding: 0; border: 2px solid var(--primary);
-  box-shadow: 4px 4px 0 var(--primary);
 }
 .map-popup .leaflet-popup-content { margin: 0; }
 .map-popup .leaflet-popup-tip-container { display: none; }
