@@ -70,7 +70,6 @@ export default function HeatMap({ readings = [], lang, pollutantKey = 'pm25', sh
             x={padL + di * cellW + 1} y={padT + 1}
             width={cellW - 2} height={cellH - 2}
             fill={getColor(maxAQI)} opacity={maxAQI === null ? 0.12 : 0.3 + (maxAQI / 5) * 0.7}
-            rx={2}
           />
         ))}
         {/* Legend */}
@@ -117,7 +116,6 @@ export default function HeatMap({ readings = [], lang, pollutantKey = 'pm25', sh
             width={cellW - 0.8} height={cellH - 0.8}
             fill={getColor(val)}
             opacity={val === null ? 0.15 : 0.3 + (val / maxV) * 0.7}
-            rx="0.5"
           />
         ))
       )}

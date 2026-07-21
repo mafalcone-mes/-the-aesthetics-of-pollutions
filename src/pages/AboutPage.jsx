@@ -66,6 +66,11 @@ const SUB_LABEL = {
   letterSpacing: '0.1em', textTransform: 'uppercase',
 };
 
+// One shared lede size for a section's opening statement — was two different ad-hoc
+// clamp() ranges (19–28px for the hero statement, 18–24px for the threshold intro)
+// for what is functionally the same role, with no reason for the two to differ.
+const LEDE = { fontFamily: 'var(--font-body)', fontSize: 'clamp(19px, 2vw, 26px)', lineHeight: 1.55, color: 'var(--black)' };
+
 function btnStyle(primary) {
   return {
     display: 'inline-block', fontFamily: 'var(--font-title)', fontWeight: 700,
@@ -80,8 +85,8 @@ function btnStyle(primary) {
 function SectionLabel({ num, title }) {
   return (
     <div id={`s${num}`} className="guide-section-label" style={{
-      display: 'flex', alignItems: 'center', gap: 14,
-      padding: '13px 18px', borderBottom: '1px solid var(--gray)',
+      display: 'flex', alignItems: 'center', gap: 16,
+      padding: '16px 20px', borderBottom: '1px solid var(--gray)',
       background: 'var(--primary)', scrollMarginTop: 80,
     }}>
       <span style={{ fontFamily: 'var(--font-title)', fontSize: 17, fontWeight: 400, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#fff' }}>
@@ -97,7 +102,7 @@ function SectionLabel({ num, title }) {
 function SubHeading({ children, first }) {
   return (
     <h3 style={{
-      fontFamily: 'var(--font-title)', fontSize: 13, fontWeight: 400,
+      fontFamily: 'var(--font-title)', fontSize: 13, fontWeight: 700,
       letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--primary)',
       margin: first ? '0 0 10px' : '40px 0 10px',
       clear: 'right',
@@ -137,20 +142,22 @@ function OL({ items }) {
   );
 }
 
+// Same modernization as Archive's .archive-table: horizontal dividers only (no
+// border-right grid lines), more padding, a heavier header/body divider instead
+// of a filled gray header band.
 function Table({ headers, rows }) {
   return (
     <div style={{ overflowX: 'auto', margin: '16px 0' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-title)', fontWeight: 400, fontSize: 13, minWidth: 480 }}>
+      <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontFamily: 'var(--font-title)', fontWeight: 400, fontSize: 13, minWidth: 480 }}>
         <thead>
           <tr>
             {headers.map((h, i) => (
               <th key={i} style={{
-                textAlign: 'left', padding: '10px 13px',
+                textAlign: 'left', padding: '12px 16px',
                 fontFamily: 'var(--font-title)', fontSize: 10, fontWeight: 700,
                 letterSpacing: '0.1em', textTransform: 'uppercase',
-                color: 'var(--gray2)', background: 'var(--gray)',
-                borderRight: i < headers.length - 1 ? '1px solid var(--white)' : 'none',
-                borderBottom: '1px solid var(--gray)',
+                color: 'var(--gray2)', background: 'var(--white)',
+                borderBottom: '1.5px solid var(--black)',
               }}>{h}</th>
             ))}
           </tr>
@@ -160,9 +167,8 @@ function Table({ headers, rows }) {
             <tr key={ri}>
               {row.map((cell, ci) => (
                 <td key={ci} style={{
-                  padding: '12px 13px', verticalAlign: 'top', lineHeight: 1.6,
+                  padding: '14px 16px', verticalAlign: 'middle', lineHeight: 1.6,
                   borderBottom: ri < rows.length - 1 ? '1px solid var(--gray)' : 'none',
-                  borderRight: ci < row.length - 1 ? '1px solid var(--gray)' : 'none',
                 }}>{cell}</td>
               ))}
             </tr>
@@ -213,7 +219,7 @@ function Diagram({ src, alt, caption, size = 'md', shift = false, full = false }
       transform: visible ? 'translateX(0)' : `translateX(${full ? 0 : 48}px)`,
       transition: 'opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1)',
     }}>
-      <div style={{ textAlign: 'center', border: '1px solid var(--gray)', padding: 20, background: 'var(--white)' }}>
+      <div style={{ textAlign: 'center', padding: 20, background: 'var(--white)', borderRadius: 'var(--elevated-radius)', boxShadow: 'var(--elevated-shadow)' }}>
         <img src={src} alt={alt} style={{ width: '100%', maxWidth: 480, height: 'auto' }} />
         {caption && (
           <div style={{ fontFamily: 'var(--font-title)', fontSize: 12, fontWeight: 400, letterSpacing: '0.04em', color: 'var(--gray2)', marginTop: 12 }}>
@@ -237,7 +243,7 @@ function SchemaBox({ children }) {
 
 function Callout({ label, children }) {
   return (
-    <div style={{ padding: '14px 18px', margin: '16px 0', background: 'color-mix(in srgb, var(--primary) 9%, var(--white))', borderLeft: '3px solid var(--primary)', clear: 'right', boxSizing: 'border-box' }}>
+    <div style={{ padding: '14px 18px', margin: '16px 0', background: 'color-mix(in srgb, var(--primary) 9%, var(--white))', clear: 'right', boxSizing: 'border-box' }}>
       <div style={{ ...SUB_LABEL, color: 'var(--primary)', marginBottom: 6 }}>{label}</div>
       <p style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(14px, 0.95vw, 16px)', lineHeight: 1.68, color: 'var(--black)', margin: 0 }}>{children}</p>
     </div>
@@ -295,7 +301,8 @@ function CodeBlock({ children, size = 'md', shift = false, full = false }) {
           background: '#1d1a18', color: '#ECE7DE', padding: '18px 20px', margin: 0,
           overflowX: 'auto', fontSize: 13, lineHeight: 1.7,
           fontFamily: "'Courier New', Courier, monospace",
-          borderLeft: '3px solid var(--primary)', whiteSpace: 'pre',
+          whiteSpace: 'pre',
+          borderRadius: 'var(--elevated-radius)', boxShadow: 'var(--elevated-shadow)',
         }}>
           <code>{code}</code>
         </pre>
@@ -333,9 +340,9 @@ function ChapterNav({ prev, next, L }) {
 function ComponentGrid({ L }) {
   return (
     <div style={{ clear: 'right', margin: '16px calc(50% - 50vw)', width: '100vw', padding: 'clamp(12px, 3vw, 24px)', background: 'url(/assets/cielo.png) center / cover no-repeat', boxSizing: 'border-box' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="about-component-grid" style={{ display: 'grid', gap: 12 }}>
         {COMPONENTS.map((c) => (
-          <div key={c.name} style={{ padding: '20px 16px', textAlign: 'center', background: 'var(--white)', border: '1px solid var(--gray)' }}>
+          <div key={c.name} style={{ padding: '20px 16px', textAlign: 'center', background: 'var(--white)', borderRadius: 'var(--elevated-radius)', boxShadow: 'var(--elevated-shadow)' }}>
             <img src={`/assets/components/${c.img}`} alt={c.name} style={{ width: '100%', maxHeight: 100, objectFit: 'contain', marginBottom: 14 }} />
             <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--black)', marginBottom: 4 }}>
               {c.name}
@@ -389,7 +396,7 @@ function StartHere({ L }) {
           ? 'Questa guida è scritta per essere seguita da chiunque, anche senza esperienza di elettronica. Due passaggi sono un po’ più pratici: saldare una fila di pin e digitare qualche comando sul Raspberry Pi. Li spieghiamo entrambi, un passo alla volta.'
           : 'This guide is written so anyone can follow it, even if you have never touched electronics. Two parts of the build are a bit more hands-on: soldering a row of pins, and typing a few commands on the Raspberry Pi. We explain both, one step at a time.'}
       </P>
-      <p style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(15px, 1vw, 17px)', lineHeight: 1.7, color: 'var(--black)', borderLeft: '3px solid var(--primary)', paddingLeft: 14, fontStyle: 'italic', marginBottom: 0 }}>
+      <p style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(15px, 1vw, 17px)', lineHeight: 1.7, color: 'var(--black)', background: 'color-mix(in srgb, var(--primary) 6%, var(--white))', padding: '14px 18px', fontStyle: 'italic', marginBottom: 0, boxSizing: 'border-box' }}>
         {L
           ? <>Non devi farlo da solo. È un bel progetto da costruire <strong>con qualcuno</strong> — un nipote, un vicino, un amico, o in un makerspace locale. Se un passaggio sembra troppo tecnico, è il momento di farlo insieme, non di rinunciare.</>
           : <>You don't have to do it alone. This is a lovely project to build <strong>with someone</strong> — a grandchild, a neighbour, a friend, or at a local makerspace or fab lab. If a step feels technical, that's the moment to do it together, not to give up.</>}
@@ -446,7 +453,7 @@ export default function AboutPage({ lang }) {
         <div style={{ position: 'relative' }}>
           <video
             ref={videoRef}
-            src="/assets/GliIncappucciati_MatteoFalcone.mov"
+            src="/assets/GliIncappucciati_MatteoFalcone.mp4"
             controls={videoPlaying}
             playsInline
             preload="metadata"
@@ -474,9 +481,9 @@ export default function AboutPage({ lang }) {
           )}
         </div>
 
-        <div style={{ padding: 'clamp(32px, 6vw, 64px) 48px', display: 'flex', flexWrap: 'wrap', gap: 28, alignItems: 'flex-start' }}>
+        <div style={{ padding: 'clamp(32px, 6vw, 64px) clamp(16px, 4vw, 24px)', display: 'flex', flexWrap: 'wrap', gap: 28, alignItems: 'flex-start' }}>
           <div style={{ flex: '1 1 360px' }}>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(19px, 2.4vw, 28px)', fontWeight: 400, lineHeight: 1.5, color: 'var(--black)', maxWidth: 860, margin: 0 }}>
+            <p style={{ ...LEDE, maxWidth: 860, margin: 0 }}>
               {L
                 ? <>Questo progetto è pensato in particolare per chi resiste nelle <strong>Sacrifice Zones</strong> del mondo, come strumento per contrastare la recinzione dell'informazione. Aria Bene Comune è stato realizzato da Matteo Falcone e dagli hacker etici del gruppo Linux Jonix Group. L'idea nasce come risposta al bisogno dei tarantini di informazioni affidabili e pulite sull'aria che respiriamo. Unisciti alla comunità, costruisci il tuo sensore e diventa un nodo attivo!</>
                 : <>This project is especially aimed at people resisting in <strong>Sacrifice Zones</strong> of the world, as a tool to counter the information enclosure. Aria Bene Comune has been realized by Matteo Falcone and the ethical hackers of the group Linux Jonix Group. The idea starts as an answer to the needs of tarantinian of trustworthy and clean information about the air we breath. Join the community, build your own sensor and be an active node!</>}
@@ -485,7 +492,8 @@ export default function AboutPage({ lang }) {
           <img
             src="/assets/DSC3330.jpg"
             alt=""
-            style={{ width: 'clamp(240px, 32vw, 420px)', aspectRatio: '2 / 3', objectFit: 'cover', flexShrink: 0 }}
+            className="about-hero-photo"
+            style={{ aspectRatio: '2 / 3', objectFit: 'cover', flexShrink: 0 }}
           />
         </div>
       </div>
@@ -509,32 +517,37 @@ export default function AboutPage({ lang }) {
         </div>
 
         <div style={{ padding: '22px 28px 28px' }}>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(18px, 1.8vw, 24px)', lineHeight: 1.6, color: 'var(--black)', marginBottom: 16, maxWidth: 860 }}>
-            {L
-              ? "Le soglie si basano sulle linee guida WHO (2021), adattate a un sistema a 6 livelli. Il livello complessivo è determinato dall'inquinante con il valore più critico. I limiti usati puntano a proteggere la salute umana, ma non riflettono i limiti legali italiani o europei, che sono più alti e obsoleti rispetto alle evidenze scientifiche più recenti."
-              : 'Thresholds are based on WHO Air Quality Guidelines (2021), adapted into a 6-level system. The overall level is set by the single worst-performing pollutant. The thresholds used aim to protect human health, but do not reflect Italian or European legal limits, which are higher and outdated compared to the latest scientific evidence.'}
-          </p>
-
-          <SubHeading>{L ? 'Scala cromatica' : 'Colour scale'}</SubHeading>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
-            {LEVELS.map(lv => (
-              <div key={lv.key} style={{ flex: '1 1 150px', background: lv.color, padding: '14px 16px' }}>
-                <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 4 }}>{lv.index + 1}</div>
-                <div style={{ fontFamily: 'var(--font-title)', fontSize: 17, fontWeight: 400, textTransform: 'uppercase', color: '#fff', marginBottom: 6 }}>
-                  {L ? lv.it : lv.en}
-                </div>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.45, color: 'rgba(255,255,255,0.85)' }}>
-                  {L ? LEVEL_DESCS[lv.key].it : LEVEL_DESCS[lv.key].en}
-                </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 340px) 1fr', gap: 32, alignItems: 'start', marginBottom: 24 }}>
+            <div>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(13px, 0.9vw, 15px)', lineHeight: 1.6, color: 'var(--black)', margin: 0 }}>
+                {L
+                  ? "Le soglie si basano sulle linee guida WHO (2021), adattate a un sistema a 6 livelli. Il livello complessivo è determinato dall'inquinante con il valore più critico. I limiti usati puntano a proteggere la salute umana, ma non riflettono i limiti legali italiani o europei, che sono più alti e obsoleti rispetto alle evidenze scientifiche più recenti."
+                  : 'Thresholds are based on WHO Air Quality Guidelines (2021), adapted into a 6-level system. The overall level is set by the single worst-performing pollutant. The thresholds used aim to protect human health, but do not reflect Italian or European legal limits, which are higher and outdated compared to the latest scientific evidence.'}
+              </p>
+            </div>
+            <div>
+              <SubHeading first>{L ? 'Scala cromatica' : 'Colour scale'}</SubHeading>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+                {LEVELS.map(lv => (
+                  <div key={lv.key} style={{ background: lv.color, padding: '14px 16px', borderRadius: 'var(--elevated-radius)', boxShadow: 'var(--elevated-shadow)' }}>
+                    <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.65)', marginBottom: 4 }}>{lv.index + 1}</div>
+                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 17, fontWeight: 400, textTransform: 'uppercase', color: '#fff', marginBottom: 6 }}>
+                      {L ? lv.it : lv.en}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.45, color: 'rgba(255,255,255,0.85)' }}>
+                      {L ? LEVEL_DESCS[lv.key].it : LEVEL_DESCS[lv.key].en}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
 
           {/* Tables + pollutant types — same matrix component the Symptoms page uses:
               category header (title + pollutant list) above a 6-column grid, one
               cell per AQI level, each cell listing that level's threshold per pollutant. */}
           <SubHeading>{L ? 'Soglie per inquinante' : 'Thresholds by pollutant'}</SubHeading>
-          <div className="symptoms-matrix-section" style={{ borderTop: '1px solid var(--gray)', marginBottom: 16 }}>
+          <div className="symptoms-matrix-section about-threshold-matrix" style={{ borderTop: '1px solid var(--gray)', marginBottom: 16 }}>
             {THRESHOLD_CATS.map(cat => (
               <div key={cat.key} className="symptoms-matrix-cat">
                 <div className="symptoms-matrix-cat-header">
@@ -897,8 +910,8 @@ void loop() {
             ]} />
             <Callout label={L ? 'Verifica rapida' : 'Quick check'}>
               {L
-                ? <>Dopo aver caricato lo sketch, apri il Serial Monitor a 115200 baud: vedrai messaggi di avvio, poi una riga ogni 5 minuti come<br /><code>{'{"sensor_id":"S1","samples":5,"nh3":21.3,...}'}</code><br />Per i test iniziali, abbassa temporaneamente <code>CYCLE_PERIOD_MS</code> a 15000 (15 s).</>
-                : <>After uploading the sketch, open the Serial Monitor at 115200 baud: you will see startup messages, then one line every 5 minutes such as<br /><code>{'{"sensor_id":"S1","samples":5,"nh3":21.3,...}'}</code><br />For initial testing, temporarily lower <code>CYCLE_PERIOD_MS</code> to 15000 (15 s).</>}
+                ? <>Dopo aver caricato lo sketch, apri il Serial Monitor a 115200 baud: vedrai messaggi di avvio, poi una riga ogni 5 minuti come<br /><code style={{ overflowWrap: 'break-word' }}>{'{"sensor_id":"S1","samples":5,"nh3":21.3,...}'}</code><br />Per i test iniziali, abbassa temporaneamente <code>CYCLE_PERIOD_MS</code> a 15000 (15 s).</>
+                : <>After uploading the sketch, open the Serial Monitor at 115200 baud: you will see startup messages, then one line every 5 minutes such as<br /><code style={{ overflowWrap: 'break-word' }}>{'{"sensor_id":"S1","samples":5,"nh3":21.3,...}'}</code><br />For initial testing, temporarily lower <code>CYCLE_PERIOD_MS</code> to 15000 (15 s).</>}
             </Callout>
 
             <ChapterNav L={L}

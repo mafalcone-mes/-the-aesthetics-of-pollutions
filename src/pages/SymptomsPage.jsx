@@ -46,7 +46,7 @@ function pillStyleWhite(active) {
     padding: '5px 14px',
     border: '1.5px solid ' + (active ? 'var(--primary)' : 'rgba(0,0,0,0.22)'),
     background: active ? 'var(--primary)' : 'transparent',
-    color: active ? '#fff' : 'var(--black)',
+    color: active ? 'var(--white)' : 'var(--black)',
     fontFamily: 'Epilogue', fontSize: 11, fontWeight: active ? 700 : 400,
     letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
   };
@@ -76,7 +76,7 @@ function reportPill(active) {
     padding: '5px 14px',
     border: '1.5px solid ' + (active ? 'var(--primary)' : 'rgba(0,0,0,0.22)'),
     background: active ? 'var(--primary)' : 'transparent',
-    color: active ? '#fff' : 'var(--black)',
+    color: active ? 'var(--white)' : 'var(--black)',
     fontFamily: 'Epilogue', fontSize: 11, fontWeight: active ? 700 : 400,
     letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
   };
@@ -86,9 +86,13 @@ function toISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const panelW = 'calc(100vw / 6 * 1.5)';
-const BOX    = { background: 'var(--white)', padding: '12px 14px' };
-const PANEL  = { ...BOX, width: panelW, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, borderRight: '1px solid var(--gray)' };
+// Sized and constructed exactly like MapPage's floating filters card: a fixed
+// ~320px content width (not a viewport fraction) and a flex-row-wrap of
+// 260px-min blocks, not a hard vertical stack.
+const panelW = 320;
+const BOX    = { background: 'var(--white)', padding: '16px clamp(16px, 4vw, 24px)' };
+const PANEL  = { ...BOX, width: '100%', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start' };
+const FILTER_BLOCK = { flex: '1 1 260px', minWidth: 240 };
 
 function BodySvg({ stretch }) {
   return (
@@ -115,7 +119,7 @@ function SymptomCards({ categoryLevels, lang, embedded, columns }) {
     ? { flex: '1 1 50%', minWidth: 0, alignSelf: 'stretch', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: 16, boxSizing: 'border-box', alignContent: 'start' }
     : embedded
       ? { width: '100%', flexShrink: 1, display: 'flex', flexWrap: 'wrap', gap: 2 }
-      : { width: 680, height: '90%', alignSelf: 'center', flexShrink: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'repeat(3, 1fr)', gap: 2 };
+      : { width: 680, height: '90%', alignSelf: 'center', flexShrink: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'repeat(3, 1fr)', gap: 20, padding: 20, boxSizing: 'border-box' };
   return (
     <div style={containerStyle}>
       {Object.entries(ZONE_CATS).map(([key, z]) => {
@@ -123,14 +127,14 @@ function SymptomCards({ categoryLevels, lang, embedded, columns }) {
         const sym = ORGAN_SYMPTOMS[key][lv.key];
         const noSym = !sym || (!sym.gen && !sym.sen);
         return (
-          <div key={key} style={embedded
+          <div key={key} className={embedded ? undefined : 'symptom-glass-card'} style={embedded
             ? { flex: '1 1 200px', minWidth: 200, minHeight: 220, overflow: 'hidden', background: lv.color, padding: '20px 24px' }
-            : { minHeight: 0, overflow: 'hidden', background: lv.color, padding: '14px 18px' }
+            : { minHeight: 0, overflow: 'hidden', background: lv.color, padding: '16px 20px' }
           }>
             <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
               {L ? 'SINTOMI' : 'SYMPTOMS'} — {L ? lv.it : lv.en}
             </div>
-            <div style={{ fontFamily: 'var(--font-title)', fontSize: embedded ? 22 : 'clamp(13px, 1.4vw, 20px)', fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 8 }}>
+            <div style={{ fontFamily: 'var(--font-title)', fontSize: embedded ? 22 : 'clamp(13px, 1.4vw, 20px)', fontWeight: 400, textTransform: 'uppercase', color: 'var(--white)', lineHeight: 1.0, marginBottom: 8 }}>
               {L ? z.label_it : z.label_en}
             </div>
             {noSym ? (
@@ -144,7 +148,7 @@ function SymptomCards({ categoryLevels, lang, embedded, columns }) {
               ].filter(s => s.text).map((s, i) => (
                 <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
                   <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
-                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 13, lineHeight: 1.5, color: 'var(--white)' }}>{s.text}</div>
                 </div>
               ))
             )}
@@ -296,19 +300,6 @@ export default function SymptomsPage({ lang, liveRows, timeControl, sensorContro
       <div style={embedded ? undefined : {
         height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
-        {!embedded && (
-          <div style={{ flexShrink: 0, padding: '24px 24px 0 24px' }}>
-            <div style={{
-              fontFamily: "'Ronzino Variable', sans-serif",
-              fontVariationSettings: `"BLND" ${Math.max(50, globalAQI * 200)}`,
-              fontSize: 'clamp(40px, 5.5vw, 88px)', textTransform: 'uppercase',
-              lineHeight: 0.92, letterSpacing: '-0.02em',
-              color: 'var(--white)', WebkitTextStroke: '6px var(--primary)', paintOrder: 'stroke fill',
-            }}>
-              {L ? 'Sintomi' : 'Symptoms'}
-            </div>
-          </div>
-        )}
         {/* SYMPTOMS BY BODY ZONE — tight bordered row, same PANEL+CONTENT rules
             as RecordPage/ArchivePage. Hidden when embedded: MapPage's own panel
             (Time/Sensor/Health rec, shared via timeControl/sensorControl)
@@ -323,11 +314,12 @@ export default function SymptomsPage({ lang, liveRows, timeControl, sensorContro
         }}>
 
         {!embedded && (
+          <div className="map-glass-panel" style={{ margin: '16px 0 16px 16px', flexShrink: 0, alignSelf: 'flex-start', width: panelW }}>
           <div style={PANEL}>
-            <div style={{ ...SUB_LABEL, color: 'var(--black)', marginBottom: 0 }}>{L ? 'Sintomi' : 'Symptoms'}</div>
+            <div style={{ ...SUB_LABEL, color: 'var(--black)', marginBottom: 0, width: '100%' }}>{L ? 'Sintomi' : 'Symptoms'}</div>
 
             {liveRows ? (
-              <div>
+              <div style={FILTER_BLOCK}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
                   <span style={{ ...SUB_LABEL, color: '#22c55e' }}>{L ? 'DATI IN TEMPO REALE' : 'LIVE DATA'}</span>
@@ -338,15 +330,15 @@ export default function SymptomsPage({ lang, liveRows, timeControl, sensorContro
               </div>
             ) : (
               <>
-                <div>
+                <div style={FILTER_BLOCK}>
                   <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>{L ? 'Tempo' : 'Time'}</div>
                   <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
                     {['single', 'range'].map(m => (
-                      <span key={m}
+                      <button key={m} type="button" className="pill-btn"
                         style={{ ...pillStyleWhite(timeMode === m), flex: 1, textAlign: 'center', display: 'block' }}
                         onClick={() => { setTimeMode(m); setIsPlaying(false); }}>
                         {m === 'single' ? (L ? 'Giorno' : 'Day') : (L ? 'Intervallo' : 'Range')}
-                      </span>
+                      </button>
                     ))}
                   </div>
                   {timeMode === 'single' ? (
@@ -403,46 +395,46 @@ export default function SymptomsPage({ lang, liveRows, timeControl, sensorContro
                         onChange={e => { setIsPlaying(false); setPlayhead(Number(e.target.value)); }}
                         style={{ width: '100%', accentColor: 'var(--primary)', margin: 0, cursor: 'pointer' }} />
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateStart}</span>
-                        <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateEnd}</span>
+                        <span style={{ color: 'var(--gray2)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateStart}</span>
+                        <span style={{ color: 'var(--gray2)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateEnd}</span>
                       </div>
                       <div style={{
-                        background: 'var(--primary)', color: '#fff', fontFamily: 'Epilogue',
+                        background: 'var(--primary)', color: 'var(--white)', fontFamily: 'Epilogue',
                         fontSize: 11, fontWeight: 700, padding: '4px 10px', letterSpacing: '0.05em',
                         textAlign: 'center',
                       }}>
                         {displayDate}
                       </div>
 
-                      <button onClick={() => setIsPlaying(p => !p)} style={{ ...pillStyleWhite(isPlaying), width: '100%', textAlign: 'center' }}>
+                      <button type="button" className="pill-btn" onClick={() => setIsPlaying(p => !p)} style={{ ...pillStyleWhite(isPlaying), width: '100%', textAlign: 'center' }}>
                         {isPlaying ? (L ? '⏸ Pausa' : '⏸ Pause') : (L ? '▶ Anima' : '▶ Play')}
                       </button>
                     </div>
                   )}
                 </div>
 
-                <div>
+                <div style={FILTER_BLOCK}>
                   <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>{L ? 'Sensore' : 'Sensor'}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    <span style={pillStyleWhite(activeSensor === 'all')} onClick={() => setActiveSensor('all')}>
+                    <button type="button" className="pill-btn" style={pillStyleWhite(activeSensor === 'all')} onClick={() => setActiveSensor('all')}>
                       {L ? 'Tutti' : 'All'}
-                    </span>
+                    </button>
                     {SENSORS.map(s => (
-                      <span key={s.id} style={pillStyleWhite(activeSensor === s.id)}
+                      <button key={s.id} type="button" className="pill-btn" style={pillStyleWhite(activeSensor === s.id)}
                         onClick={() => setActiveSensor(s.id)}>
                         {s.location}
-                      </span>
+                      </button>
                     ))}
                   </div>
                 </div>
               </>
             )}
 
-            <div style={{ background: lvSuggestion.color, padding: '12px 14px', margin: '0 -14px -14px' }}>
+            <div style={{ ...FILTER_BLOCK, background: lvSuggestion.color, padding: '12px 14px' }}>
               <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
                 {L ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'}
               </div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 8 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: 'var(--white)', lineHeight: 1.0, marginBottom: 8 }}>
                 {L ? lvSuggestion.it : lvSuggestion.en}
               </div>
               {[
@@ -451,10 +443,11 @@ export default function SymptomsPage({ lang, liveRows, timeControl, sensorContro
               ].map((s, i) => (
                 <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
                   <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: 'var(--white)' }}>{s.text}</div>
                 </div>
               ))}
             </div>
+          </div>
           </div>
         )}
 
@@ -567,7 +560,7 @@ export default function SymptomsPage({ lang, liveRows, timeControl, sensorContro
               <div style={SUB_LABEL}>{L ? 'Zona / Sensore' : 'Zone / Sensor'}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {SENSORS.map((s) => (
-                  <button key={s.id} type="button"
+                  <button key={s.id} type="button" className="pill-btn"
                     onClick={() => setForm((f) => ({ ...f, sensorId: s.id }))}
                     style={pillStyleWhite(form.sensorId === s.id)}>
                     {s.location}
@@ -580,7 +573,7 @@ export default function SymptomsPage({ lang, liveRows, timeControl, sensorContro
               <div style={SUB_LABEL}>{L ? 'Sintomi avvertiti' : 'Symptoms experienced'}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {SYMPTOM_OPTIONS.map((s) => (
-                  <button key={s.key} type="button" onClick={() => toggleSymptom(s.key)}
+                  <button key={s.key} type="button" className="pill-btn" onClick={() => toggleSymptom(s.key)}
                     aria-pressed={form.symptoms.has(s.key)} style={pillStyleWhite(form.symptoms.has(s.key))}>
                     {s.it}
                   </button>
@@ -598,7 +591,7 @@ export default function SymptomsPage({ lang, liveRows, timeControl, sensorContro
             </div>
 
             <div style={{ padding: '20px 28px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button type="submit" disabled={!validForm}
+              <button type="submit" className="pill-btn" disabled={!validForm}
                 style={{ ...pillStyleWhite(validForm), opacity: validForm ? 1 : 0.4, cursor: validForm ? 'pointer' : 'not-allowed' }}>
                 {L ? 'INVIA SEGNALAZIONE →' : 'SUBMIT REPORT →'}
               </button>

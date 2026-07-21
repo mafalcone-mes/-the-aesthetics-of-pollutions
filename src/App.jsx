@@ -10,9 +10,11 @@ import HomePage from './pages/HomePage';
 import MapPage from './pages/MapPage';
 import ArchivePage from './pages/ArchivePage';
 import RecordPage from './pages/RecordPage';
+import SymptomsPage from './pages/SymptomsPage';
 import AboutPage from './pages/AboutPage';
 import AboutPanel from './components/AboutPanel';
 import PageTransition from './components/PageTransition';
+import CustomCursor from './components/CustomCursor';
 
 const TWEAK_DEFAULTS = {
   darkMode: false,
@@ -21,7 +23,7 @@ const TWEAK_DEFAULTS = {
   variant: 'brutalist',
 };
 
-const VALID_PAGES = ['home', 'map', 'archive', 'record', 'about'];
+const VALID_PAGES = ['home', 'map', 'archive', 'record', 'symptoms', 'about'];
 
 // Lets external static pages (e.g. the printable guide) deep-link in via
 // ?page=map&lang=en instead of always landing on Home — read once on mount,
@@ -86,12 +88,14 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <TopBar page={page} setPage={navigate} lang={lang} setLang={setLang} onNavHover={setHoveredNav} />
+      <CustomCursor />
+      <TopBar page={page} setPage={navigate} lang={lang} setLang={setLang} onNavHover={setHoveredNav} heroVisible={heroVisible} />
       <main className="main-content">
         {page === 'home'     && <HomePage     lang={lang} hoveredNav={hoveredNav} onHeroVisible={setHeroVisible} setPage={navigate} setSelectedSensor={setSelectedSensor} reportsControl={reportsControl} />}
-        {page === 'map'      && <MapPage      lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} reportsControl={reportsControl} />}
+        {page === 'map'      && <MapPage      lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} />}
         {page === 'archive'  && <ArchivePage  lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} reports={reports} />}
         {page === 'record'   && <RecordPage   lang={lang} sensor={selectedSensor} hideAqiRow hideMap fitHeight="calc(100vh - 64px)" />}
+        {page === 'symptoms' && <SymptomsPage lang={lang} reportsControl={reportsControl} />}
         {page === 'about'    && <AboutPage    lang={lang} />}
       </main>
       <footer className="footer">

@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { LEVELS } from '../data/levels';
-import { POLLUTANTS } from '../data/pollutants';
 import { HOURLY_DATA } from '../data/timeseries';
 import { SENSORS } from '../data/sensors';
+import { SUGGESTIONS } from '../data/symptoms';
 import { getSensorAQI } from '../utils/aqi';
-import BwFilmstrip from '../components/BwFilmstrip';
-import HeroDots from '../components/HeroDots';
-import MapPage from './MapPage';
+import Dither from '../components/Dither';
+import ScrollReveal from '../components/ScrollReveal';
 
 const SAGOME = Object.keys(import.meta.glob('/public/assets/sagome/*.png')).map(
   p => p.replace('/public', '')
@@ -20,82 +19,22 @@ const SENSOR_PHOTOS = [
   '/assets/Piazza-Fontana-1.jpg',
   '/assets/DSC01848.jpg',
 ];
-const CAROUSEL_ARROW = {
-  flexShrink: 0, width: 36, height: 36, display: 'flex', alignItems: 'center',
-  justifyContent: 'center', background: 'var(--white)', border: '1px solid var(--gray)',
-  fontSize: 18, lineHeight: 1, cursor: 'pointer', color: 'var(--black)',
-};
 const SUB_LABEL = {
   fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700,
   letterSpacing: '0.1em', textTransform: 'uppercase',
 };
+const POLL_KEYS = ['pm25', 'pm10', 'no2', 'o3', 'so2', 'co'];
+const POLL_LABELS = { pm25: 'PM2.5', pm10: 'PM10', no2: 'NO₂', o3: 'O₃', so2: 'SO₂', co: 'CO' };
 
 
 const SENSOR_GUIDE_URL = 'https://abcsensorguide.netlify.app/';
 
-export default function HomePage({ lang, onHeroVisible, setPage, setSelectedSensor, reportsControl }) {
+export default function HomePage({ lang, onHeroVisible, setPage, setSelectedSensor }) {
   const L = lang === 'it';
-  const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
   const heroRef = useRef(null);
   const [hoveredSensor, setHoveredSensor] = useState(null);
-  const [activeCard, setActiveCard] = useState(0);
-  const carouselRef = useRef(null);
-  const cardRefs = useRef([]);
-
-  const centerCard = (idx) => {
-    cardRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  };
-  const goToCard = (idx) => {
-    const clamped = Math.max(0, Math.min(SENSORS.length - 1, idx));
-    setActiveCard(clamped);
-    centerCard(clamped);
-  };
-
-  // Keep activeCard in sync with whichever card the user has scrolled/swiped to —
-  // only recompute once scrolling has settled, so cards don't flicker through
-  // the active/scaled state while still in transit.
-  useEffect(() => {
-    const el = carouselRef.current;
-    if (!el) return;
-    let settleTimer = null;
-    const onScroll = () => {
-      clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => {
-        const rect = el.getBoundingClientRect();
-        const center = rect.left + rect.width / 2;
-        let closest = 0, closestDist = Infinity;
-        cardRefs.current.forEach((card, i) => {
-          if (!card) return;
-          const r = card.getBoundingClientRect();
-          const dist = Math.abs((r.left + r.width / 2) - center);
-          if (dist < closestDist) { closestDist = dist; closest = i; }
-        });
-        setActiveCard(closest);
-      }, 120);
-    };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => { el.removeEventListener('scroll', onScroll); clearTimeout(settleTimer); };
-  }, []);
-
-  // Max AQI per hour (0–23) for the latest day in the dataset
-  const hourlyAQI = useMemo(() => {
-    if (!HOURLY_DATA.length) return Array(24).fill(0);
-    const last = HOURLY_DATA[HOURLY_DATA.length - 1];
-    const ly = last.dateObj.getFullYear();
-    const lm = last.dateObj.getMonth();
-    const ld = last.dateObj.getDate();
-    const dayRows = HOURLY_DATA.filter(r => {
-      const d = r.dateObj;
-      return d.getFullYear() === ly && d.getMonth() === lm && d.getDate() === ld;
-    });
-    return Array.from({ length: 24 }, (_, h) => {
-      const hrs = dayRows.filter(r => r.hour === h);
-      return hrs.length ? Math.max(...hrs.map(r => r.aqi)) : null;
-    });
-  }, []);
 
   const currentHour = new Date().getHours();
-  const currentAQI = hourlyAQI[currentHour] ?? globalAQI;
 
   // Per-sensor readings for the current hour of the latest day
   const currentHourSensors = useMemo(() => {
@@ -130,95 +69,86 @@ export default function HomePage({ lang, onHeroVisible, setPage, setSelectedSens
 
   return (
     <div>
-      {/* HERO */}
-      <div
-        ref={heroRef}
-        style={{
-          minHeight: '80vh',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          zIndex: 0,
-          overflow: 'hidden',
-        }}
-      >
-        {/* Background layer — filter lives here only, so it doesn't affect
-            the dots/title/etc. drawn on top of it */}
-        <div className="home-hero-bg-drift" style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: "url('/assets/cielo.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
-          filter: 'saturate(1.6)',
-          zIndex: -1,
-        }} />
+      {/* HERO BACKDROP — pinned behind everything for the whole page scroll
+          (parallax: background + Dither stay put, content scrolls over it).
+          z-index:0 here + the foreground wrapper below at z-index:1 is what
+          actually guarantees stacking order — a negative z-index here gets
+          painted behind body's own background instead of above it. */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 0,
+        overflow: 'hidden',
+        backgroundImage: "url('/assets/cielo.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+      }}>
+        <Dither
+          waveColor={[0.9764705882352941, 0.45098039215686275, 0.08627450980392157]}
+          disableAnimation={false}
+          enableMouseInteraction
+          mouseRadius={0.3}
+          colorNum={16}
+          pixelSize={1}
+          waveAmplitude={0.3}
+          waveFrequency={2}
+          waveSpeed={0.5}
+        />
+      </div>
 
-        <HeroDots level={globalAQI} />
+      {/* FOREGROUND — everything that scrolls over the fixed backdrop above.
+          position:relative + z-index:1 pins it above the backdrop regardless
+          of DOM/paint-order quirks with the fixed layer. */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
 
-        {/* Pollution-level circle, centered on the same point as the title */}
+      {/* HERO SPACER — reserves the backdrop's height in normal flow so the
+          rest of the page starts below it, then scrolls up and over it. Holds
+          the title, which scrolls away with the rest of the content. */}
+      <div ref={heroRef} style={{ minHeight: '100vh', position: 'relative' }}>
         <div style={{
           position: 'absolute',
           left: '50%',
-          top: '38%',
-          transform: 'translate(-50%, -50%)',
-          width: 'min(42vw, 48vh)',
-          height: 'min(42vw, 48vh)',
-          borderRadius: '50%',
-          background: LEVELS[currentAQI].color,
-          zIndex: 1,
-        }} />
-
-        {/* Title — centered on the same point as the circle, independent of the health rec below it */}
-        <div style={{
-          position: 'absolute',
-          left: '50%',
-          top: '38%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 2,
+          top: '96px',
+          transform: 'translateX(-50%)',
           textAlign: 'center',
           width: '100%',
-          padding: '0 40px',
+          padding: '0 48px',
           boxSizing: 'border-box',
         }}>
-          <div className="home-hero-title-in" style={{
+          <div style={{
             fontFamily: "'Ronzino Variable', sans-serif",
-            fontVariationSettings: `"BLND" ${Math.max(50, currentAQI * 200)}`,
-            fontSize: 'clamp(64px, 14vw, 520px)',
+            fontVariationSettings: '"BLND" 100',
+            fontSize: 'clamp(36px, 9.5vw, 260px)',
             textTransform: 'uppercase',
-            lineHeight: 0.88,
+            lineHeight: 1,
             letterSpacing: '-0.02em',
             color: 'var(--white)',
-            WebkitTextStroke: '6px var(--primary)',
+            WebkitTextStroke: '3px var(--primary)',
             paintOrder: 'stroke fill',
             whiteSpace: 'nowrap',
           }}>
-            ARIA BENE<br />COMUNE
+            ARIA BENE COMUNE
           </div>
         </div>
-
       </div>
 
-      <BwFilmstrip />
-
       {/* STATEMENT */}
-      <div style={{ background: 'var(--white)', padding: '100px 48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 64 }}>
-        <div style={{
-          fontFamily: 'var(--font-body)',
-          fontSize: 'clamp(24px, 3.6vw, 56px)',
-          lineHeight: 1.15,
-          color: 'var(--black)',
-          maxWidth: '23em',
-          textAlign: 'center',
-        }}>
+      <div style={{ background: 'var(--gray)', padding: '100px 48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 64 }}>
+        <ScrollReveal
+          baseOpacity={0.1}
+          enableBlur
+          baseRotation={3}
+          blurStrength={4}
+          containerClassName="home-statement"
+          textClassName="home-statement-text"
+        >
           {L
             ? "Aria Bene Comune è una piattaforma per il libero accesso ai dati sulla qualità dell'aria a Taranto. I dati sono prodotti da una rete di sensori di proprietà dei cittadini tarantini."
             : 'Aria Bene Comune is a platform for the free access to Air Quality data in Taranto. Data is produced by a community owned network of air quality sensors.'}
-        </div>
+        </ScrollReveal>
       </div>
 
-      {/* SENSORI ATTIVI — map-popup-style card carousel, right after the statement.
-          The centered card scales up; its neighbours shrink and dim. */}
+      {/* SENSORI ATTIVI — all sensors visible at once in a grid, right after the statement. */}
       <div style={{
         backgroundImage: "url('/assets/cielo.png')",
         backgroundSize: 'cover',
@@ -226,147 +156,150 @@ export default function HomePage({ lang, onHeroVisible, setPage, setSelectedSens
       }}>
         <div>
 
-          {/* Carousel of map-popup-style cards, with prev/next arrows */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '36px 24px' }}>
-            <button
-              type="button"
-              onClick={() => goToCard(activeCard - 1)}
-              aria-label={L ? 'Sensore precedente' : 'Previous sensor'}
-              style={CAROUSEL_ARROW}
-            >
-              ‹
-            </button>
+          {/* Grid of map-popup-style cards — every sensor visible, no scrolling.
+              Fixed two per row on desktop, image left / info right, collapsing to
+              one column on narrow viewports (see .home-sensor-grid in index.css). */}
+          <div className="home-sensor-grid" style={{
+            display: 'grid',
+            gap: 24,
+            padding: 24,
+          }}>
+            {currentHourSensors.map((s, i) => {
+              const aqiIdx = getSensorAQI(s);
+              const lv = LEVELS[aqiIdx];
+              const hovered = hoveredSensor === i;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  aria-label={`${L ? 'Apri record per' : 'Open record for'} ${s.name}`}
+                  className="home-sensor-card"
+                  onClick={() => { setSelectedSensor?.(s); setPage?.('record'); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'stretch',
+                    background: hovered ? 'var(--gray)' : 'var(--white)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    padding: 0,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={() => setHoveredSensor(i)}
+                  onMouseLeave={() => setHoveredSensor(null)}
+                  onFocus={() => setHoveredSensor(i)}
+                  onBlur={() => setHoveredSensor(null)}
+                >
+                  {/* Photo — swaps to the sagome silhouette on hover */}
+                  <div style={{ width: 360, flexShrink: 0, overflow: 'hidden', position: 'relative', minHeight: 260 }}>
+                    <img
+                      src={hovered ? SAGOME[i % SAGOME.length] : SENSOR_PHOTOS[i % SENSOR_PHOTOS.length]}
+                      alt=""
+                      style={{
+                        width: '100%', height: '100%', display: 'block',
+                        objectFit: hovered ? 'contain' : 'cover',
+                        objectPosition: 'center bottom',
+                        transition: 'opacity 0.2s',
+                        background: hovered ? 'var(--gray)' : 'transparent',
+                      }}
+                    />
+                  </div>
 
-            <div ref={carouselRef} className="about-sensor-carousel" style={{
-              display: 'flex', alignItems: 'center', gap: 28,
-              overflowX: 'auto', overflowY: 'hidden',
-              scrollSnapType: 'x mandatory', scrollBehavior: 'smooth',
-              flex: 1, padding: '64px calc(50% - 150px)',
-            }}>
-              {currentHourSensors.map((s, i) => {
-                const aqiIdx = getSensorAQI(s);
-                const lv = LEVELS[aqiIdx];
-                const hovered = hoveredSensor === i;
-                const isActive = i === activeCard;
-                return (
-                  <div
-                    key={s.id}
-                    ref={el => (cardRefs.current[i] = el)}
-                    onClick={() => { setSelectedSensor?.(s); setPage?.('record'); }}
-                    style={{
-                      width: 300, flexShrink: 0, scrollSnapAlign: 'center',
-                      background: 'var(--white)', border: '1px solid var(--gray)',
-                      position: 'relative', overflow: 'hidden', cursor: 'pointer',
-                      transform: `scale(${isActive ? 1.15 : 0.85})`,
-                      opacity: isActive ? 1 : 0.5,
-                      zIndex: isActive ? 2 : 1,
-                      transition: 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease',
-                    }}
-                    onMouseEnter={() => setHoveredSensor(i)}
-                    onMouseLeave={() => setHoveredSensor(null)}
-                  >
-                    <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--gray)' }}>
-                      <span style={{ ...SUB_LABEL, color: 'var(--black)' }}>{s.name}</span>
-                    </div>
+                  {/* Info */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
 
-                    <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gray)' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {/* Top: meta + pollutants + AQI scale */}
+                    <div style={{ flex: 1, padding: '24px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '1px solid var(--gray)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                         {[
                           { label: L ? 'Sensore' : 'Sensor',     value: s.name },
                           { label: L ? 'Posizione' : 'Location', value: s.location },
+                          { label: L ? 'Quartiere' : 'District', value: s.district },
                         ].map((item, idx) => (
                           <div key={idx}>
-                            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
+                            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gray2)', marginBottom: 2 }}>
                               {item.label}
                             </div>
-                            <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.01em', color: 'var(--black)' }}>
+                            <div style={{ fontFamily: 'var(--font-title)', fontSize: 16, fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.01em', color: 'var(--black)' }}>
                               {item.value}
                             </div>
                           </div>
                         ))}
                       </div>
 
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: 12 }}>
-                        {Object.keys(POLLUTANTS).map(k => (
+                      {/* Pollutant values */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 24px', marginTop: 20 }}>
+                        {POLL_KEYS.map(k => (
                           <div key={k}>
-                            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
-                              {POLLUTANTS[k].name}
+                            <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gray2)', marginBottom: 2 }}>
+                              {POLL_LABELS[k]}
                             </div>
-                            <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--black)' }}>
+                            <div style={{ fontFamily: 'var(--font-title)', fontSize: 16, fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--black)' }}>
                               {s[k] != null ? Number(s[k]).toFixed(1) : '—'}
                             </div>
                           </div>
                         ))}
                       </div>
 
-                      <div style={{ marginTop: 12 }}>
-                        <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 5 }}>
+                      {/* AQI scale */}
+                      <div style={{ marginTop: 20 }}>
+                        <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gray2)', marginBottom: 6 }}>
                           {L ? 'Scala AQI' : 'AQI Scale'}
                         </div>
-                        <div style={{ display: 'flex', gap: 2, marginBottom: 4 }}>
+                        <div style={{ display: 'flex', gap: 3, marginBottom: 5 }}>
                           {LEVELS.map(l => (
                             <div key={l.key} style={{
-                              flex: 1, height: 6, background: l.color,
+                              flex: 1, height: 8, background: l.color,
                               outline: l.key === lv.key ? `2px solid ${l.color}` : 'none',
-                              outlineOffset: 1,
+                              outlineOffset: 2,
                               opacity: l.key === lv.key ? 1 : 0.4,
                             }} />
                           ))}
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.35)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gray2)' }}>
                           <span>1 — {L ? 'Buono' : 'Good'}</span>
                           <span>6 — {L ? 'Estremo' : 'Extreme'}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Photo */}
-                    <div style={{ aspectRatio: '3 / 2', overflow: 'hidden' }}>
-                      <img
-                        src={SENSOR_PHOTOS[i % SENSOR_PHOTOS.length]}
-                        alt=""
-                        style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover', objectPosition: 'center bottom' }}
-                      />
+                    {/* Bottom: health rec in level color */}
+                    <div style={{ background: lv.color, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ padding: '14px 28px', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+                        <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
+                          {L ? `Qualità dell'aria — ${lv.it}` : `Air Quality — ${lv.en}`}
+                          <br />{L ? 'Popolazione generale' : 'General population'}
+                        </div>
+                        {SUGGESTIONS[lv.key]?.gen && (
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 17, fontWeight: 400, lineHeight: 1.4, color: 'var(--white)' }}>
+                            {L ? SUGGESTIONS[lv.key].gen.it : SUGGESTIONS[lv.key].gen.en}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ padding: '14px 28px' }}>
+                        <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
+                          {L ? 'Popolazione sensibile' : 'Sensitive population'}
+                        </div>
+                        {SUGGESTIONS[lv.key]?.sen && (
+                          <div style={{ fontFamily: 'var(--font-body)', fontSize: 17, fontWeight: 400, lineHeight: 1.4, color: 'var(--white)' }}>
+                            {L ? SUGGESTIONS[lv.key].sen.it : SUGGESTIONS[lv.key].sen.en}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Hover takeover: whole card → gray, sagome silhouette, name in black, CTA in primary */}
-                    {hovered && (
-                      <div style={{
-                        position: 'absolute', inset: 0,
-                        background: 'var(--gray)',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        gap: 14, padding: 24, textAlign: 'center',
-                      }}>
-                        <img src={SAGOME[i % SAGOME.length]} alt="" style={{ width: '55%', maxHeight: '50%', objectFit: 'contain' }} />
-                        <div style={{ fontFamily: 'var(--font-title)', fontSize: 18, fontWeight: 700, color: 'var(--black)' }}>
-                          {s.name}
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-title)', fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--primary)' }}>
-                          {L ? 'Apri record →' : 'Open record →'}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                );
-              })}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => goToCard(activeCard + 1)}
-              aria-label={L ? 'Sensore successivo' : 'Next sensor'}
-              style={CAROUSEL_ARROW}
-            >
-              ›
-            </button>
+                </button>
+              );
+            })}
           </div>
 
-          {/* CTA — after the cards, same cielo.png background as the carousel above */}
+          {/* CTA — after the cards, same cielo.png background as the grid above */}
           <div style={{ padding: '48px', display: 'flex', justifyContent: 'center' }}>
             <a
               href={SENSOR_GUIDE_URL}
               target="_blank"
               rel="noopener noreferrer"
+              className="home-cta-link"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -387,9 +320,7 @@ export default function HomePage({ lang, onHeroVisible, setPage, setSelectedSens
         </div>
       </div>
 
-      {/* MAP — entire Map page, embedded after the last divider */}
-      <MapPage lang={lang} setPage={setPage} setSelectedSensor={setSelectedSensor} reportsControl={reportsControl} />
-
+      </div>
     </div>
   );
 }
