@@ -32,14 +32,14 @@
 * { font-variation-settings: "BLND" var(--font-blend); }
 
 html, body { height: 100%; background: var(--white); color: var(--black); }
-body { font-family: var(--font-body); overflow-x: hidden; cursor: none; }
-/* Custom cursor (CustomCursor.jsx) replaces the native pointer everywhere —
-   overrides the many explicit cursor:pointer rules on buttons/links/pills below. */
-* { cursor: none !important; }
+body { font-family: var(--font-body); overflow-x: hidden; }
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--gray); }
 ::-webkit-scrollbar-thumb { background: var(--primary); }
+
+.about-sensor-carousel { scrollbar-width: none; }
+.about-sensor-carousel::-webkit-scrollbar { display: none; }
 
 #root { min-height: 100vh; display: flex; flex-direction: column; }
 .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
@@ -50,19 +50,6 @@ body { font-family: var(--font-body); overflow-x: hidden; cursor: none; }
   border-bottom: var(--border);
   background: var(--white);
   position: sticky; top: 0; z-index: 1200;
-}
-.topbar--transparent {
-  background: transparent;
-  position: fixed; top: 0; left: 0; right: 0;
-}
-.topbar--transparent .topbar-logo,
-.topbar--transparent .topbar-nav a,
-.topbar--transparent .lang-toggle button {
-  color: var(--white);
-}
-.topbar--transparent .topbar-nav a:hover,
-.topbar--transparent .topbar-nav a.active {
-  color: var(--primary);
 }
 .topbar-logo {
   font-family: var(--font-title);
@@ -333,31 +320,20 @@ body { font-family: var(--font-body); overflow-x: hidden; cursor: none; }
 .sensor-popup-sub { font-family: var(--font-body); font-size: 11px; color: var(--gray2); margin-bottom: 12px; }
 .sensor-popup-close { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 16px; cursor: pointer; }
 
-/* ARCHIVE
-   Horizontal dividers only — no border-right grid lines; a dense full grid reads as a
-   spreadsheet, not this app's flat-doctrine tables. th used `border-bottom: var(--border)`,
-   which is the zero-alpha token DESIGN.md already flags as invisible everywhere it's used —
-   the header had no visible separation from the body at all; fixed to a real, deliberately
-   heavier rule than the row dividers so header/body read as two distinct zones.
-   border-collapse: separate (not collapse) — collapsed borders combined with a sticky
-   <th> is a known cross-browser bug where the sticky header overlaps and hides the
-   first <tbody> row; separate with zero spacing renders identically but sticky behaves
-   correctly. */
-.archive-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+/* ARCHIVE */
+.archive-table { width: 100%; border-collapse: collapse; }
 .archive-table th {
-  text-align: left; padding: 12px 18px;
+  text-align: left; padding: 10px 16px;
   font-family: var(--font-title); font-size: 10px; font-weight: 700;
-  letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray2);
-  border-bottom: 1.5px solid var(--black);
-  background: var(--white); position: sticky; top: 0; z-index: 1;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  border-bottom: var(--border); border-right: 1px solid var(--gray);
+  background: var(--white); position: sticky; top: var(--archive-sticky-offset, 48px); z-index: 1;
 }
 .archive-table td {
-  padding: 14px 18px; font-family: var(--font-body); font-size: 13px;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--gray);
+  padding: 12px 16px; font-family: var(--font-body); font-size: 13px;
+  border-bottom: 1px solid var(--gray); border-right: 1px solid var(--gray);
 }
 .archive-table tr { cursor: pointer; }
-.archive-table td { transition: background 0.15s; }
 .archive-table tr:hover td { background: var(--gray); }
 .record-table th { position: static; }
 .aqi-pill {
@@ -1111,78 +1087,13 @@ body { font-family: var(--font-body); overflow-x: hidden; cursor: none; }
   animation: rowSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* ELEVATED CARD — the one shared shape+depth recipe for every "lifted off
-   the page" surface in the app: the map's floating filter chrome, the
-   symptom severity cards, and the home sensor cards. Same radius, same
-   shadow, everywhere, so the three don't drift against each other again.
-   Kept as three selectors (not one shared class) since each has its own
-   background rule, but every one of them must carry these two properties
-   unchanged. */
-:root {
-  --elevated-radius: 20px;
-  --elevated-shadow:
-    inset 0 -1px 0 rgba(0, 0, 0, 0.05),
-    0 0 22px rgba(0, 0, 0, 0.16),
-    0 6px 16px rgba(0, 0, 0, 0.16);
-}
-
-/* MAP PAGE — floating chrome over the map (filters, sensor list, detail
-   panel, wind widget) and the SYMPTOMS PAGE's own filter panel (same class,
-   reused as-is): translucent frosted glass, explicitly requested and
-   modeled on a reference (a weather-map product's rounded glass sidebar) —
-   this is the one place in the app that departs from both the flat/opaque
-   default and the zero-radius rule. .map-glass-panel > div neutralizes the
-   opaque white background mapFiltersPanel sets inline for its non-floating
-   use elsewhere. */
-.map-glass-panel {
-  position: relative;
-  border-radius: var(--elevated-radius);
-  background: linear-gradient(165deg, rgba(250, 248, 246, 0.85) 0%, rgba(250, 248, 246, 0.6) 100%);
-  backdrop-filter: blur(24px) saturate(1.9);
-  -webkit-backdrop-filter: blur(24px) saturate(1.9);
-  box-shadow: var(--elevated-shadow);
-}
-.map-glass-panel > div {
-  background: transparent !important;
-}
-.map-glass-panel .pill-btn {
-  border-radius: 999px;
-}
-
-/* SYMPTOMS PAGE — the per-zone severity cards. Solid, not glass — the
-   AQI-level color they carry is a safety signal, not decoration — but the
-   same radius and shadow as every other elevated surface. */
-.symptom-glass-card {
-  position: relative;
-  border-radius: var(--elevated-radius);
-  box-shadow: var(--elevated-shadow);
-}
-
-/* MAP PAGE — hand-drawn treatment: tiles stay at native contrast/color for
-   legibility (buildings, roads, labels) — the hand-drawn character comes from
-   the faint paper-grain overlay below and the wobbly sensor markers instead. */
-.map-hand-drawn::after {
-  content: '';
-  position: absolute; inset: 0;
-  z-index: 900;
-  pointer-events: none;
-  opacity: 0.06;
-  mix-blend-mode: multiply;
-  background-repeat: repeat;
-  background-size: 180px 180px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.7 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
 /* MAP PAGE — sensor markers: smooth color crossfade as hour/date/pollutant
-   change, a hover highlight, a one-shot "pop" when a marker is selected, and
-   a shared hand-drawn wobble (see the <filter id="hand-drawn-wobble"> in
-   MapPage.jsx) so the dots read as sketched circles, not vector-perfect ones. */
+   change, a hover highlight, and a one-shot "pop" when a marker is selected. */
 .map-sensor-marker {
   transition: fill 0.4s ease, filter 0.15s ease;
-  filter: url(#hand-drawn-wobble);
 }
 .map-sensor-marker:hover {
-  filter: url(#hand-drawn-wobble) brightness(1.18) drop-shadow(0 0 3px rgba(0,0,0,0.35));
+  filter: brightness(1.18) drop-shadow(0 0 3px rgba(0,0,0,0.35));
 }
 @keyframes map-marker-pop {
   0%   { transform: scale(1); }
@@ -1573,47 +1484,8 @@ body { font-family: var(--font-body); overflow-x: hidden; cursor: none; }
   font-family: var(--font-title); font-size: 10px; font-weight: 400;
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray2);
 }
-/* About page's threshold table — category headers (Particolato/Gas irritanti/Sistemici)
-   get the same primary-bar treatment as the guide's numbered SectionLabel chapters.
-   Scoped here rather than on the shared .symptoms-matrix-cat-header itself, since
-   SymptomsPage reuses that class with its own current-level badge that shouldn't change. */
-.about-threshold-matrix .symptoms-matrix-cat-header { background: var(--primary); }
-.about-threshold-matrix .symptoms-matrix-cat-title { color: #fff; }
-.about-threshold-matrix .symptoms-matrix-cat-sub { color: rgba(255, 255, 255, 0.7); }
-/* Actual cards instead of edge-to-edge grid cells: real gap between them, the
-   same elevated-card recipe (rounded.card radius + the one shared shadow) every
-   other floating card on the site uses — Archive's chart tiles, Map's glass
-   panels, Symptoms' symptom cards, Home's sensor cards — never a one-off radius
-   or border per DESIGN.md's One-Elevation Rule, so no border here, just the
-   shadow. Scoped to this page's matrix, not the shared .symptoms-matrix-cell
-   class, so the Symptoms page's own matrix is unaffected. */
-.about-threshold-matrix .symptoms-matrix-levels { gap: 12px; background: transparent; }
-.about-threshold-matrix .symptoms-matrix-cell {
-  border-radius: var(--elevated-radius);
-  box-shadow: var(--elevated-shadow);
-  overflow: hidden;
-  transition: background 0.15s;
-}
-.about-threshold-matrix .symptoms-matrix-cell:hover { background: var(--gray); }
-.about-threshold-matrix .symptoms-matrix-cat { border-bottom: none; margin-bottom: 24px; }
-.about-threshold-matrix .symptoms-matrix-cat-header { border-bottom: none; margin-bottom: 12px; }
 .symptoms-matrix-levels {
   display: grid; grid-template-columns: repeat(6, 1fr);
-}
-.about-component-grid {
-  grid-template-columns: repeat(4, 1fr);
-}
-.about-hero-photo {
-  width: clamp(160px, 32vw, 420px);
-}
-@media (max-width: 768px) {
-  .about-component-grid { grid-template-columns: repeat(2, 1fr); }
-  .symptoms-matrix-levels { grid-template-columns: repeat(2, 1fr); }
-  .symptoms-matrix-levels .symptoms-matrix-cell:nth-child(2n) { border-right: none; }
-  .about-hero-photo { width: 100%; }
-}
-@media (max-width: 480px) {
-  .about-component-grid { grid-template-columns: 1fr; }
 }
 .symptoms-matrix-cell {
   padding: 12px 14px;
@@ -1654,54 +1526,39 @@ body { font-family: var(--font-body); overflow-x: hidden; cursor: none; }
   }
 }
 
-/* HOME — statement text, wrapped in the ScrollReveal component (per-word
-   blur/opacity/rotation reveal on scroll). Overrides ScrollReveal.css's own
-   defaults to keep the previous typography (serif body font, centered,
-   capped measure). */
-.home-statement { margin: 0; }
-.home-statement-text {
-  font-family: var(--font-body);
-  font-size: clamp(24px, 3.6vw, 56px);
-  line-height: 1.15;
-  font-weight: 400;
-  color: var(--black);
-  max-width: 23em;
-  margin: 0 auto;
-  text-align: center;
+/* HOME HERO — slow atmospheric drift on the cielo.png background, so the
+   sky reads as weather moving rather than a static photo. */
+@keyframes homeHeroSkyDrift {
+  0%   { background-position: 50% 50%; }
+  50%  { background-position: 53% 46%; }
+  100% { background-position: 50% 50%; }
+}
+.home-hero-bg-drift {
+  animation: homeHeroSkyDrift 90s ease-in-out infinite;
 }
 
-/* HOME — sensor grid: keyboard-operable cards, focus-visible states, and the
-   same rounded-corner + layered-shadow treatment as .map-glass-panel /
-   .symptom-glass-card (minus its hairline outline, per feedback — no visible
-   border at all here, just the shadow). overflow: hidden clips the photo and
-   the bottom color band to the rounded corners. */
-.home-sensor-card {
-  border: none;
-  border-radius: var(--elevated-radius);
-  overflow: hidden;
-  box-shadow: var(--elevated-shadow);
+/* HOME HERO — title cascades in once on load */
+@keyframes homeHeroTitleIn {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.home-sensor-card:focus-visible,
-.home-cta-link:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-.home-sensor-grid { grid-template-columns: repeat(2, 1fr); }
-@media (max-width: 900px) {
-  .home-sensor-grid { grid-template-columns: 1fr; }
+.home-hero-title-in {
+  opacity: 0;
+  animation: homeHeroTitleIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
 }
 
-/* MAP + SYMPTOMS — filter pills and list items rendered as real buttons
-   (keyboard-operable), sharing one focus-visible convention. */
-.pill-btn { margin: 0; }
-.pill-btn:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+/* HOME HERO — AQI circle: scale/fade in once, then breathe forever. Pulse
+   duration is set inline per-instance (severity-driven), only the keyframes
+   live here. */
+@keyframes homeHeroCircleIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.82); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes homeHeroCirclePulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%      { transform: translate(-50%, -50%) scale(1.035); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-hero-bg-drift, .home-hero-title-in, .home-hero-circle { animation: none; opacity: 1; }
-  .map-fade-in { animation: none; opacity: 1; }
-  .map-sensor-marker.selected { animation: none; }
-  .map-sensor-marker { transition: fill 0.4s ease; }
+  .home-hero-bg-drift, .home-hero-title-in { animation: none; opacity: 1; }
 }

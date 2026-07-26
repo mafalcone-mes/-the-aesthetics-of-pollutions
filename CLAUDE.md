@@ -12,10 +12,6 @@ npm run preview   # serve the dist/ build locally
 
 No test runner or linter is configured.
 
-## Design Context
-
-`PRODUCT.md` and `DESIGN.md` at the project root carry strategic and visual design context (register: product, North Star: "The Kitchen-Table Readout" — warm, plain-language readings over instrument-panel coldness, WHO-vs-legal honesty on screen at all times). Written and maintained by the `impeccable` skill (`.claude/skills/impeccable/`); regenerate DESIGN.md via `/impeccable document` when the visual system drifts.
-
 ## Project overview
 
 **Aria Bene Comune** — a civic air-quality monitoring dashboard for Taranto, Italy. All sensor data is static/simulated (noted in the UI footer). The app is bilingual (Italian / English), switching via a `lang` state string (`'it'` | `'en'`).

@@ -1,14 +1,11 @@
 const NAV = [
-  { id: 'map',      it: 'Mappa',      en: 'Map' },
-  { id: 'archive',  it: 'Archivio',   en: 'Archive' },
-  { id: 'symptoms', it: 'Sintomi',    en: 'Symptoms' },
-  { id: 'about',    it: 'Chi siamo',  en: 'About' },
+  { id: 'archive', it: 'Archivio', en: 'Archive' },
+  { id: 'about',   it: 'Chi siamo', en: 'About' },
 ];
 
-export default function TopBar({ page, setPage, lang, setLang, onNavHover, heroVisible = true }) {
-  const transparent = page === 'home' && heroVisible;
+export default function TopBar({ page, setPage, lang, setLang, onNavHover }) {
   return (
-    <nav className={`topbar${transparent ? ' topbar--transparent' : ''}`}>
+    <nav className="topbar">
       <div className="topbar-logo" onClick={() => setPage('home')}>
         <span>ARIA</span><span>BENE</span><span>COMUNE</span>
       </div>

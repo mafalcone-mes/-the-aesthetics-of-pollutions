@@ -1,28 +1,16 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import { LEVELS } from '../data/levels';
 import { POLLUTANTS } from '../data/pollutants';
 import { SENSORS } from '../data/sensors';
 import { SYMPTOM_OPTIONS } from '../data/symptoms';
 import { HOURLY_DATA } from '../data/timeseries';
-import { getPollLevel } from '../utils/aqi';
+import { getPollLevel, getSensorAQI } from '../utils/aqi';
+import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import MultiLineChart from '../components/charts/MultiLineChart';
 import HourlyBarChart from '../components/charts/HourlyBarChart';
 import DailyHeatmap from '../components/charts/DailyHeatmap';
 import RadarChart from '../components/charts/RadarChart';
-import ComposedTrendChart from '../components/charts/ComposedTrendChart';
-import SensorCalendarHeatmap from '../components/charts/SensorCalendarHeatmap';
-
-// Trial: one combined Recharts view (mean/peak/count) standing in for the four-chart grid
-// below. Flip to false to go back to Radar/Trend/Hourly-avg/Heatmap — none of that code
-// was removed, it's just not rendered while this is true.
-const TRIAL_COMPOSED_CHART = true;
-
-// Same sensor photos used on the Home/Map sensor cards
-const SENSOR_PHOTOS = [
-  '/assets/DSC01743.jpg',
-  '/assets/Piazza-Fontana-1.jpg',
-  '/assets/DSC01848.jpg',
-];
 
 const PAGE_SIZE = 50;
 
@@ -75,41 +63,8 @@ const SUBLABEL = {
 
 const CHART_LABEL = {
   fontFamily: 'Epilogue', fontSize: 10, fontWeight: 700,
-  letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gray2)', marginBottom: 16,
+  letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9B9790', marginBottom: 10,
 };
-
-// Doesn't depend on any component state, so it's hoisted out — ChartTile (below)
-// and the page body both reference the same object.
-const CHART_AREA = {
-  padding: '24px clamp(16px, 4vw, 24px)',
-  background: 'var(--white)',
-  borderRadius: 'var(--elevated-radius)',
-  boxShadow: 'var(--elevated-shadow)',
-  position: 'relative',
-};
-
-// One chart's tile: label, the chart itself, and the small expand/collapse
-// button bottom-right. Reused for the 2-up grid, the large expanded view, and
-// the filmstrip thumbnails — only sizing around it changes.
-function ChartTile({ title, expanded, onToggle, L, children }) {
-  return (
-    <div style={CHART_AREA}>
-      <div style={CHART_LABEL}>{title}</div>
-      {children}
-      <button type="button" onClick={onToggle}
-        aria-label={expanded ? (L ? 'Riduci grafico' : 'Collapse chart') : (L ? 'Ingrandisci grafico' : 'Expand chart')}
-        style={{
-          position: 'absolute', bottom: 10, right: 10, zIndex: 5,
-          width: 28, height: 28, borderRadius: '50%',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'var(--gray)', border: 'none', cursor: 'pointer',
-          fontFamily: 'Epilogue', fontSize: 13, color: 'var(--black)',
-        }}>
-        {expanded ? '⤡' : '⤢'}
-      </button>
-    </div>
-  );
-}
 
 function pillStyle(active) {
   return {
@@ -163,13 +118,13 @@ function PeriodPicker({ L, mode, setMode, from, setFrom, to, setTo }) {
       <div style={SUBLABEL}>{L ? 'Periodo' : 'Period'}</div>
       <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
         {['single', 'range'].map(m => (
-          <button key={m} type="button" className="pill-btn" style={{ ...pillStyle(mode === m), flex: 1, textAlign: 'center' }} onClick={() => {
+          <span key={m} style={{ ...pillStyle(mode === m), flex: 1, textAlign: 'center' }} onClick={() => {
             setMode(m);
             if (m === 'single') { setFrom(LATEST_DATE); setTo(LATEST_DATE); }
             else { setFrom(FIRST_DATE); setTo(LATEST_DATE); }
           }}>
             {m === 'single' ? (L ? 'Giorno' : 'Day') : (L ? 'Intervallo' : 'Range')}
-          </button>
+          </span>
         ))}
       </div>
       {mode === 'single' ? (
@@ -207,12 +162,12 @@ function SensorPills({ L, sensors, setSensors }) {
     <div>
       <div style={SUBLABEL}>{L ? 'Sensore' : 'Sensor'}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        <button type="button" className="pill-btn" style={pillStyle(sensors.has('all'))} onClick={() => setSensors(new Set(['all']))}>{L ? 'Tutti' : 'All'}</button>
+        <span style={pillStyle(sensors.has('all'))} onClick={() => setSensors(new Set(['all']))}>{L ? 'Tutti' : 'All'}</span>
         {SENSORS.map(s => (
-          <button key={s.id} type="button" className="pill-btn" style={pillStyle(sensors.has(String(s.id)))}
+          <span key={s.id} style={pillStyle(sensors.has(String(s.id)))}
             onClick={() => toggleSet(sensors, setSensors, String(s.id), 'all')}>
             {s.location}
-          </button>
+          </span>
         ))}
       </div>
     </div>
@@ -224,12 +179,12 @@ function DistrictPills({ L, districts, setDistricts }) {
     <div>
       <div style={SUBLABEL}>{L ? 'Quartiere' : 'District'}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        <button type="button" className="pill-btn" style={pillStyle(districts.has('all'))} onClick={() => setDistricts(new Set(['all']))}>{L ? 'Tutti' : 'All'}</button>
+        <span style={pillStyle(districts.has('all'))} onClick={() => setDistricts(new Set(['all']))}>{L ? 'Tutti' : 'All'}</span>
         {ALL_DISTRICTS.map(d => (
-          <button key={d} type="button" className="pill-btn" style={pillStyle(districts.has(d))}
+          <span key={d} style={pillStyle(districts.has(d))}
             onClick={() => setDistricts(districts.has(d) ? new Set(['all']) : new Set([d]))}>
             {d}
-          </button>
+          </span>
         ))}
       </div>
     </div>
@@ -242,13 +197,13 @@ function PollutantPills({ L, polls, setPolls }) {
       <div style={SUBLABEL}>{L ? 'Inquinanti' : 'Pollutants'}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         {Object.keys(POLLUTANTS).map(k => (
-          <button key={k} type="button" className="pill-btn" style={pillStyle(polls.has(k))} onClick={() => {
+          <span key={k} style={pillStyle(polls.has(k))} onClick={() => {
             const s = new Set(polls);
             s.has(k) ? (s.size > 1 && s.delete(k)) : s.add(k);
             setPolls(s);
           }}>
             {POLLUTANTS[k].name}
-          </button>
+          </span>
         ))}
       </div>
     </div>
@@ -282,22 +237,88 @@ function FilterPanel({ open, setOpen, children, exportFn }) {
   );
 }
 
+// ── Smooth show/hide wrapper for toggleable chart sections ────────────────────
+
+function Collapsible({ open, children }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateRows: open ? '1fr' : '0fr',
+      opacity: open ? 1 : 0,
+      transition: 'grid-template-rows 380ms cubic-bezier(0.4, 0, 0.2, 1), opacity 280ms ease',
+    }}>
+      <div style={{
+        overflow: 'hidden',
+        minHeight: 0,
+        transform: open ? 'translateY(0)' : 'translateY(-10px)',
+        transition: 'transform 320ms cubic-bezier(0.4, 0, 0.2, 1)',
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── Inline mini-map for table hover rows ─────────────────────────────────────
+
+function SensorMiniMap({ sensor, color }) {
+  if (!sensor?.lat) return null;
+  return (
+    <div style={{ width: '100%', height: '100%' }}>
+      <MapContainer key={sensor.id} center={[sensor.lat, sensor.lon]} zoom={13}
+        style={{ width: '100%', height: '100%' }} zoomControl={false} dragging={false}
+        scrollWheelZoom={false} doubleClickZoom={false} touchZoom={false} attributionControl={false}>
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+        <CircleMarker center={[sensor.lat, sensor.lon]} radius={9}
+          pathOptions={{ fillColor: color, fillOpacity: 0.9, color: '#111', weight: 1.5 }} />
+      </MapContainer>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ArchivePage({ lang, setPage, setSelectedSensor, reports = [] }) {
   const L = lang === 'it';
 
-  // One filter set shared by Radar/Trend/Hourly avg/Heatmap — the table keeps
-  // its own, independent set (tbl), since it's browsing raw rows rather than
-  // comparing charts against each other.
-  const shared = useChartFilter(FIRST_DATE,  LATEST_DATE, 'range');
-  const tbl    = useChartFilter(LATEST_DATE, LATEST_DATE, 'single');
-  const [sharedPolls, setSharedPolls] = useState(new Set(['pm25', 'pm10', 'no2', 'co']));
+  // Same city-wide AQI snapshot the home page hero uses to drive its title's font blend
+  const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
 
-  // Which chart (if any) is shown large, with the rest reflowing into a
-  // filmstrip row underneath it. All four charts are always rendered now —
-  // there's no separate show/hide selection anymore.
-  const [expandedChart, setExpandedChart] = useState(null);
+  // Each chart has its own independent filter
+  const radar = useChartFilter(FIRST_DATE,  LATEST_DATE, 'range');
+  const line  = useChartFilter(LATEST_DATE, LATEST_DATE, 'single');
+  const bar   = useChartFilter(FIRST_DATE,  LATEST_DATE, 'range');
+  const heat  = useChartFilter(FIRST_DATE,  LATEST_DATE, 'range');
+  const tbl   = useChartFilter(LATEST_DATE, LATEST_DATE, 'single');
+
+  // Line chart extras
+  const [lineSensor, setLineSensor]       = useState(null);
+  const [linePollutants, setLinePollutants] = useState(new Set(['pm25', 'pm10', 'no2', 'co']));
+
+  // Bar chart pollutants
+  const [barPolls, setBarPolls] = useState(new Set(['pm25', 'pm10', 'no2', 'co']));
+
+  // Which charts are shown — table is always visible and not part of this set.
+  // At least one chart must stay visible, so toggling off the last one is a no-op.
+  const [visibleCharts, setVisibleCharts] = useState(new Set(CHART_DEFS.map(c => c.key)));
+  const toggleChart = key => setVisibleCharts(prev => {
+    if (prev.has(key) && prev.size === 1) return prev;
+    const s = new Set(prev);
+    s.has(key) ? s.delete(key) : s.add(key);
+    return s;
+  });
+
+  // Sticky toggle bar — measure its own height so the table's sticky header
+  // (and any sticky content below) can offset past it instead of overlapping.
+  const toggleBarRef = useRef(null);
+  const [toggleBarH, setToggleBarH] = useState(0);
+  useEffect(() => {
+    const el = toggleBarRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setToggleBarH(entry.contentRect.height));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Narrower internal chart coordinate system on small screens keeps SVG text legible —
   // charts scale via viewBox, so a 900-wide canvas shrunk to a 340px phone screen
@@ -308,7 +329,6 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor, reports 
   const [tableMode, setTableMode]     = useState('numeric'); // 'numeric' | 'qualitative'
   const [currentPage, setCurrentPage] = useState(1);
   const [filterKey, setFilterKey]     = useState(0);
-  // { key, r, lv, x, y } of the row currently showing the floating hover card, or null
   const [hoveredRow, setHoveredRow]   = useState(null);
   const leaveTimer = useRef(null);
 
@@ -331,31 +351,24 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor, reports 
   // ── Derived data ────────────────────────────────────────────────────────────
 
   const radarSensors = useMemo(() => {
-    const ids = [...new Set(shared.filtered.map(r => r.sensorId))];
+    const ids = [...new Set(radar.filtered.map(r => r.sensorId))];
     return ids.map(id => {
-      const rows = shared.filtered.filter(r => r.sensorId === id);
+      const rows = radar.filtered.filter(r => r.sensorId === id);
       const sensor = SENSORS.find(s => s.id === id);
       const pollutantLevels = {};
-      for (const key of sharedPolls) {
+      for (const key of Object.keys(POLLUTANTS)) {
         const peak = Math.max(...rows.map(r => r[key] ?? 0));
         pollutantLevels[key] = getPollLevel(key, peak);
       }
       const overallAqi = Math.max(...Object.values(pollutantLevels));
-      return { id, name: sensor?.location || String(id), pollutantLevels, overallAqi };
+      return { id, name: sensor?.name?.replace('Taranto - ', '') || String(id), pollutantLevels, overallAqi };
     });
-  }, [shared.filtered, sharedPolls]);
+  }, [radar.filtered]);
 
-  // Trend now draws one line per selected sensor (its worst score among the
-  // shared selected pollutants), instead of one sensor's separate pollutant
-  // lines — a direct consequence of sharing sensor/pollutant filters with
-  // every other chart instead of keeping its own single-sensor picker.
-  const lineSensorSeries = useMemo(() => {
-    const ids = [...new Set(shared.filtered.map(r => r.sensorId))];
-    return ids.map(id => {
-      const sensor = SENSORS.find(s => s.id === id);
-      return { sensorId: id, sensorName: sensor?.location || String(id), rows: shared.filtered.filter(r => r.sensorId === id) };
-    });
-  }, [shared.filtered]);
+  const lineSensorIds = [...new Set(line.filtered.map(r => r.sensorId))];
+  const effectiveLineSensor = lineSensorIds.includes(lineSensor) ? lineSensor : (lineSensorIds[0] ?? null);
+  const lineSensorRows = line.filtered.filter(r => r.sensorId === effectiveLineSensor);
+  const lineSensorMeta = SENSORS.find(s => s.id === effectiveLineSensor);
 
   const activeFiltered = tableMode === 'numeric' ? tbl.filtered : reportsFiltered;
   const pagedData  = activeFiltered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -387,191 +400,181 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor, reports 
     a.click();
   };
 
-  const CARD = { padding: '12px 14px' };
-  // Same construction as MapPage's floating filters card (fixed content width,
-  // flex-row-wrap, gap 24) — the .map-glass-panel class supplies the glass
-  // background/radius/shadow; margin gives its shadow room to render.
-  const PANEL = { ...CARD, width: isNarrow ? '100%' : 320, flexShrink: 0, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', padding: '16px clamp(16px, 4vw, 24px)', margin: 16, boxSizing: 'border-box' };
-  // Full-width variant of the same glass panel, for the one filter bar shared
-  // by all four charts (as opposed to Table's own narrow side panel above).
-  // Column stack instead of PANEL's row-wrap: with flex-wrap and auto-width
-  // items of very different natural widths (Period ~250px vs Sensor's 7 pills
-  // ~800px), the browser was leaving a large dead gap before District rather
-  // than packing tightly — a grid row with content-sized columns below avoids
-  // that ambiguity entirely.
-  // width: 'auto' (not '100%') — PANEL's margin: 16 already insets it from its
-  // parent on both sides; combining that margin with width: 100% would make the
-  // box 100% of the parent PLUS 32px of margin, overflowing past the chart
-  // cards below (which are inset via padding on their wrapper, not margin).
-  // auto lets the browser fill the remaining width after the margins instead,
-  // which lines its edges up with the chart cards exactly.
-  const SHARED_PANEL = { ...PANEL, width: 'auto', flexShrink: 1, flexDirection: 'column', flexWrap: 'nowrap', gap: 20 };
-  // Period / Sensor / District as three explicit content-sized grid columns —
-  // grid tracks never stretch a column past its own content the way a flex
-  // item can, so the gap between columns is always exactly `gap`. Each track
-  // is `minmax(0, max-content)` rather than bare `auto`: bare `auto` has an
-  // automatic minimum equal to its own content width, so on a viewport too
-  // narrow for all three at full width the row overflows off-screen instead
-  // of shrinking; the explicit 0 floor lets a column shrink below its
-  // preferred width, which makes its own internal flex-wrap (Sensor/District's
-  // pills) kick in and wrap onto more lines instead of forcing overflow.
-  const FILTER_ROW = { display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : 'repeat(3, minmax(0, max-content))', columnGap: 32, rowGap: 16, alignItems: 'flex-start', maxWidth: '100%' };
+  const CARD = { background: 'var(--white)', padding: '12px 14px' };
+  const SECTION = { display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--gray)' };
+  const PANEL = { ...CARD, width: '100%', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', padding: '16px clamp(16px, 4vw, 24px)', borderBottom: '1px solid var(--gray)' };
+  const CHART_AREA = {
+    ...CARD, flex: 1, minWidth: 0, padding: '20px clamp(16px, 4vw, 24px)',
+    background: 'url(/assets/cielo.png) center / cover no-repeat',
+  };
 
   // Smaller internal coordinate system on narrow viewports — these charts scale via
   // viewBox, so keeping width=900 on a 340px phone would shrink label text to a sliver.
   const chartW = isNarrow ? 480 : 900;
   const radarH = isNarrow ? 340 : 420;
   const plotH  = isNarrow ? 230 : 300;
-  const filmstripH = 130;
-
-  const CHART_TITLES = {
-    radar: L ? 'Radar inquinanti — picco nel periodo' : 'Pollutant radar — peak over period',
-    line: L ? 'Andamento — punteggio peggiore per sensore' : 'Trend — worst score per sensor',
-    bar: (L ? 'Media per ora del giorno — ' : 'Mean by hour of day — ') + shared.from + (shared.from !== shared.to ? ` → ${shared.to}` : ''),
-    heatmap: (L ? 'AQI massimo giornaliero — ' : 'Daily max AQI — ') + shared.from + (shared.from !== shared.to ? ` → ${shared.to}` : ''),
-  };
-
-  function renderChartBody(key, w, h) {
-    switch (key) {
-      case 'radar':
-        return <RadarChart key={`radar-${shared.from}-${shared.to}-${setKey(shared.sensors)}-${setKey(shared.districts)}-${setKey(sharedPolls)}`}
-          sensors={radarSensors} pollutants={[...sharedPolls]} lang={lang} width={w} height={h} />;
-      case 'line':
-        return <MultiLineChart key={`line-${shared.from}-${shared.to}-${setKey(shared.sensors)}-${setKey(sharedPolls)}`}
-          data={lineSensorSeries} pollutants={[...sharedPolls]} mode="sensor" lang={lang} width={w} height={h} />;
-      case 'bar':
-        return <HourlyBarChart data={shared.filtered} pollutants={[...sharedPolls]} lang={lang} width={w} height={h} />;
-      case 'heatmap':
-        return <DailyHeatmap key={`heat-${shared.from}-${shared.to}-${setKey(shared.sensors)}`}
-          data={shared.filtered} lang={lang} width={w} height={h} />;
-      default:
-        return null;
-    }
-  }
 
   return (
-    <div>
+    <div style={{ '--archive-sticky-offset': `${48 + toggleBarH}px` }}>
 
-      {/* ── SHARED CHART FILTERS — one panel drives Radar/Trend/Hourly avg/Heatmap;
-          the table keeps its own, further down. ────────────────────────────── */}
-      <div style={{ paddingTop: 24, borderBottom: '1px solid var(--gray)', background: "url('/assets/cielo.png') center / cover no-repeat" }}>
-        <div style={{ textAlign: 'center', padding: '24px 24px 40px' }}>
-          <h1 style={{
-            fontFamily: 'var(--font-title)', fontSize: 'clamp(56px, 9vw, 96px)', fontWeight: 800,
-            textTransform: 'uppercase', letterSpacing: '-0.01em', color: '#fff', margin: 0,
-            // -webkit-text-stroke draws its line centered on the glyph edge (half inside the
-            // fill, half outside); layering text-shadow copies at a fixed offset in every
-            // direction instead keeps the outline entirely outside the white fill. The soft
-            // dark shadow is appended last (furthest back) so it sits behind the crisp
-            // orange outline instead of muddying it, same drop-shadow used on the subtitle.
-            textShadow: [-2, -1, 0, 1, 2].flatMap(x =>
-              [-2, -1, 0, 1, 2].filter(y => x !== 0 || y !== 0).map(y => `${x}px ${y}px 0 var(--primary)`)
-            ).concat('0 4px 16px rgba(0,0,0,0.35)').join(', '),
-          }}>
-            {L ? 'Archivio' : 'Archive'}
-          </h1>
-          <p style={{
-            fontFamily: 'var(--font-body)', fontSize: 18, lineHeight: 1.65, fontWeight: 400,
-            letterSpacing: '0.01em', color: '#fff', maxWidth: 640, margin: '24px auto 0',
-            textAlign: 'center', textWrap: 'pretty',
-            // Solid white + a real shadow instead of opacity — opacity was fighting the very
-            // contrast it needed against the paler parts of the photo.
-            textShadow: '0 1px 3px rgba(0,0,0,0.45), 0 1px 12px rgba(0,0,0,0.2)',
-          }}>
-            {L
-              ? 'La pagina archivio è pensata per la raccolta ed analisi dei dati con un profilo più tecnico. In questa pagina è possibile vedere uno storico di tutti i dati qualitativi e quantitativi raccolti da quando la piattaforma è attiva.'
-              : 'The archive page is designed for data collection and analysis with a more technical profile. Here you can see a historical record of all qualitative and quantitative data collected since the platform went live.'}
-          </p>
-        </div>
-        <div className="map-glass-panel" style={SHARED_PANEL}>
-          <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0, width: '100%' }}>
-            {L ? 'Filtri grafici' : 'Chart filters'}
-          </div>
-          <div style={FILTER_ROW}>
-            <PeriodPicker L={L} mode={shared.mode} setMode={shared.setMode}
-              from={shared.from} setFrom={shared.setFrom} to={shared.to} setTo={shared.setTo} />
-            <SensorPills L={L} sensors={shared.sensors} setSensors={shared.setSensors} />
-            <DistrictPills L={L} districts={shared.districts} setDistricts={shared.setDistricts} />
-          </div>
-          <PollutantPills L={L} polls={sharedPolls} setPolls={setSharedPolls} />
-        </div>
-
-        {/* ── CHARTS ───────────────────────────────────────────────────────────── */}
-        {TRIAL_COMPOSED_CHART ? (
-          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={CHART_AREA}>
-              <div style={CHART_LABEL}>{L ? 'Andamento combinato — prova' : 'Combined trend — trial'}</div>
-              <ComposedTrendChart data={shared.filtered} pollutants={[...sharedPolls]} lang={lang} height={isNarrow ? 260 : 380} />
-            </div>
-            <div style={CHART_AREA}>
-              <div style={CHART_LABEL}>{L ? 'Calendario giornaliero — prova' : 'Daily calendar — trial'}</div>
-              <SensorCalendarHeatmap data={shared.filtered} pollutants={[...sharedPolls]} lang={lang} />
-            </div>
-          </div>
-        ) : expandedChart ? (
-          <div style={{ padding: '0 16px 16px' }}>
-            <ChartTile title={CHART_TITLES[expandedChart]} expanded L={L}
-              onToggle={() => setExpandedChart(null)}>
-              {renderChartBody(expandedChart, chartW, radarH)}
-            </ChartTile>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 16 }}>
-              {CHART_DEFS.filter(c => c.key !== expandedChart).map(c => (
-                <div key={c.key} style={{ flex: '1 1 240px', minWidth: 220 }}>
-                  <ChartTile title={L ? c.it : c.en} L={L}
-                    onToggle={() => setExpandedChart(c.key)}>
-                    {renderChartBody(c.key, 480, filmstripH)}
-                  </ChartTile>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : 'repeat(2, 1fr)', gap: 16, padding: 16 }}>
-            {CHART_DEFS.map(c => (
-              <ChartTile key={c.key} title={L ? c.it : c.en} L={L}
-                onToggle={() => setExpandedChart(c.key)}>
-                {renderChartBody(c.key, 480, plotH)}
-              </ChartTile>
-            ))}
-          </div>
-        )}
+      {/* TITLE — same treatment as the home page hero: Ronzino Variable's blend axis
+          tied to current AQI, white fill + primary stroke outline */}
+      <div style={{ padding: 'clamp(16px, 4vw, 24px) clamp(16px, 4vw, 24px) 16px', borderBottom: '1px solid var(--gray)' }}>
+        <span style={{
+          fontFamily: "'Ronzino Variable', sans-serif",
+          fontVariationSettings: `"BLND" ${Math.max(50, globalAQI * 200)}`,
+          fontSize: 'clamp(48px, 6vw, 96px)', textTransform: 'uppercase',
+          lineHeight: 0.92, letterSpacing: '-0.02em',
+          color: 'var(--white)', WebkitTextStroke: '6px var(--primary)', paintOrder: 'stroke fill',
+        }}>
+          {L ? 'Archivio Dati' : 'Data Archive'}
+        </span>
       </div>
 
+      {/* ── CHART VISIBILITY TOGGLE ───────────────────────────────────────────── */}
+      <div ref={toggleBarRef} style={{
+        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        padding: '14px clamp(16px, 4vw, 24px)', borderBottom: '1px solid var(--gray)',
+        background: 'var(--white)', position: 'sticky', top: 48, zIndex: 1100,
+      }}>
+        <span style={SUBLABEL}>
+          {L ? 'Grafici visibili' : 'Visible charts'}
+          <span style={{ marginLeft: 6, color: 'var(--primary)' }}>{visibleCharts.size}/{CHART_DEFS.length}</span>
+        </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {CHART_DEFS.map(c => {
+            const isOnlyOne = visibleCharts.size === 1 && visibleCharts.has(c.key);
+            return (
+              <span key={c.key} style={{ ...pillStyle(visibleCharts.has(c.key)), ...(isOnlyOne ? { opacity: 0.6, cursor: 'not-allowed' } : {}) }}
+                onClick={() => toggleChart(c.key)}
+                title={isOnlyOne ? (L ? 'Deve restare visibile almeno un grafico' : 'At least one chart must stay visible') : undefined}>
+                {L ? c.it : c.en}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── RADAR ─────────────────────────────────────────────────────────────── */}
+      <Collapsible open={visibleCharts.has('radar')}>
+        <div style={SECTION}>
+          <div style={PANEL}>
+            <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0, width: '100%' }}>Radar</div>
+            <PeriodPicker L={L} mode={radar.mode} setMode={radar.setMode}
+              from={radar.from} setFrom={radar.setFrom} to={radar.to} setTo={radar.setTo} />
+            <SensorPills L={L} sensors={radar.sensors} setSensors={radar.setSensors} />
+            <DistrictPills L={L} districts={radar.districts} setDistricts={radar.setDistricts} />
+          </div>
+          <div style={CHART_AREA}>
+            <div style={CHART_LABEL}>{L ? 'Radar inquinanti — picco nel periodo' : 'Pollutant radar — peak over period'}</div>
+            <RadarChart key={`${radar.from}-${radar.to}-${setKey(radar.sensors)}-${setKey(radar.districts)}`}
+              sensors={radarSensors} pollutants={Object.keys(POLLUTANTS)} lang={lang} width={chartW} height={radarH} />
+          </div>
+        </div>
+      </Collapsible>
+
+      {/* ── LINE CHART ────────────────────────────────────────────────────────── */}
+      <Collapsible open={visibleCharts.has('line')}>
+        <div style={SECTION}>
+          <div style={PANEL}>
+            <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0, width: '100%' }}>{L ? 'Andamento' : 'Trend'}</div>
+            <PeriodPicker L={L} mode={line.mode} setMode={line.setMode}
+              from={line.from} setFrom={line.setFrom} to={line.to} setTo={line.setTo} />
+            <div>
+              <div style={SUBLABEL}>{L ? 'Sensore' : 'Sensor'}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {lineSensorIds.map(id => {
+                  const s = SENSORS.find(s => s.id === id);
+                  return (
+                    <span key={id} style={pillStyle(effectiveLineSensor === id)}
+                      onClick={() => setLineSensor(id)}>
+                      {s?.name?.replace('Taranto - ', '') || id}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <PollutantPills L={L} polls={linePollutants} setPolls={setLinePollutants} />
+          </div>
+          <div style={CHART_AREA}>
+            <div style={CHART_LABEL}>
+              {lineSensorMeta?.name?.replace('Taranto - ', '') || '—'}
+              <span style={{ fontWeight: 400, marginLeft: 8, color: '#BDBAB4' }}>
+                {line.from}{line.from !== line.to ? ` → ${line.to}` : ''}
+              </span>
+            </div>
+            <MultiLineChart key={`${effectiveLineSensor}-${line.from}-${line.to}-${setKey(linePollutants)}`}
+              data={lineSensorRows} pollutants={[...linePollutants]}
+              mode="pollutant" width={chartW} height={plotH} />
+          </div>
+        </div>
+      </Collapsible>
+
+      {/* ── HOURLY BAR ────────────────────────────────────────────────────────── */}
+      <Collapsible open={visibleCharts.has('bar')}>
+        <div style={SECTION}>
+          <div style={PANEL}>
+            <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0, width: '100%' }}>{L ? 'Media oraria' : 'Hourly avg'}</div>
+            <PeriodPicker L={L} mode={bar.mode} setMode={bar.setMode}
+              from={bar.from} setFrom={bar.setFrom} to={bar.to} setTo={bar.setTo} />
+            <SensorPills L={L} sensors={bar.sensors} setSensors={bar.setSensors} />
+            <PollutantPills L={L} polls={barPolls} setPolls={setBarPolls} />
+          </div>
+          <div style={CHART_AREA}>
+            <div style={CHART_LABEL}>
+              {L ? 'Media per ora del giorno — ' : 'Mean by hour of day — '}
+              {bar.from}{bar.from !== bar.to ? ` → ${bar.to}` : ''}
+            </div>
+            <HourlyBarChart data={bar.filtered} pollutants={[...barPolls]} lang={lang} width={chartW} height={plotH} />
+          </div>
+        </div>
+      </Collapsible>
+
+      {/* ── DAILY HEATMAP ─────────────────────────────────────────────────────── */}
+      <Collapsible open={visibleCharts.has('heatmap')}>
+        <div style={SECTION}>
+          <div style={PANEL}>
+            <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0, width: '100%' }}>Heatmap</div>
+            <PeriodPicker L={L} mode={heat.mode} setMode={heat.setMode}
+              from={heat.from} setFrom={heat.setFrom} to={heat.to} setTo={heat.setTo} />
+            <SensorPills L={L} sensors={heat.sensors} setSensors={heat.setSensors} />
+          </div>
+          <div style={CHART_AREA}>
+            <div style={CHART_LABEL}>
+              {L ? 'AQI massimo giornaliero — ' : 'Daily max AQI — '}
+              {heat.from}{heat.from !== heat.to ? ` → ${heat.to}` : ''}
+            </div>
+            <DailyHeatmap key={`${heat.from}-${heat.to}-${setKey(heat.sensors)}`}
+              data={heat.filtered} lang={lang} width={chartW} height={plotH} />
+          </div>
+        </div>
+      </Collapsible>
+
       {/* ── TABLE ─────────────────────────────────────────────────────────────── */}
-      <div style={{ paddingTop: 24, borderBottom: '1px solid var(--gray)', background: 'var(--white)' }}>
-        <div className="map-glass-panel" style={SHARED_PANEL}>
+      <div style={SECTION}>
+        <div style={PANEL}>
           <div style={{ ...SUBLABEL, color: 'var(--black)', marginBottom: 0, width: '100%' }}>{L ? 'Tabella' : 'Table'}</div>
           <div>
             <div style={SUBLABEL}>{L ? 'Tipo di dati' : 'Data type'}</div>
             <div style={{ display: 'flex', gap: 4 }}>
               {['numeric', 'qualitative'].map(m => (
-                <button key={m} type="button" className="pill-btn" style={{ ...pillStyle(tableMode === m), textAlign: 'center' }} onClick={() => setTableMode(m)}>
+                <span key={m} style={{ ...pillStyle(tableMode === m), textAlign: 'center' }} onClick={() => setTableMode(m)}>
                   {m === 'numeric' ? (L ? 'Numerici' : 'Numerical') : (L ? 'Qualitativi' : 'Qualitative')}
-                </button>
+                </span>
               ))}
             </div>
           </div>
-          <div style={FILTER_ROW}>
-            <PeriodPicker L={L} mode={tbl.mode} setMode={tbl.setMode}
-              from={tbl.from} setFrom={tbl.setFrom} to={tbl.to} setTo={tbl.setTo} />
-            <SensorPills L={L} sensors={tbl.sensors} setSensors={tbl.setSensors} />
-            <DistrictPills L={L} districts={tbl.districts} setDistricts={tbl.setDistricts} />
-          </div>
-          <button type="button" className="pill-btn" onClick={exportCSV}
+          <PeriodPicker L={L} mode={tbl.mode} setMode={tbl.setMode}
+            from={tbl.from} setFrom={tbl.setFrom} to={tbl.to} setTo={tbl.setTo} />
+          <SensorPills L={L} sensors={tbl.sensors} setSensors={tbl.setSensors} />
+          <DistrictPills L={L} districts={tbl.districts} setDistricts={tbl.setDistricts} />
+          <button onClick={exportCSV}
             style={{ padding: '6px 16px', background: 'var(--primary)', color: '#fff', border: 'none', fontFamily: 'Epilogue', fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
             ↓ CSV
           </button>
         </div>
-      </div>
-      <div style={{ background: 'var(--white)' }}>
-          {/* overflowX: 'auto' alone forces the browser to compute overflow-y as 'auto' too
-              (a mixed overflow-x:auto/overflow-y:visible is not a valid computed combination) —
-              that silently made this div, not the page, the sticky <th>'s scrolling ancestor,
-              so `top: topbarH` pushed the header down from the div's own edge and hid row 1
-              underneath it. Giving the div its own bounded height/overflowY and sticking the
-              header at top:0 within it (a self-contained scrollable table) fixes that directly
-              instead of fighting the page-topbar-offset trick. */}
-          <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '70vh' }}>
+        <div style={{ background: 'var(--white)', flex: 1, minWidth: 0, padding: 0 }}>
+          <div style={{ overflowX: 'auto' }}>
             <table className="archive-table">
               {tableMode === 'numeric' ? (
                 <thead>
@@ -610,28 +613,54 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor, reports 
                     const lv = LEVELS[r.aqi];
                     const isDark = r.aqi <= 1;
                     const rowKey = `${r.sensorId}-${r.dateStr}-${r.hourStr}`;
-                    const isHovered = hoveredRow?.key === rowKey;
-                    const onEnter = e => { clearTimeout(leaveTimer.current); setHoveredRow({ key: rowKey, r, lv, x: e.clientX, y: e.clientY }); };
-                    const onMove  = e => { if (isHovered) setHoveredRow(h => h && { ...h, x: e.clientX, y: e.clientY }); };
+                    const isHovered = hoveredRow === rowKey;
+                    const onEnter = () => { clearTimeout(leaveTimer.current); setHoveredRow(rowKey); };
                     const onLeave = () => { leaveTimer.current = setTimeout(() => setHoveredRow(null), 60); };
                     return (
-                      <tr key={`${filterKey}-${r.sensorId}-${r.dateObj}`} className="archive-row-animate"
-                        style={{ animationDelay: `${i * 18}ms`, background: isHovered ? 'var(--gray)' : '' }}
-                        onMouseEnter={onEnter} onMouseMove={onMove} onMouseLeave={onLeave}
-                        onClick={() => { setSelectedSensor(SENSORS.find(s => s.id === r.sensorId)); setPage('record'); }}>
-                        <td style={{ color: '#9B9790', fontSize: 11 }}>{(currentPage - 1) * PAGE_SIZE + i + 1}</td>
-                        <td><span style={{ fontFamily: 'Epilogue', fontWeight: 700 }}>{r.sensorName}</span></td>
-                        <td>{r.district}</td>
-                        <td>{r.dateStr}</td>
-                        <td style={{ fontFamily: 'Epilogue', fontWeight: 600 }}>{r.hourStr}</td>
-                        <td><span className={`aqi-pill${isDark ? ' dark' : ''}`} style={{ background: lv.color }}>{L ? lv.it : lv.en}</span></td>
-                        <td style={{ color: LEVELS[getPollLevel('pm25', r.pm25)].color, fontFamily: 'Epilogue', fontWeight: 700 }}>{r.pm25}</td>
-                        <td style={{ color: LEVELS[getPollLevel('pm10', r.pm10)].color, fontFamily: 'Epilogue', fontWeight: 700 }}>{r.pm10}</td>
-                        <td style={{ color: LEVELS[getPollLevel('no2',  r.no2)].color,  fontFamily: 'Epilogue', fontWeight: 700 }}>{r.no2}</td>
-                        <td style={{ color: LEVELS[getPollLevel('co',   r.co)].color,   fontFamily: 'Epilogue', fontWeight: 700 }}>{r.co}</td>
-                        <td style={{ fontFamily: 'Epilogue' }}>{r.temp}°</td>
-                        <td style={{ fontFamily: 'Epilogue' }}>{r.hum}%</td>
-                      </tr>
+                      <Fragment key={`${filterKey}-${r.sensorId}-${r.dateObj}`}>
+                        <tr className="archive-row-animate"
+                          style={{ animationDelay: `${i * 18}ms`, background: isHovered ? 'var(--gray)' : '' }}
+                          onMouseEnter={onEnter} onMouseLeave={onLeave}
+                          onClick={() => { setSelectedSensor(SENSORS.find(s => s.id === r.sensorId)); setPage('record'); }}>
+                          <td style={{ color: '#9B9790', fontSize: 11 }}>{(currentPage - 1) * PAGE_SIZE + i + 1}</td>
+                          <td><span style={{ fontFamily: 'Epilogue', fontWeight: 700 }}>{r.sensorName}</span></td>
+                          <td>{r.district}</td>
+                          <td>{r.dateStr}</td>
+                          <td style={{ fontFamily: 'Epilogue', fontWeight: 600 }}>{r.hourStr}</td>
+                          <td><span className={`aqi-pill${isDark ? ' dark' : ''}`} style={{ background: lv.color }}>{L ? lv.it : lv.en}</span></td>
+                          <td style={{ color: LEVELS[getPollLevel('pm25', r.pm25)].color, fontFamily: 'Epilogue', fontWeight: 700 }}>{r.pm25}</td>
+                          <td style={{ color: LEVELS[getPollLevel('pm10', r.pm10)].color, fontFamily: 'Epilogue', fontWeight: 700 }}>{r.pm10}</td>
+                          <td style={{ color: LEVELS[getPollLevel('no2',  r.no2)].color,  fontFamily: 'Epilogue', fontWeight: 700 }}>{r.no2}</td>
+                          <td style={{ color: LEVELS[getPollLevel('co',   r.co)].color,   fontFamily: 'Epilogue', fontWeight: 700 }}>{r.co}</td>
+                          <td style={{ fontFamily: 'Epilogue' }}>{r.temp}°</td>
+                          <td style={{ fontFamily: 'Epilogue' }}>{r.hum}%</td>
+                        </tr>
+                        {isHovered && (
+                          <tr onMouseEnter={onEnter} onMouseLeave={onLeave}>
+                            <td colSpan={12} style={{ padding: '8px 16px 10px 24px', background: 'var(--gray)', borderBottom: '1px solid var(--gray2)' }}>
+                              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                                <div style={{ width: 280, flexShrink: 0 }}>
+                                  <MultiLineChart
+                                    data={HOURLY_DATA.filter(d => d.sensorId === r.sensorId && d.dateStr === r.dateStr)}
+                                    pollutants={[...linePollutants]}
+                                    mode="pollutant" width={280} height={90} compact />
+                                </div>
+                                <div style={{ width: 120, height: 90, flexShrink: 0 }}>
+                                  <SensorMiniMap sensor={SENSORS.find(s => s.id === r.sensorId)} color={LEVELS[r.aqi].color} />
+                                </div>
+                                <div style={{ fontFamily: 'Epilogue', fontSize: 10, color: 'var(--gray2)', letterSpacing: '0.06em', textTransform: 'uppercase', lineHeight: 1.6 }}>
+                                  <div style={{ fontWeight: 700, color: 'var(--black)', marginBottom: 4 }}>{r.sensorName}</div>
+                                  <div>{r.dateStr}</div>
+                                  <div>{r.hourStr}</div>
+                                  <div style={{ marginTop: 6 }}>
+                                    <span className={`aqi-pill${r.aqi <= 1 ? ' dark' : ''}`} style={{ background: lv.color }}>{L ? lv.it : lv.en}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -680,89 +709,7 @@ export default function ArchivePage({ lang, setPage, setSelectedSensor, reports 
             </div>
           </div>
         </div>
-
-      {/* Floating hover card — overlaps the table near the cursor instead of pushing rows down.
-          Same look as the sensor card on Home/Map (header strip, label/value rows, pollutant
-          grid, AQI scale bar) so a row preview reads as "the same sensor card" everywhere. */}
-      {hoveredRow && (() => {
-        const { r, lv, x, y } = hoveredRow;
-        const cardW = 260;
-        const left = Math.min(x + 16, window.innerWidth - cardW - 12);
-        const top  = Math.min(y + 16, window.innerHeight - 452);
-        const sensorIdx = SENSORS.findIndex(s => s.id === r.sensorId);
-        return (
-          <div style={{
-            position: 'fixed', left, top, width: cardW, zIndex: 1300, pointerEvents: 'none',
-            background: 'var(--white)', overflow: 'hidden',
-            borderRadius: 'var(--elevated-radius)', boxShadow: 'var(--elevated-shadow)',
-          }}>
-            <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--gray)' }}>
-              <span style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--black)' }}>
-                {r.sensorName}
-              </span>
-            </div>
-
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gray)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[
-                  { label: L ? 'Data' : 'Date', value: r.dateStr },
-                  { label: L ? 'Ora' : 'Hour', value: r.hourStr },
-                ].map((item, idx) => (
-                  <div key={idx}>
-                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
-                      {item.label}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.01em', color: 'var(--black)' }}>
-                      {item.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: 12 }}>
-                {Object.keys(POLLUTANTS).map(k => (
-                  <div key={k}>
-                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
-                      {POLLUTANTS[k].name}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--black)' }}>
-                      {r[k] != null ? Number(r[k]).toFixed(1) : '—'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 5 }}>
-                  {L ? 'Scala AQI' : 'AQI Scale'}
-                </div>
-                <div style={{ display: 'flex', gap: 2, marginBottom: 4 }}>
-                  {LEVELS.map(l => (
-                    <div key={l.key} style={{
-                      flex: 1, height: 6, background: l.color,
-                      outline: l.key === lv.key ? `2px solid ${l.color}` : 'none',
-                      outlineOffset: 1,
-                      opacity: l.key === lv.key ? 1 : 0.4,
-                    }} />
-                  ))}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.35)' }}>
-                  <span>1 — {L ? 'Buono' : 'Good'}</span>
-                  <span>6 — {L ? 'Estremo' : 'Extreme'}</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ height: 140, overflow: 'hidden' }}>
-              <img
-                src={SENSOR_PHOTOS[sensorIdx % SENSOR_PHOTOS.length]}
-                alt=""
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            </div>
-          </div>
-        );
-      })()}
+      </div>
 
     </div>
   );

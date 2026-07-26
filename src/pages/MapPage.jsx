@@ -8,15 +8,9 @@ import { HOURLY_DATA } from '../data/timeseries';
 import { WIND_DAILY } from '../data/loader';
 import { getSensorAQI, getPollLevel } from '../utils/aqi';
 import { SUGGESTIONS } from '../data/symptoms';
+import SymptomsPage from './SymptomsPage';
 
-// Shifted south of the sensor cluster's average so the initial view frames
-// the whole city (including the Mar Grande coastline south of the old town),
-// not just the sensor midpoint.
-const TARANTO_CENTER = [40.4440, 17.2270];
-// Keeps panning/zooming inside the sensor network's footprint (Taranto proper
-// through Massafra) — wide enough to hold every sensor with margin, nowhere
-// near wide enough to pan out to the rest of Italy.
-const TARANTO_BOUNDS = [[40.40, 17.00], [40.66, 17.34]];
+const TARANTO_CENTER = [40.4760, 17.2270];
 
 // Same sensor photos used on the Home page sensor cards
 const SENSOR_PHOTOS = [
@@ -44,7 +38,7 @@ function pillStyleWhite(active) {
     padding: '5px 14px',
     border: '1.5px solid ' + (active ? 'var(--primary)' : 'rgba(0,0,0,0.22)'),
     background: active ? 'var(--primary)' : 'transparent',
-    color: active ? 'var(--white)' : 'var(--black)',
+    color: active ? '#fff' : 'var(--black)',
     fontFamily: 'Epilogue', fontSize: 11, fontWeight: active ? 700 : 400,
     letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
   };
@@ -58,7 +52,7 @@ function pillStyleOnSky(active) {
     padding: '7px 14px',
     border: '1.5px solid ' + (active ? 'var(--primary)' : 'rgba(0,0,0,0.18)'),
     background: active ? 'var(--primary)' : 'var(--white)',
-    color: active ? 'var(--white)' : 'var(--black)',
+    color: active ? '#fff' : 'var(--black)',
     fontFamily: 'Epilogue', fontSize: 11, fontWeight: active ? 700 : 400,
     letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer',
     textAlign: 'left',
@@ -79,19 +73,6 @@ function useIsNarrow(breakpoint = 768) {
     return () => mq.removeEventListener('change', onChange);
   }, [breakpoint]);
   return isNarrow;
-}
-
-// Wind particles and the marker pulse ring are continuous, looping motion —
-// both skip/simplify under prefers-reduced-motion rather than just running quieter.
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  return reduced;
 }
 
 
@@ -134,46 +115,14 @@ function BlobOverlay({ wind, activePollutant, sensors }) {
         const blurStd = 18 + (maxLvl - blobLvl) * 7;
         const opac = Math.max(0.08, 0.55 - (maxLvl - blobLvl) * 0.08);
 
-        // Dithered/posterized cloud style, matching the hero's retro-dither look:
-        // blur the shape for a soft silhouette, then quantize the alpha into
-        // discrete bands (like the shader's color posterization) and roughen
-        // the edge with a turbulence displacement instead of a clean falloff.
         const filtId = `grp-bf-${blobLvl}`;
         const filt = document.createElementNS(ns, 'filter');
         filt.setAttribute('id', filtId);
         filt.setAttribute('x', '-150%'); filt.setAttribute('y', '-150%');
         filt.setAttribute('width', '400%'); filt.setAttribute('height', '400%');
-
         const blurEl = document.createElementNS(ns, 'feGaussianBlur');
         blurEl.setAttribute('stdDeviation', blurStd);
-        blurEl.setAttribute('result', 'blurred');
         filt.appendChild(blurEl);
-
-        const posterizeEl = document.createElementNS(ns, 'feComponentTransfer');
-        posterizeEl.setAttribute('in', 'blurred');
-        posterizeEl.setAttribute('result', 'posterized');
-        const alphaFunc = document.createElementNS(ns, 'feFuncA');
-        alphaFunc.setAttribute('type', 'discrete');
-        alphaFunc.setAttribute('tableValues', '0 0.18 0.32 0.48 0.65 0.85 1');
-        posterizeEl.appendChild(alphaFunc);
-        filt.appendChild(posterizeEl);
-
-        const noiseEl = document.createElementNS(ns, 'feTurbulence');
-        noiseEl.setAttribute('type', 'fractalNoise');
-        noiseEl.setAttribute('baseFrequency', '0.06 0.09');
-        noiseEl.setAttribute('numOctaves', '2');
-        noiseEl.setAttribute('seed', String(blobLvl + 3));
-        noiseEl.setAttribute('result', 'noise');
-        filt.appendChild(noiseEl);
-
-        const displaceEl = document.createElementNS(ns, 'feDisplacementMap');
-        displaceEl.setAttribute('in', 'posterized');
-        displaceEl.setAttribute('in2', 'noise');
-        displaceEl.setAttribute('scale', '22');
-        displaceEl.setAttribute('xChannelSelector', 'R');
-        displaceEl.setAttribute('yChannelSelector', 'G');
-        filt.appendChild(displaceEl);
-
         defs.appendChild(filt);
 
         const grp = document.createElementNS(ns, 'g');
@@ -222,7 +171,6 @@ function BlobOverlay({ wind, activePollutant, sensors }) {
 function SeverityPulseOverlay({ sensors, activePollutant }) {
   const map = useMap();
   const svgRef = useRef(null);
-  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (!sensors.length) return;
@@ -251,11 +199,7 @@ function SeverityPulseOverlay({ sensors, activePollutant }) {
         circle.setAttribute('fill', 'none');
         circle.setAttribute('stroke', LEVELS[lvIdx].color);
         circle.setAttribute('stroke-width', 2.5);
-        circle.setAttribute('stroke-opacity', reducedMotion ? '0.7' : '1');
-        circle.setAttribute('filter', 'url(#hand-drawn-wobble)');
-        if (!reducedMotion) {
-          circle.style.cssText = `animation: map-pulse-ring 2.2s ease-out ${(i % 4) * 0.4}s infinite;`;
-        }
+        circle.style.cssText = `animation: map-pulse-ring 2.2s ease-out ${(i % 4) * 0.4}s infinite;`;
         svg.appendChild(circle);
       });
 
@@ -269,20 +213,16 @@ function SeverityPulseOverlay({ sensors, activePollutant }) {
       map.off('zoomend viewreset', render);
       if (svgRef.current) { svgRef.current.remove(); svgRef.current = null; }
     };
-  }, [map, sensors, activePollutant, reducedMotion]);
+  }, [map, sensors, activePollutant]);
 
   return null;
 }
 
 function WindParticleOverlay({ wind, sensors, activePollutant }) {
   const map = useMap();
-  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    // Purely ambient/decorative motion — wind speed/direction is already
-    // conveyed by the compass widget's text, so this skips entirely rather
-    // than running a quieter version.
-    if (!wind || !sensors.length || reducedMotion) return;
+    if (!wind || !sensors.length) return;
 
     const sensorData = sensors.map(s => {
       const lvl = activePollutant
@@ -376,7 +316,7 @@ function WindParticleOverlay({ wind, sensors, activePollutant }) {
       map.off('moveend zoomend viewreset', resize);
       canvas.remove();
     };
-  }, [map, wind, sensors, activePollutant, reducedMotion]);
+  }, [map, wind, sensors, activePollutant]);
 
   return null;
 }
@@ -389,7 +329,7 @@ function FlyTo({ sensor }) {
   return null;
 }
 
-export default function MapPage({ lang, setPage, setSelectedSensor }) {
+export default function MapPage({ lang, setPage, setSelectedSensor, reportsControl }) {
   const [selectedSensorId, setSelectedSensorId] = useState('all');
   const [activePollutant, setActivePollutant] = useState(null);
   const L_lang = lang === 'it';
@@ -514,9 +454,23 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
 
   const fmtHour = h => `${String(h).padStart(2, '0')}:00`;
 
-  // Filters-on-top-of-content — same PANEL rules as ArchivePage's chart sections.
+  // Filters-on-top-of-content, sky-backed map area below — same SECTION/PANEL/
+  // AREA rules as ArchivePage's chart sections.
   const BOX = { background: 'var(--white)', padding: '12px 14px' };
+  const SECTION = { display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--gray)' };
   const PANEL = { ...BOX, width: '100%', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', padding: '16px clamp(16px, 4vw, 24px)', borderBottom: '1px solid var(--gray)' };
+  const MAP_AREA = { ...BOX, padding: '24px clamp(16px, 4vw, 24px)', background: 'url(/assets/cielo.png) center / cover no-repeat' };
+
+  const sharedTimeControl = {
+    timeMode, setTimeMode,
+    selectedDate, setSelectedDate,
+    selectedHour, setSelectedHour,
+    rangeDateStart, setRangeDateStart,
+    rangeDateEnd, setRangeDateEnd,
+    playhead, setPlayhead,
+    isPlaying, setIsPlaying,
+  };
+  const sharedSensorControl = { selectedSensorId, setSelectedSensorId };
 
   // Health-rec block — third slot of the filters panel above the map.
   const healthRecBlock = (
@@ -524,7 +478,7 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
       <div style={{ ...SUB_LABEL, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
         {L_lang ? "QUALITÀ DELL'ARIA" : 'AIR QUALITY'}
       </div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: 'var(--white)', lineHeight: 1.0, marginBottom: 8 }}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, textTransform: 'uppercase', color: '#fff', lineHeight: 1.0, marginBottom: 8 }}>
         {L_lang ? lvSuggestion.it : lvSuggestion.en}
       </div>
       {[
@@ -533,14 +487,35 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
       ].map((s, i) => (
         <div key={i} style={{ marginBottom: i === 0 ? 8 : 0 }}>
           <div style={{ ...SUB_LABEL, fontSize: 9, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{s.who}</div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: 'var(--white)' }}>{s.text}</div>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, lineHeight: 1.5, color: '#fff' }}>{s.text}</div>
         </div>
       ))}
     </div>
   );
 
-  // Filters panel floating over the map; thirdBlock is always healthRecBlock
-  // now, kept as a param in case another slot is needed later.
+  // Sensor-selector block — third slot of the filters panel above the
+  // Symptoms section, in place of the health-rec block used above the map.
+  const sensorFilterBlock = (
+    <div style={{ flex: '1 1 260px', minWidth: 240 }}>
+      <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 8 }}>
+        {L_lang ? 'Sensore' : 'Sensor'}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        <span style={pillStyleWhite(selectedSensorId === 'all')} onClick={() => setSelectedSensorId('all')}>
+          {L_lang ? 'Tutti' : 'All'}
+        </span>
+        {SENSORS.map(s => (
+          <span key={s.id} style={pillStyleWhite(selectedSensorId === s.id)}
+            onClick={() => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id)}>
+            {s.location}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Filters panel — shared by both render sites (above the map, above the
+  // Symptoms section); only the third slot differs between them.
   const mapFiltersPanel = (thirdBlock) => (
     <div className="map-fade-in" style={{ ...PANEL, animationDelay: '90ms' }}>
       <div style={{ ...SUB_LABEL, color: 'var(--black)', marginBottom: 0, width: '100%' }}>{L_lang ? 'Mappa' : 'Map'}</div>
@@ -551,11 +526,11 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
         </div>
         <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
           {['single', 'range'].map(m => (
-            <button key={m} type="button" className="pill-btn"
+            <span key={m}
               style={{ ...pillStyleWhite(timeMode === m), flex: 1, textAlign: 'center', display: 'block' }}
               onClick={() => { setTimeMode(m); setIsPlaying(false); }}>
               {m === 'single' ? (L_lang ? 'Giorno' : 'Day') : (L_lang ? 'Intervallo' : 'Range')}
-            </button>
+            </span>
           ))}
         </div>
         {timeMode === 'single' ? (
@@ -612,18 +587,18 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
               onChange={e => { setIsPlaying(false); setPlayhead(Number(e.target.value)); }}
               style={{ width: '100%', accentColor: 'var(--primary)', margin: 0, cursor: 'pointer' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--gray2)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateStart}</span>
-              <span style={{ color: 'var(--gray2)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateEnd}</span>
+              <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateStart}</span>
+              <span style={{ color: 'rgba(0,0,0,0.45)', fontFamily: 'Epilogue', fontSize: 9 }}>{rangeDateEnd}</span>
             </div>
             <div style={{
-              background: 'var(--primary)', color: 'var(--white)', fontFamily: 'Epilogue',
+              background: 'var(--primary)', color: '#fff', fontFamily: 'Epilogue',
               fontSize: 11, fontWeight: 700, padding: '4px 10px', letterSpacing: '0.05em',
               textAlign: 'center',
             }}>
               {displayDate}
             </div>
 
-            <button type="button" className="pill-btn" onClick={() => setIsPlaying(p => !p)} style={{ ...pillStyleWhite(isPlaying), width: '100%', textAlign: 'center' }}>
+            <button onClick={() => setIsPlaying(p => !p)} style={{ ...pillStyleWhite(isPlaying), width: '100%', textAlign: 'center' }}>
               {isPlaying ? (L_lang ? '⏸ Pausa' : '⏸ Pause') : (L_lang ? '▶ Anima' : '▶ Play')}
             </button>
           </div>
@@ -635,12 +610,12 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
           {L_lang ? 'Inquinante' : 'Pollutant'}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          <button type="button" className="pill-btn" style={pillStyleWhite(activePollutant === null)} onClick={() => setActivePollutant(null)}>AQI</button>
+          <span style={pillStyleWhite(activePollutant === null)} onClick={() => setActivePollutant(null)}>AQI</span>
           {Object.keys(POLLUTANTS).map(k => (
-            <button key={k} type="button" className="pill-btn" style={pillStyleWhite(activePollutant === k)}
+            <span key={k} style={pillStyleWhite(activePollutant === k)}
               onClick={() => setActivePollutant(prev => prev === k ? null : k)}>
               {POLLUTANTS[k].name}
-            </button>
+            </span>
           ))}
         </div>
       </div>
@@ -651,224 +626,239 @@ export default function MapPage({ lang, setPage, setSelectedSensor }) {
 
   return (
     <div>
-      {/* Shared hand-drawn wobble filter — referenced by sensor markers and the
-          wind compass so both read as sketched rather than vector-perfect. */}
-      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
-        <defs>
-          <filter id="hand-drawn-wobble" x="-30%" y="-30%" width="160%" height="160%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="noise" />
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.3" xChannelSelector="R" yChannelSelector="G" />
-          </filter>
-        </defs>
-      </svg>
-
-      {/* MAP — full screen; filters, sensor list, detail panel and wind all
-          float over it instead of pushing it down or squeezing it sideways. */}
-      <div className="map-hand-drawn" style={{ position: 'relative', height: 'calc(100vh - 64px)', borderBottom: '1px solid var(--gray)' }}>
-        <MapContainer
-          center={TARANTO_CENTER}
-          zoom={12}
-          minZoom={11}
-          maxZoom={19}
-          maxBounds={TARANTO_BOUNDS}
-          maxBoundsViscosity={1.0}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            maxZoom={19}
-            maxNativeZoom={19}
-          />
-          <ZoomControl position="bottomright" />
-          <FlyTo sensor={selectedSensor} />
-          <BlobOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
-          <WindParticleOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
-          <SeverityPulseOverlay activePollutant={activePollutant} sensors={displaySensors} />
-          {displaySensors.map((s) => {
-            const dotLv = getDotLevel(s);
-            const dotColor = LEVELS[dotLv].color;
-            const isSel = selectedSensorId === s.id;
-            return (
-              <CircleMarker
-                key={s.id}
-                center={[s.lat, s.lon]}
-                radius={isSel ? 14 : 9}
-                pathOptions={{
-                  fillColor: dotColor,
-                  fillOpacity: 0.85,
-                  color: '#111010',
-                  weight: isSel ? 2.5 : 1.5,
-                  className: `map-sensor-marker${isSel ? ' selected' : ''}`,
-                }}
-                eventHandlers={{ click: () => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id) }}
-              />
-            );
-          })}
-        </MapContainer>
-
-        {/* Filters + sensor list — glass column on the left. Padded well past
-            the visible panel width/height (rather than sitting flush at
-            top/left/bottom:16) so this wrapper's own overflow-y: auto — needed
-            for short viewports — doesn't clip the panels' shadows on their
-            top/left/right sides the way a flush, unpadded scroll box would. */}
+      <div className="map-fade-in" style={{ padding: '24px 24px 0 24px' }}>
         <div style={{
-          position: 'absolute', top: 0, left: 0, bottom: 0, zIndex: 1000,
-          width: isNarrow ? '100%' : 384,
-          padding: 32, boxSizing: 'border-box',
-          display: 'flex', flexDirection: 'column', gap: 16,
-          overflowY: 'auto', pointerEvents: 'none',
+          fontFamily: "'Ronzino Variable', sans-serif",
+          fontVariationSettings: `"BLND" ${Math.max(50, globalAQI * 200)}`,
+          fontSize: 'clamp(40px, 5.5vw, 88px)', textTransform: 'uppercase',
+          lineHeight: 0.92, letterSpacing: '-0.02em',
+          color: 'var(--white)', WebkitTextStroke: '6px var(--primary)', paintOrder: 'stroke fill',
         }}>
-          <div className="map-glass-panel" style={{ pointerEvents: 'auto', flexShrink: 0 }}>
-            {mapFiltersPanel(healthRecBlock)}
-          </div>
+          {L_lang ? 'Aria e Salute' : 'Air & Health'}
+        </div>
+      </div>
 
-          {/* Sensor list */}
-          <div className="map-glass-panel" style={{
-            pointerEvents: 'auto', flexShrink: 0,
-            maxHeight: '40vh', overflowY: 'auto',
-            display: 'flex', flexDirection: 'column', gap: 8,
-            padding: '10px 12px',
+      {/* MAP FILTERS — full-width panel on top, same pattern as Archive's chart filters */}
+      <div style={SECTION}>
+        {mapFiltersPanel(healthRecBlock)}
+
+        {/* MAP AREA — sky backdrop; sensor list pinned to the left edge, detail panel to the
+            right edge, map fills the (now much bigger) space between them */}
+        <div className="map-fade-in" style={{ ...MAP_AREA, animationDelay: '160ms' }}>
+          <div style={{
+            display: 'flex', flexDirection: isNarrow ? 'column' : 'row', gap: 20,
+            width: '100%', height: isNarrow ? 'auto' : '76vh',
           }}>
-            <div style={{ ...SUB_LABEL, color: 'var(--black)', marginBottom: 2 }}>
-              {L_lang ? 'Sensore' : 'Sensor'}
+
+            {/* Sensor list — sits over the sky photo, pills kept opaque white for legibility */}
+            <div style={{
+              width: isNarrow ? '100%' : 170, flexShrink: 0, overflowY: 'auto',
+              display: 'flex', flexDirection: 'column', gap: 8,
+            }}>
+              <div style={{ ...SUB_LABEL, color: 'var(--black)', marginBottom: 2 }}>
+                {L_lang ? 'Sensore' : 'Sensor'}
+              </div>
+              <div style={{ display: 'flex', flexDirection: isNarrow ? 'row' : 'column', flexWrap: isNarrow ? 'wrap' : 'nowrap', gap: 6 }}>
+                <span style={pillStyleOnSky(selectedSensorId === 'all')} onClick={() => setSelectedSensorId('all')}>
+                  {L_lang ? 'Tutti' : 'All'}
+                </span>
+                {SENSORS.map(s => (
+                  <span key={s.id} style={pillStyleOnSky(selectedSensorId === s.id)}
+                    onClick={() => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id)}>
+                    {s.location}
+                  </span>
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              <button type="button" className="pill-btn" style={pillStyleOnSky(selectedSensorId === 'all')} onClick={() => setSelectedSensorId('all')}>
-                {L_lang ? 'Tutti' : 'All'}
-              </button>
-              {SENSORS.map(s => (
-                <button key={s.id} type="button" className="pill-btn" style={pillStyleOnSky(selectedSensorId === s.id)}
-                  onClick={() => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id)}>
-                  {s.location}
-                </button>
-              ))}
+
+            <div style={{ flex: 1, position: 'relative', height: isNarrow ? '50vh' : '100%' }}>
+          <MapContainer
+            center={TARANTO_CENTER}
+            zoom={13}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={false}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            />
+            <ZoomControl position="bottomright" />
+            <FlyTo sensor={selectedSensor} />
+            <BlobOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
+            <WindParticleOverlay wind={wind} activePollutant={activePollutant} sensors={displaySensors} />
+            <SeverityPulseOverlay activePollutant={activePollutant} sensors={displaySensors} />
+            {displaySensors.map((s) => {
+              const dotLv = getDotLevel(s);
+              const dotColor = LEVELS[dotLv].color;
+              const isSel = selectedSensorId === s.id;
+              return (
+                <CircleMarker
+                  key={s.id}
+                  center={[s.lat, s.lon]}
+                  radius={isSel ? 14 : 9}
+                  pathOptions={{
+                    fillColor: dotColor,
+                    fillOpacity: 0.85,
+                    color: '#111010',
+                    weight: isSel ? 2.5 : 1.5,
+                    className: `map-sensor-marker${isSel ? ' selected' : ''}`,
+                  }}
+                  eventHandlers={{ click: () => setSelectedSensorId(prev => prev === s.id ? 'all' : s.id) }}
+                />
+              );
+            })}
+          </MapContainer>
+
+          {/* Wind — floating top-right, map chrome like the zoom control */}
+          {wind && (() => {
+            const pts = ['N','NE','E','SE','S','SW','W','NW'];
+            const compassPt = pts[Math.round(((wind.dir + 180) % 360) / 45) % 8];
+            return (
+              <div className="map-fade-in" style={{
+                position: 'absolute', top: 12, right: 12, zIndex: 1000,
+                background: 'var(--white)', padding: '10px 14px', animationDelay: '220ms',
+                display: 'flex', alignItems: 'center', gap: 12, pointerEvents: 'none',
+              }}>
+                <svg width="32" height="32" viewBox="-16 -16 32 32" style={{ flexShrink: 0 }}>
+                  <circle r="14" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+                  <g style={{ transform: `rotate(${windArrowDeg}deg)`, transformOrigin: '0px 0px', transition: 'transform 0.6s ease' }}>
+                    <line x1="0" y1="10" x2="0" y2="-8" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+                    <polygon points="0,-13 -4,-5 4,-5" fill="var(--primary)" />
+                  </g>
+                </svg>
+                <div>
+                  <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>
+                    {L_lang ? 'Vento' : 'Wind'}
+                  </div>
+                  <div style={{ fontFamily: 'Epilogue', fontSize: 18, fontWeight: 700, color: 'var(--black)', lineHeight: 1 }}>
+                    {wind.spd.toFixed(1)} <span style={{ fontSize: 10, fontWeight: 400 }}>m/s</span>
+                  </div>
+                  <div style={{ fontFamily: 'Epilogue', fontSize: 11, color: 'var(--gray2)', marginTop: 2 }}>
+                    {compassPt} · {Math.round(wind.dir)}°
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+            </div>
+
+            {/* Detail panel — sensor info appears OUTSIDE the map, to its right, instead of a Leaflet popup */}
+            <div style={{ width: isNarrow ? '100%' : 260, flexShrink: 0, overflowY: 'auto' }}>
+              {detailSensor ? (
+                <div className="map-fade-in" style={{ background: 'var(--white)' }}>
+                  <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--gray)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ ...SUB_LABEL, color: 'var(--black)' }}>{L_lang ? 'Sensore selezionato' : 'Selected sensor'}</span>
+                    <span onClick={() => setSelectedSensorId('all')}
+                      style={{ cursor: 'pointer', fontFamily: 'Epilogue', fontSize: 16, color: 'var(--gray2)', lineHeight: 1 }}>×</span>
+                  </div>
+
+                  <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gray)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {[
+                        { label: L_lang ? 'Sensore' : 'Sensor',     value: detailSensor.name },
+                        { label: L_lang ? 'Posizione' : 'Location', value: detailSensor.location },
+                      ].map((item, idx) => (
+                        <div key={idx}>
+                          <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
+                            {item.label}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.01em', color: 'var(--black)' }}>
+                            {item.value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: 12 }}>
+                      {Object.keys(POLLUTANTS).map(k => (
+                        <div key={k}>
+                          <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 2 }}>
+                            {POLLUTANTS[k].name}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--black)' }}>
+                            {detailSensor[k] != null ? Number(detailSensor[k]).toFixed(1) : '—'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', marginBottom: 5 }}>
+                        {L_lang ? 'Scala AQI' : 'AQI Scale'}
+                      </div>
+                      <div style={{ display: 'flex', gap: 2, marginBottom: 4 }}>
+                        {LEVELS.map(l => (
+                          <div key={l.key} style={{
+                            flex: 1, height: 6, background: l.color,
+                            outline: l.key === detailLv.key ? `2px solid ${l.color}` : 'none',
+                            outlineOffset: 1,
+                            opacity: l.key === detailLv.key ? 1 : 0.4,
+                          }} />
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.35)' }}>
+                        <span>1 — {L_lang ? 'Buono' : 'Good'}</span>
+                        <span>6 — {L_lang ? 'Estremo' : 'Extreme'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sensor photo, same images used on the Home page sensor cards */}
+                  <div style={{ height: 140, overflow: 'hidden' }}>
+                    <img
+                      src={SENSOR_PHOTOS[detailSensorIdx % SENSOR_PHOTOS.length]}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => { setSelectedSensor(detailSensor); setPage('record'); }}
+                    style={{
+                      width: '100%', padding: '8px', background: 'var(--primary)', color: '#fff',
+                      border: 'none', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 10,
+                      cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase',
+                    }}
+                  >
+                    {L_lang ? 'Apri record →' : 'Open record →'}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ background: 'var(--white)', padding: '16px', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--gray2)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                  {L_lang ? 'Seleziona un sensore sulla mappa per vedere i dettagli.' : 'Select a sensor on the map to see its details.'}
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Detail panel — floating bottom-right, clear of the wind widget
-            up top; sensor info appears here instead of a Leaflet popup */}
-        {detailSensor && (
-          <div className="map-glass-panel" style={{
-            position: 'absolute', bottom: 16, right: 16, zIndex: 1000,
-            width: isNarrow ? 'calc(100% - 32px)' : 280, maxHeight: '70vh',
-            overflowY: 'auto',
-          }}>
-            <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--gray)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ ...SUB_LABEL, color: 'var(--black)' }}>{L_lang ? 'Sensore selezionato' : 'Selected sensor'}</span>
-              <button type="button" className="pill-btn" onClick={() => setSelectedSensorId('all')}
-                aria-label={L_lang ? 'Chiudi dettaglio sensore' : 'Close sensor detail'}
-                style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'Epilogue', fontSize: 16, color: 'var(--gray2)', lineHeight: 1 }}>×</button>
-            </div>
-
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gray)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[
-                  { label: L_lang ? 'Sensore' : 'Sensor',     value: detailSensor.name },
-                  { label: L_lang ? 'Posizione' : 'Location', value: detailSensor.location },
-                ].map((item, idx) => (
-                  <div key={idx}>
-                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gray2)', marginBottom: 2 }}>
-                      {item.label}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.01em', color: 'var(--black)' }}>
-                      {item.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: 12 }}>
-                {Object.keys(POLLUTANTS).map(k => (
-                  <div key={k}>
-                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--gray2)', marginBottom: 2 }}>
-                      {POLLUTANTS[k].name}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-title)', fontSize: 14, fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--black)' }}>
-                      {detailSensor[k] != null ? Number(detailSensor[k]).toFixed(1) : '—'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontFamily: 'var(--font-title)', fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gray2)', marginBottom: 5 }}>
-                  {L_lang ? 'Scala AQI' : 'AQI Scale'}
-                </div>
-                <div style={{ display: 'flex', gap: 2, marginBottom: 4 }}>
-                  {LEVELS.map(l => (
-                    <div key={l.key} style={{
-                      flex: 1, height: 6, background: l.color,
-                      outline: l.key === detailLv.key ? `2px solid ${l.color}` : 'none',
-                      outlineOffset: 1,
-                      opacity: l.key === detailLv.key ? 1 : 0.4,
-                    }} />
-                  ))}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-title)', fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gray2)' }}>
-                  <span>1 — {L_lang ? 'Buono' : 'Good'}</span>
-                  <span>6 — {L_lang ? 'Estremo' : 'Extreme'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Sensor photo, same images used on the Home page sensor cards */}
-            <div style={{ height: 140, overflow: 'hidden' }}>
-              <img
-                src={SENSOR_PHOTOS[detailSensorIdx % SENSOR_PHOTOS.length]}
-                alt=""
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            </div>
-
-            <button
-              onClick={() => { setSelectedSensor(detailSensor); setPage('record'); }}
-              style={{
-                width: '100%', padding: '8px', background: 'var(--primary)', color: 'var(--white)',
-                border: 'none', fontFamily: 'Epilogue', fontWeight: 700, fontSize: 10,
-                cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase',
-              }}
-            >
-              {L_lang ? 'Apri record →' : 'Open record →'}
-            </button>
-          </div>
-        )}
-
-        {/* Wind — floating top-right, map chrome like the zoom control */}
-        {wind && (() => {
-          const pts = ['N','NE','E','SE','S','SW','W','NW'];
-          const compassPt = pts[Math.round(((wind.dir + 180) % 360) / 45) % 8];
-          return (
-            <div className="map-fade-in map-glass-panel" style={{
-              position: 'absolute', top: 16, right: 16, zIndex: 1000,
-              padding: '10px 14px', animationDelay: '220ms',
-              display: 'flex', alignItems: 'center', gap: 12, pointerEvents: 'none',
-            }}>
-              <svg width="32" height="32" viewBox="-16 -16 32 32" style={{ flexShrink: 0, filter: 'url(#hand-drawn-wobble)' }}>
-                <circle r="14" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
-                <g style={{ transform: `rotate(${windArrowDeg}deg)`, transformOrigin: '0px 0px', transition: 'transform 0.6s ease' }}>
-                  <line x1="0" y1="10" x2="0" y2="-8" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
-                  <polygon points="0,-13 -4,-5 4,-5" fill="var(--primary)" />
-                </g>
-              </svg>
-              <div>
-                <div style={{ ...SUB_LABEL, color: 'var(--gray2)', marginBottom: 4 }}>
-                  {L_lang ? 'Vento' : 'Wind'}
-                </div>
-                <div style={{ fontFamily: 'Epilogue', fontSize: 18, fontWeight: 700, color: 'var(--black)', lineHeight: 1 }}>
-                  {wind.spd.toFixed(1)} <span style={{ fontSize: 10, fontWeight: 400 }}>m/s</span>
-                </div>
-                <div style={{ fontFamily: 'Epilogue', fontSize: 11, color: 'var(--gray2)', marginTop: 2 }}>
-                  {compassPt} · {Math.round(wind.dir)}°
-                </div>
-              </div>
-            </div>
-          );
-        })()}
       </div>
 
+      <div className="map-fade-in" style={{ padding: '24px 24px 0 24px' }}>
+        <div style={{
+          fontFamily: "'Ronzino Variable', sans-serif",
+          fontVariationSettings: `"BLND" ${Math.max(50, globalAQI * 200)}`,
+          fontSize: 'clamp(40px, 5.5vw, 88px)', textTransform: 'uppercase',
+          lineHeight: 0.92, letterSpacing: '-0.02em',
+          color: 'var(--white)', WebkitTextStroke: '6px var(--primary)', paintOrder: 'stroke fill',
+        }}>
+          {L_lang ? 'Sintomi' : 'Symptoms'}
+        </div>
+      </div>
+
+      <div style={SECTION}>
+        {mapFiltersPanel(sensorFilterBlock)}
+      </div>
+
+      {/* Symptom boxes + matrix + report form — full width, under the map */}
+      <div className="map-fade-in" style={{ animationDelay: '260ms' }}>
+        <SymptomsPage
+          lang={lang}
+          embedded
+          timeControl={sharedTimeControl}
+          sensorControl={sharedSensorControl}
+          reportsControl={reportsControl}
+        />
+      </div>
     </div>
   );
 }

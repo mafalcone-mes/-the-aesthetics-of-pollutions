@@ -1,24 +1,29 @@
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceArea, Legend, ResponsiveContainer,
-} from 'recharts';
+import { useState } from 'react';
 import { POLLUTANTS } from '../../data/pollutants';
-import { LEVELS } from '../../data/levels';
 import { getPollLevel } from '../../utils/aqi';
-import { POLL_COLORS } from './chartColors';
 
-const TICK_STYLE = { fontFamily: 'Epilogue', fontSize: 10, fill: 'var(--black)' };
+const POLL_COLORS = {
+  pm25: '#E05A2B', pm10: '#F0A500', no2: '#4CAF6F', co: '#B5213D',
+  o3: '#C8D43A', so2: '#6B1540', nh3: '#9B6B3A', c6h6: '#3A7B9B',
+};
 
-// Grouped bar chart: mean AQI level per pollutant, grouped by hour of day (0–23).
+const PAD = { top: 16, right: 16, bottom: 44, left: 44 };
+
+// Vertical bar chart: mean AQI level per pollutant, grouped by hour of day (0–23).
 // data = Row[] (all filtered rows), pollutants = string[] of selected pollutant keys.
-export default function HourlyBarChart({ data, pollutants, lang, height = 220 }) {
+export default function HourlyBarChart({ data, pollutants, lang, width = 900, height = 220 }) {
+  const [tooltip, setTooltip] = useState(null);
   const L = lang === 'it';
+
+  const W = width - PAD.left - PAD.right;
+  const H = height - PAD.top - PAD.bottom;
 
   if (!data.length || !pollutants.length) return null;
 
   // Group by hour-of-day: mean AQI level and mean raw value per pollutant
   const hourly = Array.from({ length: 24 }, (_, h) => {
     const rows = data.filter(r => r.hour === h);
-    const entry = { hour: h, hourLabel: `${String(h).padStart(2, '0')}:00`, count: rows.length };
+    const entry = { hour: h, count: rows.length };
     for (const p of pollutants) {
       entry[p] = rows.length
         ? rows.reduce((s, r) => s + getPollLevel(p, r[p] ?? 0), 0) / rows.length
@@ -30,46 +35,83 @@ export default function HourlyBarChart({ data, pollutants, lang, height = 220 })
     return entry;
   });
 
-  function renderTooltip({ active, payload }) {
-    if (!active || !payload?.length) return null;
-    const d = payload[0].payload;
-    const lines = pollutants.filter(p => d[p] !== null);
-    return (
-      <div style={{ background: '#1A1A1A', opacity: 0.93, padding: '8px 10px', minWidth: 150 }}>
-        <div style={{ fontFamily: 'Epilogue', fontSize: 9.5, fontWeight: 700, color: '#fff' }}>
-          {d.hourLabel}–{String((d.hour + 1) % 24).padStart(2, '0')}:00
-          <span style={{ fontSize: 8.5, fontWeight: 400 }}> ({d.count} {L ? 'letture' : 'readings'})</span>
-        </div>
-        {lines.map(p => (
-          <div key={p} style={{ fontFamily: 'Epilogue', fontSize: 9, color: POLL_COLORS[p] || '#fff', marginTop: 4 }}>
-            {POLLUTANTS[p]?.name}: {d[`${p}_raw`]?.toFixed(1)} {POLLUTANTS[p]?.unit}
-            <span style={{ color: '#fff' }}> · L{d[p].toFixed(2)}</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const groupW = W / 24;
+  const barW = Math.max(1, (groupW - 2) / pollutants.length);
+  const xGroupLeft = (h) => PAD.left + h * groupW;
+  const yScale = (level) => PAD.top + H - (level / 5) * H;
+
+  const yTicks = [0, 1, 2, 3, 4, 5];
 
   return (
-    <ResponsiveContainer className="chart-fade-in" width="100%" height={height}>
-      <BarChart data={hourly} margin={{ top: 8, right: 8, bottom: 8, left: 8 }} barCategoryGap="24%" barGap={2}>
-        {/* Hazard-scale bands, kept very faint so they read as a reference scale rather than
-            competing with the pollutant-colored bars for attention. */}
-        {LEVELS.map((lv, i) => (
-          <ReferenceArea key={lv.key} y1={i} y2={i + 1} fill={lv.color} fillOpacity={0.07} strokeWidth={0} />
-        ))}
-        <XAxis dataKey="hourLabel" interval={2} tickLine={false} axisLine={{ stroke: 'var(--gray)' }} tick={TICK_STYLE} />
-        <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} tickLine={false} axisLine={false} width={20} tick={TICK_STYLE} />
-        <Tooltip content={renderTooltip} cursor={{ fill: 'var(--gray)', opacity: 0.4 }} />
-        <Legend
-          formatter={(_value, entry) => `${POLLUTANTS[entry.dataKey]?.name} (${POLLUTANTS[entry.dataKey]?.unit})`}
-          wrapperStyle={{ fontFamily: 'Epilogue', fontSize: 10, color: 'var(--black)' }}
-          iconType="circle" iconSize={8}
-        />
-        {pollutants.map(p => (
-          <Bar key={p} dataKey={p} fill={POLL_COLORS[p] || '#1A1A1A'} radius={[2, 2, 0, 0]} maxBarSize={26} />
-        ))}
-      </BarChart>
-    </ResponsiveContainer>
+    <svg className="chart-fade-in" viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
+      {yTicks.map(lv => (
+        <line key={lv} x1={PAD.left} y1={yScale(lv)} x2={PAD.left + W} y2={yScale(lv)}
+          stroke="#DDDAD3" strokeWidth="1" />
+      ))}
+      {yTicks.map(lv => (
+        <text key={lv} x={PAD.left - 4} y={yScale(lv) + 3} textAnchor="end"
+          fontSize="8" fontFamily="Epilogue" fill="#9B9790">{lv}</text>
+      ))}
+
+      {hourly.filter(d => d.hour % 3 === 0).map(d => (
+        <text key={d.hour} x={xGroupLeft(d.hour) + groupW / 2} y={PAD.top + H + 14}
+          textAnchor="middle" fontSize="7" fontFamily="Epilogue" fill="#9B9790">
+          {String(d.hour).padStart(2, '0')}:00
+        </text>
+      ))}
+
+      {hourly.map(d =>
+        pollutants.map((p, pi) => {
+          const val = d[p];
+          if (val === null || val === 0) return null;
+          const x = xGroupLeft(d.hour) + pi * barW + 1;
+          const barH = (val / 5) * H;
+          const y = PAD.top + H - barH;
+          return (
+            <rect key={`${d.hour}-${p}`}
+              x={x} y={y} width={Math.max(barW - 1, 1)} height={barH}
+              fill={POLL_COLORS[p] || '#111'} opacity={0.82} rx={1}
+              style={{ cursor: 'pointer', transition: 'height 240ms ease, y 240ms ease, x 240ms ease, width 240ms ease' }}
+              onMouseEnter={() => setTooltip({ x: xGroupLeft(d.hour) + groupW / 2, y, hour: d.hour, data: d })}
+              onMouseLeave={() => setTooltip(null)}
+            />
+          );
+        })
+      )}
+
+      {tooltip && (() => {
+        const lines = pollutants
+          .filter(p => tooltip.data[p] !== null)
+          .map(p => ({ p, level: tooltip.data[p].toFixed(2), raw: tooltip.data[`${p}_raw`]?.toFixed(1) ?? '—' }));
+        const tw = 168;
+        const th = 22 + lines.length * 14;
+        const tx = Math.min(tooltip.x + 6, width - tw - 4);
+        const ty = Math.max(tooltip.y - th - 6, PAD.top);
+        return (
+          <g pointerEvents="none">
+            <rect x={tx} y={ty} width={tw} height={th} rx={3} fill="#111" opacity="0.93" />
+            <text x={tx + 7} y={ty + 13} fontSize="8.5" fontFamily="Epilogue" fontWeight="700" fill="#fff">
+              {String(tooltip.hour).padStart(2, '0')}:00–{String(tooltip.hour + 1).padStart(2, '0')}:00
+              <tspan fontSize="7.5" fontWeight="400" fill="#9B9790"> ({tooltip.data.count} {L ? 'letture' : 'readings'})</tspan>
+            </text>
+            {lines.map(({ p, level, raw }, i) => (
+              <text key={p} x={tx + 7} y={ty + 27 + i * 14} fontSize="8" fontFamily="Epilogue" fill={POLL_COLORS[p] || '#fff'}>
+                {POLLUTANTS[p]?.name}: {raw} {POLLUTANTS[p]?.unit}
+                <tspan fill="#9B9790"> · L{level}</tspan>
+              </text>
+            ))}
+          </g>
+        );
+      })()}
+
+      {pollutants.map((p, i) => (
+        <g key={p} transform={`translate(${PAD.left + i * 90}, ${height - 10})`}>
+          <rect width="12" height="8" fill={POLL_COLORS[p] || '#111'} opacity={0.82} rx={1} />
+          <text x="15" y="7" fontSize="7" fontFamily="Epilogue" fill="#9B9790">
+            {POLLUTANTS[p]?.name} ({POLLUTANTS[p]?.unit})
+          </text>
+        </g>
+      ))}
+    </svg>
   );
 }
