@@ -43,7 +43,10 @@
       "Bash(rm -f \"/c/Users/mafal/Desktop/aria-bene-pi-deploy.zip\")",
       "Bash(powershell -NoProfile -Command \"Compress-Archive -Path 'C:\\\\Users\\\\mafal\\\\AppData\\\\Local\\\\Temp\\\\aria-bene-pi-deploy\\\\*' -DestinationPath 'C:\\\\Users\\\\mafal\\\\Desktop\\\\aria-bene-pi-deploy.zip' -Force\")",
       "Read(//c/Users/mafal/Desktop/**)",
-      "Bash(powershell *)"
+      "Bash(powershell *)",
+      "Bash(git remote *)",
+      "Bash(git rev-list *)",
+      "Bash(git push *)"
     ]
   }
 }
