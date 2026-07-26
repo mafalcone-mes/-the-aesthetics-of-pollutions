@@ -1,0 +1,627 @@
+/* ============================================================
+   ARIA BENE COMUNE — Web Dossier
+   Visual language matched to the printed thesis book (see design.md):
+   white paper, near-black ink, one red accent reserved for
+   epigraph-style quotes only, Epilogue for titles/navigation,
+   Source Serif 4 for everything you read. No hairlines, no boxes,
+   no monospace outside real code — structure comes from whitespace
+   and an oversized asymmetric left margin, like the book's grid.
+   Website-only affordances (sticky nav, cards, buttons) are kept
+   functional but typographically restrained; they'll get their own
+   "this is a website" pass later per design.md §6.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:        #231F20;   /* body text — sampled from the book */
+  --ink-dim:    rgba(35, 31, 32, 0.62);
+  --ink-faint:  rgba(35, 31, 32, 0.34);
+  --paper:      #FFFFFF;   /* page ground — pure white, like the book */
+  --hairline:   rgba(35, 31, 32, 0.14); /* used sparingly — see design.md's No-Rules Rule */
+  --evidence:   #B23720;   /* the one accent — sampled from the book's epigraph pages. Reserved for quote-like content, not chrome. */
+  --evidence-dim: rgba(178, 55, 32, 0.08);
+
+  --font-display: 'Epilogue', -apple-system, 'Segoe UI', sans-serif; /* titles, chapter headings, navigation */
+  --font-body:    'Source Serif 4', Georgia, serif;                  /* everything you read */
+  --font-mono:    'IBM Plex Mono', 'Courier New', monospace;         /* real code only — not a decorative third typeface */
+
+  /* The book's actual grid, measured from the InDesign/IDML source
+     (see design.md §4a): page 396.85 x 595.28pt, recto (right-hand)
+     text column starts at 105.8pt (26.65% of page width) and ends
+     22.7pt (5.72%) from the outer edge — a 67.6%-wide column, not a
+     rough guess. --gutter carries that 5.72% outer margin (used on
+     both sides as the base); --indent adds the extra left-only amount
+     needed to reach 26.65% total on the left. */
+  --gutter: clamp(16px, 5.7vw, 56px);
+  --indent: clamp(0px, 20.9vw, 300px);
+}
+
+html, body { background: var(--paper); color: var(--ink); }
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  /* Book's actual body type is 12pt on a 14.5pt baseline grid — a
+     1.208 ratio, much tighter than typical web body copy. Split the
+     difference for screen legibility rather than matching exactly. */
+  line-height: 1.4;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100vh; display: flex; flex-direction: column; }
+
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+
+::selection { background: var(--evidence); color: var(--paper); }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--paper); }
+::-webkit-scrollbar-thumb { background: var(--hairline); }
+
+/* ---------- Layout shell ---------- */
+.dossier-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.dossier-main { flex: 1; }
+
+/* Shared asymmetric column — the book's grid, applied to every major
+   text block. Page-number-like elements (nav, footer) intentionally
+   stay centered/full-width instead, matching the book. */
+.book-indent {
+  padding-left: calc(var(--gutter) + var(--indent));
+  padding-right: var(--gutter);
+}
+
+/* ---------- Small sans meta labels (book's "Epilogue-ish" index numerals) ---------- */
+.stamp {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.stamp--accent { color: var(--evidence); }
+
+/* ---------- Top nav (website chrome — kept plain and quiet) ---------- */
+.dossier-nav {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px var(--gutter);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+}
+.dossier-nav-mark {
+  font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  letter-spacing: 0.04em; cursor: pointer;
+  display: flex; align-items: baseline; gap: 6px;
+}
+.dossier-nav-mark span.dot { color: var(--evidence); }
+.dossier-nav-links { display: flex; align-items: center; gap: 4px; }
+.dossier-nav-links a, .dossier-nav-links button {
+  font-family: var(--font-display); font-size: 12px; font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 8px 14px; background: none; border: none; color: var(--ink-dim);
+  cursor: pointer; text-decoration: none; transition: color 0.15s;
+}
+.dossier-nav-links a:hover, .dossier-nav-links button:hover,
+.dossier-nav-links a.active, .dossier-nav-links button.active { color: var(--ink); }
+.dossier-nav-lang { display: flex; margin-left: 8px; }
+.dossier-nav-lang button {
+  padding: 6px 10px; font-size: 11px; color: var(--ink-faint);
+}
+.dossier-nav-lang button.active { color: var(--ink); text-decoration: underline; }
+
+/* ---------- Case header — analogous to the book's chapter opener ---------- */
+.case-header {
+  padding-top: clamp(48px, 8vw, 96px);
+  padding-bottom: clamp(24px, 4vw, 40px);
+  padding-left: calc(var(--gutter) + var(--indent));
+  padding-right: var(--gutter);
+  position: relative;
+}
+.case-header-meta {
+  display: flex; flex-wrap: wrap; gap: 20px 32px;
+  margin-bottom: 26px;
+}
+.case-header-meta-item { display: flex; flex-direction: column; gap: 3px; }
+.case-header-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-style: normal;
+  font-size: clamp(36px, 6.5vw, 88px);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  max-width: 16ch;
+}
+.case-header-title em {
+  font-style: normal;
+  color: var(--evidence);
+}
+.case-header-dek {
+  font-family: var(--font-body);
+  font-size: clamp(16px, 1.4vw, 20px);
+  line-height: 1.6;
+  color: var(--ink-dim);
+  max-width: 640px;
+  margin-top: 20px;
+}
+
+/* ---------- Section marker (book's chapter-opener numeral + title) ---------- */
+.section-marker {
+  display: flex; align-items: baseline; gap: 18px;
+  padding: clamp(40px, 7vw, 72px) var(--gutter) clamp(12px, 2vw, 20px) calc(var(--gutter) + var(--indent));
+}
+.section-marker-num {
+  font-family: var(--font-body); font-size: 18px; font-weight: 400;
+  color: var(--ink); flex-shrink: 0;
+  margin-left: -1.6em; /* small hanging outdent, matching the book's chapter numeral */
+}
+.section-marker-title {
+  font-family: var(--font-display); font-size: clamp(22px, 3vw, 34px);
+  font-weight: 500; letter-spacing: -0.005em; color: var(--ink);
+  line-height: 1.1;
+}
+
+/* ---------- Generic content column ---------- */
+.dossier-col {
+  padding: clamp(16px, 3vw, 28px) var(--gutter) clamp(24px, 4vw, 40px) calc(var(--gutter) + var(--indent));
+  max-width: 900px;
+}
+.dossier-col--wide { max-width: 1180px; }
+.dossier-p {
+  font-family: var(--font-body); font-size: 17px; line-height: 1.45;
+  color: var(--ink-dim); margin-bottom: 20px; max-width: 68ch;
+}
+.dossier-p strong { color: var(--ink); font-weight: 600; }
+.dossier-lede {
+  font-family: var(--font-body); font-style: italic; font-weight: 400;
+  font-size: clamp(20px, 2.2vw, 27px); line-height: 1.5; color: var(--evidence);
+  max-width: 46ch; margin-bottom: 24px;
+}
+.dossier-h2 {
+  font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  letter-spacing: 0.04em; color: var(--ink);
+  margin: 40px 0 14px;
+}
+.dossier-h2:first-child { margin-top: 0; }
+.dossier-ul, .dossier-ol { padding-left: 22px; margin-bottom: 20px; max-width: 68ch; }
+.dossier-ul li, .dossier-ol li {
+  font-family: var(--font-body); font-size: 16px; line-height: 1.45;
+  color: var(--ink-dim); margin-bottom: 11px;
+}
+.dossier-ul li strong, .dossier-ol li strong { color: var(--ink); }
+.dossier-ul li code, .dossier-ol li code, .dossier-p code {
+  font-family: var(--font-mono); font-size: 0.82em; color: var(--evidence);
+  background: var(--evidence-dim); padding: 1px 5px;
+}
+
+/* ---------- Evidence card (photo / component) — site-only device, kept quiet ---------- */
+.evidence-card {
+  background: var(--paper);
+}
+.evidence-card-img-wrap {
+  position: relative; overflow: hidden;
+  filter: grayscale(1) contrast(1.05);
+}
+.evidence-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.evidence-card-tag {
+  position: absolute; top: 10px; left: 10px;
+  font-family: var(--font-display); font-size: 9px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  background: var(--paper); color: var(--ink-faint);
+  padding: 3px 8px;
+}
+.evidence-card-body { padding: 14px 4px; }
+.evidence-card-name {
+  font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  letter-spacing: 0.01em; color: var(--ink); margin-bottom: 4px;
+}
+.evidence-card-role {
+  font-family: var(--font-display); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint);
+  margin-bottom: 8px;
+}
+.evidence-card-detail {
+  font-family: var(--font-body); font-size: 13px; line-height: 1.55;
+  color: var(--ink-dim);
+}
+.evidence-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 28px 22px;
+  margin: 24px 0 32px;
+}
+.evidence-grid .evidence-card-img-wrap { aspect-ratio: 4/3; background: var(--paper); }
+.evidence-grid .evidence-card-img-wrap img { object-fit: contain; padding: 12px; }
+
+/* ---------- Callout / aside — no box, no border; reads like a footnote aside ---------- */
+.annex {
+  padding: 4px 0 4px 20px;
+  margin: 22px 0 26px;
+  max-width: 66ch;
+}
+.annex-label {
+  font-family: var(--font-display); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint);
+  margin-bottom: 8px;
+}
+.annex-body { font-family: var(--font-body); font-size: 14.5px; line-height: 1.4; color: var(--ink-dim); }
+.annex-body strong { color: var(--ink); }
+
+/* ---------- Code / terminal block — the one deliberate monospace exception ---------- */
+.dossier-code-wrap { margin: 22px 0 28px; max-width: 100%; }
+.dossier-code-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2px 8px;
+}
+.dossier-code-head span {
+  font-family: var(--font-display); font-size: 10px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-faint);
+}
+.dossier-code-copy {
+  font-family: var(--font-display); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  background: none; border: none; color: var(--ink-faint);
+  padding: 2px 0; cursor: pointer; text-decoration: underline; transition: color 0.15s;
+}
+.dossier-code-copy:hover { color: var(--evidence); }
+.dossier-code-wrap pre {
+  background: #F4F2EE;
+  padding: 18px 20px; overflow-x: auto;
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7; color: var(--ink);
+  white-space: pre;
+}
+
+/* ---------- Table ---------- */
+.dossier-table-wrap { overflow-x: auto; margin: 20px 0 30px; }
+.dossier-table { width: 100%; border-collapse: collapse; min-width: 520px; }
+.dossier-table th {
+  text-align: left; padding: 8px 14px 12px 0;
+  font-family: var(--font-display); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint);
+}
+.dossier-table td {
+  padding: 13px 14px 13px 0; font-family: var(--font-body); font-size: 14.5px;
+  color: var(--ink-dim);
+  vertical-align: top;
+}
+.dossier-table tr:hover td { color: var(--ink); }
+
+/* ---------- Buttons / links — no boxes; underline like an inline citation ---------- */
+.dossier-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-size: 13px; font-weight: 500;
+  letter-spacing: 0.01em;
+  padding: 4px 0; border: none; color: var(--ink);
+  text-decoration: underline; text-underline-offset: 3px;
+  background: none; cursor: pointer;
+  transition: color 0.15s;
+}
+.dossier-btn:hover { color: var(--evidence); }
+.dossier-btn--accent { color: var(--evidence); }
+.dossier-btn--accent:hover { color: var(--ink); }
+
+/* ---------- Landing page ---------- */
+.landing-hero {
+  min-height: 88vh;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: clamp(20px, 4vw, 40px) var(--gutter);
+  position: relative;
+  /* Whitened photo ground — keeps the book's ink-on-white type legible
+     while still showing the image through it, rather than a dark scrim
+     that would force a white-text flip. */
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)),
+    url('/assets/photos/vecchio.jpg') center 60% / cover no-repeat;
+}
+.landing-hero-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 20px; flex-wrap: wrap;
+}
+.landing-coords {
+  font-family: var(--font-display); font-size: 11px; letter-spacing: 0.04em;
+  color: var(--ink-faint); text-align: right; line-height: 1.6;
+}
+.landing-title {
+  font-family: var(--font-display); font-weight: 500;
+  font-size: clamp(48px, 9vw, 156px);
+  line-height: 0.98; letter-spacing: -0.015em;
+  margin: 48px 0 28px;
+  padding-left: var(--indent);
+}
+.landing-title em { font-style: normal; color: var(--evidence); }
+.landing-sub {
+  /* Matched to the reference crop from the book cover: solid ink
+     (not dimmed), regular-weight serif, modest size, comfortable
+     (not cramped) leading — not a blown-up sub-headline. */
+  font-family: var(--font-body); font-size: clamp(15px, 1.7vw, 22px);
+  font-weight: 400;
+  line-height: 1.5; color: var(--ink);
+  max-width: none; white-space: nowrap; /* only the 3 manual <br> breaks — never auto-wrapped mid-line */
+  /* indented a step further than the title, editorial-dek style */
+  padding-left: calc(var(--indent) + 4em);
+}
+.landing-scroll-cue {
+  font-family: var(--font-display); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-faint);
+  display: flex; align-items: center; gap: 10px;
+}
+.landing-doors {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  padding-top: clamp(24px, 4vw, 40px);
+}
+.landing-door {
+  padding: clamp(24px, 5vw, 48px) clamp(20px, 4vw, 40px);
+  cursor: pointer; text-decoration: none; color: inherit;
+  transition: opacity 0.2s;
+  position: relative; overflow: hidden;
+}
+.landing-door:hover { opacity: 0.72; }
+.landing-door:hover .landing-door-arrow { color: var(--evidence); }
+.landing-door-num {
+  font-family: var(--font-display); font-size: 11px; color: var(--ink-faint);
+  letter-spacing: 0.06em; margin-bottom: 20px; display: block;
+}
+.landing-door-title {
+  font-family: var(--font-body); font-size: clamp(24px, 3vw, 36px);
+  font-weight: 400; line-height: 1.15; margin-bottom: 14px;
+}
+.landing-door-desc {
+  font-family: var(--font-body); font-size: 14.5px; line-height: 1.6;
+  color: var(--ink-dim); max-width: 42ch; margin-bottom: 20px;
+}
+.landing-door-arrow {
+  font-family: var(--font-display); font-size: 11px; letter-spacing: 0.04em;
+  color: var(--ink-dim);
+  display: inline-block; transition: color 0.2s;
+}
+.landing-footer-link {
+  padding: 22px var(--gutter);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.landing-footer-link a {
+  font-family: var(--font-display); font-size: 12px; font-weight: 500;
+  letter-spacing: 0.02em; text-decoration: underline; text-underline-offset: 3px;
+  color: var(--ink); display: flex; align-items: center; gap: 8px;
+}
+.landing-footer-link a:hover { color: var(--evidence); }
+
+/* ---------- Scale swatches (WHO levels) — semantic AQI colors, kept as-is ---------- */
+.scale-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 24px;
+  margin: 20px 0 30px;
+}
+.scale-swatch { padding: 14px 0 0; }
+.scale-swatch-num { font-family: var(--font-display); font-size: 10px; color: var(--ink-faint); margin-bottom: 6px; }
+.scale-swatch-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+.scale-swatch-desc { font-family: var(--font-body); font-size: 12.5px; line-height: 1.5; color: var(--ink-dim); }
+
+/* ---------- Scrollytelling blocks (Research page) ---------- */
+.scrolly-block { margin-bottom: 56px; max-width: 66ch; }
+.scrolly-block:has(.scale-grid),
+.scrolly-block:has(.scrolly-video-wrap) { max-width: none; }
+
+/* ---------- Pinned-background scrollytelling (Louisiana/FA pattern) ----------
+   A sticky full-viewport image layer sits behind the text column. As each
+   .scrolly-step crosses the viewport's vertical center, it claims the
+   background (crossfade between stacked layers). The text column is pulled
+   up on top of the sticky media via a negative margin equal to its height,
+   the classic sticky-media-plus-overlap technique — no scroll-position JS
+   needed beyond the IntersectionObserver in ScrollyStep.jsx. */
+.scrolly-pin-wrap { position: relative; }
+.scrolly-pin-media {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+.scrolly-pin-layer {
+  position: absolute; inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1.1s ease;
+  filter: saturate(0.92) brightness(0.72);
+}
+.scrolly-pin-layer.is-active { opacity: 1; }
+.scrolly-pin-scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(255, 255, 255, 0.90) 32%,
+    rgba(255, 255, 255, 0.42) 58%,
+    rgba(255, 255, 255, 0.08) 82%
+  );
+}
+.scrolly-pin-caption {
+  position: absolute; left: var(--gutter); bottom: 28px; z-index: 1;
+  font-family: var(--font-display); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.scrolly-pin-text {
+  position: relative;
+  z-index: 1;
+  margin-top: -100vh;
+  padding-top: 6vh;
+}
+.scrolly-step { margin-bottom: 30vh; max-width: 62ch; }
+.scrolly-step:last-child { margin-bottom: 6vh; }
+.scrolly-step:has(.scale-grid) { max-width: none; }
+.scrolly-step .dossier-p,
+.scrolly-step .dossier-lede { max-width: none; }
+
+@media (max-width: 760px) {
+  .scrolly-pin-media { height: 58vh; }
+  .scrolly-pin-text { margin-top: -58vh; }
+  .scrolly-pin-scrim {
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.2) 0%,
+      rgba(255,255,255,0.97) 46%,
+      rgba(255,255,255,0.99) 100%
+    );
+  }
+  .scrolly-step { margin-bottom: 12vh; }
+}
+.scrolly-video-wrap {
+  position: relative;
+  width: 100%;
+  background: #000;
+}
+.scrolly-video-play {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.12);
+  border: none; padding: 0; cursor: pointer;
+  transition: background 0.15s;
+}
+.scrolly-video-play:hover { background: rgba(0, 0, 0, 0.22); }
+.scrolly-video-play-triangle {
+  width: 0; height: 0;
+  border-top: 20px solid transparent;
+  border-bottom: 20px solid transparent;
+  border-left: 32px solid #fff;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+}
+
+/* ---------- Reveal-on-scroll ---------- */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1); }
+.reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+/* ---------- Chapter nav (book's prev/next, plain text, no boxes) ---------- */
+.chapter-nav {
+  display: flex; gap: 24px;
+  margin: 40px 0 0; max-width: 720px;
+}
+.chapter-nav a {
+  flex: 1; min-width: 0;
+  text-decoration: none; color: inherit;
+}
+.chapter-nav a:last-child { text-align: right; }
+.chapter-nav-label {
+  display: block; font-family: var(--font-display); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 5px;
+}
+.chapter-nav a:hover .chapter-nav-label { color: var(--evidence); }
+.chapter-nav-title { font-family: var(--font-body); font-size: 15px; color: var(--ink); }
+
+/* ---------- Footer — centered like the book's page numbers, not indented ---------- */
+.dossier-footer {
+  padding: 24px var(--gutter);
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 18px;
+}
+.dossier-footer span { font-family: var(--font-body); font-size: 12px; letter-spacing: 0.01em; color: var(--ink-faint); }
+
+/* ---------- Grain — site-wide, so nothing reads as flat/AI-clean ---------- */
+.grain-overlay {
+  position: fixed; inset: 0;
+  z-index: 500;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-repeat: repeat;
+}
+
+/* ---------- Halftone — newsprint/photocopier dot pattern over photographs ---------- */
+.scrolly-pin-media::after,
+.landing-hero::after,
+.research-closing::after,
+.evidence-card-img-wrap::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(35, 31, 32, 0.65) 1px, transparent 1.3px);
+  background-size: 3px 3px;
+  mix-blend-mode: multiply;
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+/* ---------- EU-vs-WHO chart — a deliberate break from the photo sequence:
+   plain paper, no pinned background, so the numbers stay crisp and legible. ---------- */
+.euwho { max-width: 720px; margin: 8px 0 12px; }
+.euwho-head {
+  display: flex; gap: 24px; margin-bottom: 14px; padding-bottom: 14px;
+  border-bottom: 1px solid var(--hairline);
+}
+.euwho-legend {
+  font-family: var(--font-display); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 7px;
+}
+.euwho-legend::before { content: ''; width: 10px; height: 10px; display: inline-block; }
+.euwho-legend--who { color: var(--evidence); }
+.euwho-legend--who::before { background: var(--evidence); }
+.euwho-legend--gap { color: var(--ink-faint); }
+.euwho-legend--gap::before { background: var(--ink-faint); }
+
+.euwho-row {
+  display: grid; grid-template-columns: 118px 1fr 168px;
+  align-items: center; gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.euwho-label {
+  font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--ink);
+}
+.euwho-track {
+  position: relative; height: 22px;
+  background: var(--paper);
+}
+.euwho-gap-fill {
+  position: absolute; inset: 0;
+  background: var(--ink-faint); opacity: 0.16;
+}
+.euwho-gap-fill--full { opacity: 0.28; }
+.euwho-who-fill {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  background: var(--evidence); opacity: 0.82;
+}
+.euwho-tick {
+  position: absolute; top: -3px; bottom: -3px; width: 2px;
+  background: var(--ink); transform: translateX(-1px);
+}
+.euwho-nosafe {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  padding-left: 10px;
+  font-family: var(--font-display); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.03em; color: var(--evidence);
+  background: repeating-linear-gradient(135deg, var(--evidence-dim) 0, var(--evidence-dim) 6px, transparent 6px, transparent 12px);
+}
+.euwho-values { display: flex; flex-direction: column; gap: 2px; text-align: right; }
+.euwho-v { font-family: var(--font-body); font-size: 13px; color: var(--ink); }
+.euwho-v--who { color: var(--evidence); font-weight: 600; }
+.euwho-v em { font-style: normal; font-size: 10px; color: var(--ink-faint); margin-left: 4px; }
+.euwho-footnote {
+  font-family: var(--font-body); font-size: 12.5px; line-height: 1.55; color: var(--ink-faint);
+  margin-top: 18px; max-width: 62ch;
+}
+
+/* ---------- Research page: plain data interlude + closing image moment ---------- */
+.scrolly-interlude { padding-top: clamp(32px, 5vw, 56px); padding-bottom: clamp(24px, 4vw, 40px); }
+
+.research-closing {
+  position: relative;
+  min-height: 62vh;
+  margin-top: clamp(24px, 4vw, 48px);
+  display: flex; align-items: flex-end;
+  background-size: cover; background-position: center 45%; background-repeat: no-repeat;
+  padding: clamp(32px, 6vw, 72px) var(--gutter);
+}
+.research-closing .dossier-lede { color: #fff; max-width: 46ch; position: relative; z-index: 1; }
+
+@media (max-width: 760px) {
+  .landing-doors { grid-template-columns: 1fr; }
+  .dossier-nav-links a, .dossier-nav-links button { padding: 8px 8px; font-size: 10px; }
+  .case-header-meta { gap: 14px 20px; }
+  .landing-title, .landing-sub { padding-left: 0; }
+  .euwho-row { grid-template-columns: 90px 1fr; }
+  .euwho-values { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; text-align: left; }
+}
