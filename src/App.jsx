@@ -58,20 +58,14 @@ export default function App() {
   }, [tweaks.fontScale]);
 
   useEffect(() => {
-    const globalAQI = Math.max(...SENSORS.map(getSensorAQI));
-    const el = document.documentElement;
-    if (globalAQI >= 1) {
-      el.style.setProperty('--font-display', "'Ronzino Variable', sans-serif");
-      el.style.setProperty('--font-blend', String(globalAQI * 200));
-    } else {
-      el.style.setProperty('--font-display', "'Epilogue', sans-serif");
-      el.style.setProperty('--font-blend', '0');
-    }
+    document.documentElement.style.setProperty('--font-display', "'Source Serif 4', Georgia, serif");
+    document.documentElement.style.setProperty('--font-blend', '0');
   }, []);
+
 
   return (
     <div className="app-shell">
-      {!(page === 'home' && heroVisible) && <TopBar page={page} setPage={navigate} lang={lang} setLang={setLang} onNavHover={setHoveredNav} />}
+      <TopBar page={page} setPage={navigate} lang={lang} setLang={setLang} onNavHover={setHoveredNav} />
       <main className="main-content">
         {page === 'home'     && <HomePage     lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} hoveredNav={hoveredNav} onHeroVisible={setHeroVisible} />}
         {page === 'map'      && <MapPage      lang={lang} setPage={navigate} setSelectedSensor={setSelectedSensor} />}

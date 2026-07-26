@@ -341,12 +341,12 @@ export default function SymptomsPage({ lang, liveRows }) {
     <div className="symptoms-page">
 
       {/* BODY FIGURE — full viewport */}
-      <div style={{ position: 'relative', height: '95vh', overflow: 'hidden', backgroundImage: "url('/assets/cielo.png')", backgroundSize: 'cover', backgroundPosition: 'center' }} onClick={() => setActiveZone(null)}>
+      <div style={{ position: 'relative', height: '95vh', overflow: 'hidden', background: 'var(--white)' }} onClick={() => setActiveZone(null)}>
 
         {/* Floating title */}
         <div style={{ position: 'absolute', top: 48, left: 12, zIndex: 21, pointerEvents: 'none' }}>
           <div style={{
-            fontFamily: 'var(--font-display)',
+            fontFamily: 'var(--font-title)',
             fontSize: 'clamp(28px, 3.5vw, 56px)',
             fontWeight: 400,
             textTransform: 'uppercase',
@@ -599,44 +599,45 @@ export default function SymptomsPage({ lang, liveRows }) {
           const lvIdx = categoryLevels[cat.key];
           const catLv = LEVELS[lvIdx];
           return (
-            <div key={cat.key} className="symptoms-matrix-cat" style={{ borderLeft: `5px solid ${catLv.color}` }}>
-              <div
-                className="symptoms-matrix-cat-header"
-                style={{ background: `color-mix(in srgb, ${catLv.color} 14%, var(--white))` }}
-              >
-                <span className="symptoms-matrix-cat-title">{L ? cat.it.split(' (')[0] : cat.en.split(' (')[0]}</span>
+            <div key={cat.key} className="symptoms-matrix-cat">
+
+              {/* Category header */}
+              <div className="symptoms-matrix-cat-header">
+                <span className="symptoms-matrix-cat-title">
+                  {L ? cat.it.split(' (')[0] : cat.en.split(' (')[0]}
+                </span>
                 <span className="symptoms-matrix-cat-sub">
                   {cat.key === 'particulates' ? 'PM2.5 · PM10' : cat.key === 'gaseous' ? 'NO₂ · SO₂ · O₃' : 'CO · NH₃ · C₆H₆'}
                 </span>
-                <span className="symptoms-matrix-current-badge" style={{ background: catLv.color }}>
-                  <span>{lvIdx + 1}</span>
-                  <span>{L ? catLv.it : catLv.en}</span>
-                </span>
+                <div className="symptoms-matrix-current-badge" style={{ background: catLv.color }}>
+                  {lvIdx + 1} — {L ? catLv.it : catLv.en}
+                </div>
               </div>
+
+              {/* 6-column grid — one cell per level */}
               <div className="symptoms-matrix-levels">
                 {LEVELS.map((lv) => {
                   const sym = SYMPTOMS[cat.key][lv.key];
-                  const isCurrent = categoryLevels[cat.key] === lv.index;
+                  const isCurrent = lvIdx === lv.index;
                   const noSym = !sym || (!sym.gen && !sym.sen);
                   return (
-                    <div key={lv.key} className={`symptoms-matrix-cell${isCurrent ? ' current' : ''}`} style={{ borderTop: `3px solid ${lv.color}` }}>
+                    <div key={lv.key} className={`symptoms-matrix-cell${isCurrent ? ' current' : ''}`}>
                       <div className="symptoms-matrix-level-badge" style={{ background: lv.color }}>
-                        <span>{lv.index + 1}</span>
-                        <span>{L ? lv.it : lv.en}</span>
+                        {lv.index + 1}&nbsp;{L ? lv.it : lv.en}
                       </div>
                       {noSym ? (
-                        <div className="symptoms-matrix-none">—</div>
+                        <span className="symptoms-matrix-none">—</span>
                       ) : (
                         <>
                           {sym.gen && (
                             <div className="symptoms-matrix-row">
-                              <span className="symptoms-matrix-who">{L ? 'Gen.' : 'Gen.'}</span>
+                              <span className="symptoms-matrix-who">GEN</span>
                               <span className="symptoms-matrix-text">{L ? sym.gen.it : sym.gen.en}</span>
                             </div>
                           )}
                           {sym.sen && (
                             <div className="symptoms-matrix-row">
-                              <span className="symptoms-matrix-who">{L ? 'Sen.' : 'Sen.'}</span>
+                              <span className="symptoms-matrix-who">SEN</span>
                               <span className="symptoms-matrix-text">{L ? sym.sen.it : sym.sen.en}</span>
                             </div>
                           )}
@@ -646,6 +647,7 @@ export default function SymptomsPage({ lang, liveRows }) {
                   );
                 })}
               </div>
+
             </div>
           );
         })}
